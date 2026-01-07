@@ -1,0 +1,85 @@
+{
+  "test_time": "2025-12-22T06:30:21.555586",
+  "total_tests": 6,
+  "passed_tests": 6,
+  "failed_tests": 0,
+  "success_rate": 1.0,
+  "results": {
+    "monitoring": {
+      "health_check": {
+        "success": true,
+        "status": "服务健康",
+        "version": "2.0.0",
+        "uptime": 798
+      },
+      "metrics_endpoint": {
+        "success": true,
+        "total_metrics": 5,
+        "found_metrics": 5,
+        "coverage": 1.0,
+        "metrics": [
+          "streaming_session_ttfb_seconds",
+          "streaming_session_duration_seconds",
+          "streaming_session_tokens_per_second",
+          "streaming_session_success_total",
+          "streaming_session_failure_total"
+        ]
+      }
+    },
+    "logging": {
+      "structure": {
+        "success": true,
+        "session_created": true,
+        "steps_logged": 1,
+        "summary_available": true
+      }
+    },
+    "performance": {
+      "cache_system": {
+        "success": true,
+        "cache_set": true,
+        "cache_get": true,
+        "stats_complete": true,
+        "stats": {
+          "hit_rate": 100.0,
+          "l1_hit_rate": 100.0,
+          "l2_hit_rate": 0.0,
+          "total_requests": 1,
+          "l1_size": 1,
+          "l1_memory_mb": 0.0,
+          "l1_hits": 1,
+          "l2_hits": 0,
+          "l3_hits": 0,
+          "misses": 0
+        }
+      },
+      "monitoring": {
+        "success": true,
+        "measure_context_works": true,
+        "stats_complete": true,
+        "stats": {
+          "operation": "test_context_operation",
+          "count": 1,
+          "avg": 0.05015754699707031,
+          "min": 0.05015754699707031,
+          "max": 0.05015754699707031,
+          "median": 0.05015754699707031,
+          "p95": 0.05015754699707031,
+          "p99": 0.05015754699707031
+        },
+        "multi_operations_count": 3
+      }
+    },
+    "integration": {
+      "workflow": {
+        "success": true,
+        "logging": true,
+        "caching": true,
+        "monitoring": true,
+        "steps_executed": 1,
+        "cache_stats_available": true,
+        "perf_stats_available": true
+      }
+    }
+  }
+}

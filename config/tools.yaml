@@ -1,0 +1,431 @@
+# =============================================================================
+# DAML-RAG Server - MCP Tools Configuration
+# =============================================================================
+# 
+# This file contains the configuration for all MCP tools.
+# It replaces the hardcoded tool mappings in mcp_tool_manager.py.
+#
+# Version: 2.0.0
+# Date: 2025-12-29
+# Requirements: 1.5
+# =============================================================================
+
+# Default configuration for all tools
+defaults:
+  server_name: python_internal
+  timeout: 30.0
+  cacheable: true
+  cache_ttl: 300
+  retry_count: 3
+
+# =============================================================================
+# Tool Definitions (与mcp_tool_manager.py硬编码完全一致)
+# =============================================================================
+tools:
+  # ---------------------------------------------------------------------------
+  # User Profile Tools (stdio MCP) - 1个
+  # ---------------------------------------------------------------------------
+  - name: get_user_profile
+    server_name: user-profile-stdio
+    tool_name: get_user_profile
+    description: "获取用户档案"
+    required_params:
+      - user_id
+    optional_params: []
+    param_schema:
+      user_id: int
+
+  # ---------------------------------------------------------------------------
+  # P0 Core Tools - 5个
+  # ---------------------------------------------------------------------------
+  - name: intelligent_exercise_selector
+    server_name: python_internal
+    tool_name: intelligent_exercise_selector
+    description: "智能选择动作"
+    required_params:
+      - user_id
+      - muscle_group
+      - training_goal
+      - difficulty_level
+    optional_params:
+      - available_equipment
+      - safety_priority
+      - injury_history
+      - exercise_preferences
+      - disliked_exercises
+      - session_focus
+    param_schema:
+      user_id: str
+      muscle_group: str
+      training_goal: str
+      difficulty_level: str
+      available_equipment: list
+      safety_priority: float
+
+  - name: contraindications_checker
+    server_name: python_internal
+    tool_name: contraindications_checker
+    description: "检查用户的健康禁忌症"
+    required_params:
+      - user_id
+      - exercise_ids
+    optional_params:
+      - health_conditions
+      - include_recommendations
+      - strict_mode
+    param_schema:
+      user_id: str
+      exercise_ids: list
+      health_conditions: list
+      include_recommendations: bool
+      strict_mode: bool
+
+  - name: injury_risk_assessor
+    server_name: python_internal
+    tool_name: injury_risk_assessor
+    description: "评估动作的受伤风险"
+    required_params:
+      - user_id
+      - planned_exercises
+      - training_intensity
+      - session_duration_minutes
+    optional_params:
+      - include_prevention_plan
+      - risk_tolerance_level
+      - previous_injuries
+      - current_pain_areas
+    param_schema:
+      user_id: str
+      planned_exercises: list
+      training_intensity: str
+      session_duration_minutes: int
+      include_prevention_plan: bool
+      risk_tolerance_level: str
+      previous_injuries: list
+      current_pain_areas: list
+
+  - name: muscle_group_volume_calculator
+    server_name: python_internal
+    tool_name: muscle_group_volume_calculator
+    description: "计算肌群训练量"
+    required_params:
+      - user_id
+      - muscle_group
+      - training_goal
+      - training_frequency_per_week
+    optional_params:
+      - current_weekly_sets
+      - recovery_capacity
+    param_schema:
+      user_id: str
+      muscle_group: str
+      training_goal: str
+      training_frequency_per_week: int
+      current_weekly_sets: int
+      recovery_capacity: str
+
+  - name: tdee_calculator
+    server_name: python_internal
+    tool_name: tdee_calculator
+    description: "计算每日总能量消耗"
+    required_params:
+      - user_id
+      - training_frequency_per_week
+      - training_intensity
+      - daily_activity_level
+      - fitness_goal
+    optional_params:
+      - age
+      - gender
+      - weight_kg
+      - height_cm
+      - dietary_preference
+    param_schema:
+      user_id: str
+      training_frequency_per_week: int
+      training_intensity: str
+      daily_activity_level: str
+      fitness_goal: str
+      age: int
+      gender: str
+      weight_kg: float
+      height_cm: float
+      dietary_preference: str
+
+  # ---------------------------------------------------------------------------
+  # P1 Recommended Tools - 8个
+  # ---------------------------------------------------------------------------
+  - name: professional_program_designer
+    server_name: python_internal
+    tool_name: professional_program_designer
+    description: "专业训练计划设计"
+    required_params:
+      - user_id
+      - training_goal
+      - training_split
+      - training_days_per_week
+      - difficulty_level
+      - available_equipment
+    optional_params:
+      - injury_history
+      - target_muscle_groups
+    param_schema:
+      user_id: str
+      training_goal: str
+      training_split: str
+      training_days_per_week: int
+      difficulty_level: str
+      available_equipment: list
+      injury_history: list
+      target_muscle_groups: list
+
+  - name: exercise_alternative_finder
+    server_name: python_internal
+    tool_name: exercise_alternative_finder
+    description: "查找替代动作"
+    required_params:
+      - user_id
+      - original_exercise_id
+      - reason
+    optional_params:
+      - constraints
+    param_schema:
+      user_id: str
+      original_exercise_id: str
+      reason: str
+      constraints: dict
+
+  - name: movement_pattern_balancer
+    server_name: python_internal
+    tool_name: movement_pattern_balancer
+    description: "平衡动作模式"
+    required_params:
+      - user_id
+      - current_program
+      - target_muscle_groups
+    optional_params: []
+    param_schema:
+      user_id: str
+      current_program: list
+      target_muscle_groups: list
+
+  - name: intelligent_weight_calculator
+    server_name: python_internal
+    tool_name: intelligent_weight_calculator
+    description: "智能计算训练重量"
+    required_params:
+      - user_id
+      - exercise_id
+    optional_params:
+      - training_goal
+      - target_reps
+      - target_rir
+      - one_rm
+      - recent_performance
+    param_schema:
+      user_id: str
+      exercise_id: str
+      training_goal: str
+      target_reps: int
+      target_rir: int
+      one_rm: float
+      recent_performance: dict
+
+  - name: safe_exercise_modifier
+    server_name: python_internal
+    tool_name: safe_exercise_modifier
+    description: "安全修改动作"
+    required_params:
+      - user_id
+      - exercise_id
+      - modification_purpose
+    optional_params:
+      - user_injuries
+      - safety_requirements
+      - available_equipment
+      - modification_preference
+    param_schema:
+      user_id: str
+      exercise_id: str
+      modification_purpose: str
+      user_injuries: list
+      safety_requirements: list
+      available_equipment: list
+      modification_preference: str
+
+  - name: nutrition_intake_analyzer
+    server_name: python_internal
+    tool_name: nutrition_intake_analyzer
+    description: "分析营养摄入"
+    required_params:
+      - user_id
+      - daily_food_intake
+    optional_params:
+      - target_calories
+      - target_protein_grams
+      - target_carbs_grams
+      - target_fat_grams
+      - include_micronutrients
+      - fitness_goal
+    param_schema:
+      user_id: str
+      daily_food_intake: list
+      target_calories: float
+      target_protein_grams: float
+      target_carbs_grams: float
+      target_fat_grams: float
+      include_micronutrients: bool
+      fitness_goal: str
+
+  - name: meal_plan_designer
+    server_name: python_internal
+    tool_name: meal_plan_designer
+    description: "膳食计划设计"
+    required_params:
+      - user_id
+      - target_calories
+      - target_protein_grams
+      - target_carbs_grams
+      - target_fat_grams
+    optional_params:
+      - dietary_preference
+      - meals_per_day
+      - training_days_per_week
+      - fitness_goal
+    param_schema:
+      user_id: str
+      target_calories: float
+      target_protein_grams: float
+      target_carbs_grams: float
+      target_fat_grams: float
+      dietary_preference: str
+      meals_per_day: int
+      training_days_per_week: int
+      fitness_goal: str
+
+  - name: exercise_nutrition_optimization
+    server_name: python_internal
+    tool_name: exercise_nutrition_optimization
+    description: "优化运动营养"
+    required_params:
+      - user_id
+      - training_type
+      - training_duration_minutes
+      - training_intensity
+      - training_time
+      - weight_kg
+      - fitness_goal
+      - daily_protein_target
+      - daily_carbs_target
+    optional_params:
+      - current_supplements
+    param_schema:
+      user_id: str
+      training_type: str
+      training_duration_minutes: int
+      training_intensity: str
+      training_time: str
+      weight_kg: float
+      fitness_goal: str
+      daily_protein_target: float
+      daily_carbs_target: float
+      current_supplements: list
+
+  # ---------------------------------------------------------------------------
+  # P2 Extended Tools - 2个
+  # ---------------------------------------------------------------------------
+  - name: periodized_program_designer
+    server_name: python_internal
+    tool_name: periodized_program_designer
+    description: "周期化训练计划设计"
+    required_params:
+      - user_id
+      - training_goal
+      - difficulty_level
+      - program_duration_weeks
+      - training_days_per_week
+      - available_equipment
+    optional_params:
+      - injury_history
+      - target_muscle_groups
+      - periodization_model
+      - include_deload_weeks
+      - auto_progression
+    param_schema:
+      user_id: str
+      training_goal: str
+      difficulty_level: str
+      program_duration_weeks: int
+      training_days_per_week: int
+      available_equipment: list
+      injury_history: list
+      target_muscle_groups: list
+      periodization_model: str
+      include_deload_weeks: bool
+      auto_progression: bool
+
+  - name: training_split_designer
+    server_name: python_internal
+    tool_name: training_split_designer
+    description: "训练分化设计"
+    required_params:
+      - user_id
+      - training_level
+      - primary_goal
+      - training_days_per_week
+      - session_duration_minutes
+      - available_equipment
+    optional_params:
+      - muscle_group_focus
+      - injury_history
+      - preferred_split_type
+      - include_cardio
+      - rest_day_preference
+      - time_constraints
+    param_schema:
+      user_id: str
+      training_level: str
+      primary_goal: str
+      training_days_per_week: int
+      session_duration_minutes: int
+      available_equipment: list
+      muscle_group_focus: list
+      injury_history: list
+      preferred_split_type: str
+      include_cardio: bool
+      rest_day_preference: str
+      time_constraints: str
+
+  # ---------------------------------------------------------------------------
+  # Training Case Library Tool - 1个
+  # ---------------------------------------------------------------------------
+  - name: find_similar_training_cases
+    server_name: python_internal
+    tool_name: find_similar_training_cases
+    description: "查找相似的训练案例，基于质量评分和用户特征推荐成功案例"
+    required_params:
+      - query
+      - user_profile
+    optional_params:
+      - training_goal
+      - min_quality_score
+      - training_effect_filter
+      - top_k
+    param_schema:
+      query: str
+      user_profile: dict
+      training_goal: str
+      min_quality_score: float
+      training_effect_filter: str
+      top_k: int
+
+# =============================================================================
+# Orchestration Configuration
+# =============================================================================
+orchestration:
+  default_timeout_ms: 10000
+  max_parallel: 5
+  retry_config:
+    max_retries: 3
+    retry_delay_ms: 1000
+    backoff_multiplier: 2

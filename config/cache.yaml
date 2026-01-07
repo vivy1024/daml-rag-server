@@ -1,0 +1,319 @@
+# -*- coding: utf-8 -*-
+# DAML-RAG 缓存配置文件
+# 
+# 版本: v1.0.0
+# 日期: 2025-12-29
+# 
+# 配置说明:
+# - name: 缓存配置名称（通常是工具名或操作名）
+# - ttl: 缓存过期时间（秒）
+# - level: 缓存级别 (l1_memory, l2_redis, l3_computed)
+# - strategy: 缓存策略 (time_based, access_based, size_based, write_through, write_back, no_cache)
+# - preload: 是否支持预加载
+# - max_size: 最大缓存条目数
+# - async_write: 是否使用异步写入
+# - batch_size: 批量写入大小
+# - timeout_ms: 操作超时时间（毫秒）
+# - fallback_ttl: 降级数据的TTL（秒）
+
+cache_configs:
+  # ============ 工作流步骤缓存配置 ============
+  
+  # 步骤1: 用户档案缓存（预加载）
+  - name: user_profile
+    ttl: 300  # 5分钟
+    level: l2_redis
+    strategy: time_based
+    preload: true
+    max_size: 500
+    async_write: false
+    timeout_ms: 800
+    fallback_ttl: 60
+    metadata:
+      workflow_step: 1
+      description: "用户档案缓存，支持预加载"
+  
+  # 步骤3: 会员权限缓存（优化：使用步骤1预热）
+  - name: user_membership
+    ttl: 600  # 10分钟
+    level: l2_redis
+    strategy: time_based
+    preload: true  # 在步骤1预热
+    max_size: 500
+    async_write: false
+    timeout_ms: 800  # 优化：从1252ms降到800ms
+    fallback_ttl: 60
+    metadata:
+      workflow_step: 3
+      description: "会员权限缓存，步骤1预热"
+      optimization: "preload_from_step1"
+  
+  # 步骤4: BGE复杂度分类缓存（优化：查询哈希缓存）
+  - name: bge_complexity
+    ttl: 3600  # 1小时
+    level: l1_memory
+    strategy: time_based
+    preload: false
+    max_size: 2000
+    async_write: false
+    timeout_ms: 500
+    fallback_ttl: 300
+    metadata:
+      workflow_step: 4
+      description: "BGE复杂度分类缓存，基于查询哈希"
+      optimization: "query_hash_caching"
+  
+  # 步骤6: Few-Shot检索缓存
+  - name: few_shot
+    ttl: 1800  # 30分钟
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 1000
+    async_write: false
+    timeout_ms: 2000
+    fallback_ttl: 300
+    metadata:
+      workflow_step: 6
+      description: "Few-Shot检索结果缓存"
+  
+  # 步骤11: 交互记录缓存（优化：异步批量写入）
+  - name: interaction_log
+    ttl: 0  # 不缓存读取，只用于写入
+    level: l1_memory
+    strategy: write_back  # 异步写回
+    preload: false
+    max_size: 100
+    async_write: true  # 启用异步写入
+    batch_size: 10  # 每10条批量写入
+    timeout_ms: 5000
+    fallback_ttl: 0
+    metadata:
+      workflow_step: 11
+      description: "交互记录异步批量写入"
+      optimization: "async_batch_write"
+      flush_interval: 5.0  # 5秒刷新间隔
+
+  # ============ MCP工具缓存配置 ============
+  
+  # 训练计划相关（5个）
+  - name: intelligent_exercise_selector
+    ttl: 1800  # 30分钟
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 500
+    async_write: false
+    timeout_ms: 5000
+    fallback_ttl: 300
+    metadata:
+      category: training
+      description: "智能动作选择器缓存"
+  
+  - name: professional_program_designer
+    ttl: 3600  # 1小时
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 200
+    async_write: false
+    timeout_ms: 10000
+    fallback_ttl: 600
+    metadata:
+      category: training
+      description: "专业训练计划设计器缓存"
+  
+  - name: periodized_program_designer
+    ttl: 3600  # 1小时
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 200
+    async_write: false
+    timeout_ms: 10000
+    fallback_ttl: 600
+    metadata:
+      category: training
+      description: "周期化训练计划设计器缓存"
+  
+  - name: training_split_designer
+    ttl: 1800  # 30分钟
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 300
+    async_write: false
+    timeout_ms: 5000
+    fallback_ttl: 300
+    metadata:
+      category: training
+      description: "训练分化设计器缓存"
+  
+  - name: intelligent_weight_calculator
+    ttl: 600  # 10分钟
+    level: l1_memory
+    strategy: time_based
+    preload: false
+    max_size: 1000
+    async_write: false
+    timeout_ms: 2000
+    fallback_ttl: 120
+    metadata:
+      category: training
+      description: "智能重量计算器缓存"
+
+  # 安全与康复相关（5个）
+  - name: contraindications_checker
+    ttl: 3600  # 1小时
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 500
+    async_write: false
+    timeout_ms: 3000
+    fallback_ttl: 600
+    metadata:
+      category: safety
+      description: "禁忌症检查器缓存"
+  
+  - name: injury_risk_assessor
+    ttl: 1800  # 30分钟
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 500
+    async_write: false
+    timeout_ms: 3000
+    fallback_ttl: 300
+    metadata:
+      category: safety
+      description: "受伤风险评估器缓存"
+  
+  - name: exercise_alternative_finder
+    ttl: 3600  # 1小时
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 1000
+    async_write: false
+    timeout_ms: 3000
+    fallback_ttl: 600
+    metadata:
+      category: safety
+      description: "动作替代查找器缓存"
+  
+  - name: safe_exercise_modifier
+    ttl: 1800  # 30分钟
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 500
+    async_write: false
+    timeout_ms: 3000
+    fallback_ttl: 300
+    metadata:
+      category: safety
+      description: "安全动作修改器缓存"
+  
+  - name: movement_pattern_balancer
+    ttl: 3600  # 1小时
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 300
+    async_write: false
+    timeout_ms: 3000
+    fallback_ttl: 600
+    metadata:
+      category: safety
+      description: "动作模式平衡器缓存"
+
+  # 训练量与恢复相关（2个）
+  - name: muscle_group_volume_calculator
+    ttl: 1800  # 30分钟
+    level: l1_memory
+    strategy: time_based
+    preload: false
+    max_size: 500
+    async_write: false
+    timeout_ms: 2000
+    fallback_ttl: 300
+    metadata:
+      category: volume
+      description: "肌群训练量计算器缓存"
+  
+  - name: tdee_calculator
+    ttl: 86400  # 24小时
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 1000
+    async_write: false
+    timeout_ms: 1000
+    fallback_ttl: 3600
+    metadata:
+      category: volume
+      description: "TDEE计算器缓存"
+
+  # 营养相关（3个）
+  - name: nutrition_intake_analyzer
+    ttl: 1800  # 30分钟
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 500
+    async_write: false
+    timeout_ms: 3000
+    fallback_ttl: 300
+    metadata:
+      category: nutrition
+      description: "营养摄入分析器缓存"
+  
+  - name: meal_plan_designer
+    ttl: 3600  # 1小时
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 200
+    async_write: false
+    timeout_ms: 5000
+    fallback_ttl: 600
+    metadata:
+      category: nutrition
+      description: "膳食计划设计器缓存"
+  
+  - name: exercise_nutrition_optimization
+    ttl: 1800  # 30分钟
+    level: l2_redis
+    strategy: time_based
+    preload: false
+    max_size: 500
+    async_write: false
+    timeout_ms: 3000
+    fallback_ttl: 300
+    metadata:
+      category: nutrition
+      description: "运动营养优化器缓存"
+
+  # ============ 通用缓存配置 ============
+  
+  # 默认配置（未配置的工具使用此配置）
+  - name: default
+    ttl: 300  # 5分钟
+    level: l1_memory
+    strategy: time_based
+    preload: false
+    max_size: 1000
+    async_write: false
+    timeout_ms: 1000
+    fallback_ttl: 60
+    metadata:
+      description: "默认缓存配置"
+
+# ============ 全局设置 ============
+global_settings:
+  max_memory_entries: 5000
+  max_memory_mb: 256
+  enable_async_write: true
+  cleanup_interval_seconds: 60
+  redis_prefix: "daml_rag:"

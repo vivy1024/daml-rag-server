@@ -1,0 +1,153 @@
+{
+  "$schema": "./mcp_registry.schema.json",
+  "version": "4.0.0",
+  "description": "MCP服务器注册表 - v4.0: 1个stdio MCP (用户档案) + 15个Python内置工具",
+  
+  "servers": {
+    "user-profile-stdio": {
+      "name": "用户档案服务",
+      "version": "2.1.0",
+      "type": "stdio",
+      "command": "node",
+      "args": ["/app/mcp-servers/user-profile-stdio/build/index.js"],
+      "env": {
+        "PHP_BACKEND_URL": "http://nginx_v2:80",
+        "PHP_INTERNAL_TOKEN": "${INTERNAL_API_TOKEN}"
+      },
+      "dependencies": [],
+      "tools": [
+        {
+          "name": "get_user_profile",
+          "description": "获取用户健身档案",
+          "requires": [],
+          "level": 0,
+          "category": "data_retrieval",
+          "complexity": "simple",
+          "avg_execution_ms": 300
+        },
+        {
+          "name": "update_user_profile",
+          "description": "更新用户档案",
+          "requires": [],
+          "level": 0,
+          "category": "data_retrieval",
+          "complexity": "simple",
+          "avg_execution_ms": 400
+        }
+      ],
+      "health_check": {
+        "enabled": true,
+        "timeout_ms": 5000
+      }
+    }
+  },
+  
+  "python_tools": {
+    "description": "15个Python MCP工具（直接集成在DAML-RAG容器内）",
+    "location": "/app/src/applications/fitness/mcp_tools/",
+    "tools": [
+      {
+        "name": "intelligent_exercise_selector",
+        "description": "智能动作选择器 - 基于三层检索推荐训练动作",
+        "category": "exercise",
+        "priority": "P0"
+      },
+      {
+        "name": "contraindications_checker",
+        "description": "禁忌症检查器 - 检查用户健康状况与动作禁忌",
+        "category": "safety",
+        "priority": "P0"
+      },
+      {
+        "name": "injury_risk_assessor",
+        "description": "损伤风险评估器 - 评估动作的损伤风险",
+        "category": "safety",
+        "priority": "P0"
+      },
+      {
+        "name": "muscle_group_volume_calculator",
+        "description": "肌群训练量计算器 - 基于MEV/MAV/MRV理论计算训练量",
+        "category": "training",
+        "priority": "P0"
+      },
+      {
+        "name": "tdee_calculator",
+        "description": "TDEE计算器 - 计算每日总能量消耗",
+        "category": "nutrition",
+        "priority": "P0"
+      },
+      {
+        "name": "professional_program_designer",
+        "description": "专业训练计划设计器 - 设计完整的训练计划",
+        "category": "training",
+        "priority": "P1"
+      },
+      {
+        "name": "exercise_alternative_finder",
+        "description": "动作替代查找器 - 查找动作的替代方案",
+        "category": "exercise",
+        "priority": "P1"
+      },
+      {
+        "name": "movement_pattern_balancer",
+        "description": "动作模式平衡器 - 分析训练计划的动作模式平衡",
+        "category": "training",
+        "priority": "P1"
+      },
+      {
+        "name": "intelligent_weight_calculator",
+        "description": "智能负重计算器 - 计算训练负重",
+        "category": "training",
+        "priority": "P1"
+      },
+      {
+        "name": "safe_exercise_modifier",
+        "description": "安全动作修改器 - 修改动作以适应用户限制",
+        "category": "safety",
+        "priority": "P1"
+      },
+      {
+        "name": "nutrition_intake_analyzer",
+        "description": "营养摄入分析器 - 分析用户的营养摄入",
+        "category": "nutrition",
+        "priority": "P1"
+      },
+      {
+        "name": "meal_plan_designer",
+        "description": "膳食计划设计器 - 设计个性化膳食计划",
+        "category": "nutrition",
+        "priority": "P1"
+      },
+      {
+        "name": "exercise_nutrition_optimization",
+        "description": "运动营养优化器 - 优化训练前后营养",
+        "category": "nutrition",
+        "priority": "P1"
+      },
+      {
+        "name": "periodized_program_designer",
+        "description": "周期化训练设计器 - 设计周期化训练计划",
+        "category": "training",
+        "priority": "P2"
+      },
+      {
+        "name": "training_split_designer",
+        "description": "训练分化设计器 - 设计训练分化方案",
+        "category": "training",
+        "priority": "P2"
+      }
+    ]
+  },
+  
+  "orchestration_config": {
+    "default_timeout_ms": 10000,
+    "max_parallel": 5,
+    "cache_ttl_seconds": 300,
+    "retry_config": {
+      "max_retries": 3,
+      "retry_delay_ms": 1000,
+      "backoff_multiplier": 2
+    }
+  }
+}
+

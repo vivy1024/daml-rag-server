@@ -1,0 +1,129 @@
+# 内容安全配置
+# 版本: v1.0.0
+# 创建日期: 2025-12-31
+# Requirements: 16.4
+
+# 敏感词配置
+sensitive_words:
+  # 医疗越界词汇
+  medical:
+    - 诊断
+    - 确诊
+    - 病症
+    - 疾病
+    - 病情
+    - 治疗
+    - 治愈
+    - 康复治疗
+    - 医治
+    - 根治
+    - 药物
+    - 用药
+    - 服药
+    - 处方
+    - 药方
+    - 止痛药
+    - 消炎药
+    - 抗生素
+    - 激素
+    - 就医
+    - 看医生
+    - 挂号
+    - 住院
+    - 手术
+
+  # 危险动作/方法词汇
+  dangerous:
+    - 绝食
+    - 断食超过
+    - 催吐
+    - 泻药减肥
+    - 极限负重
+    - 超负荷
+    - 忽视疼痛
+    - 带伤训练
+    - 类固醇
+    - 兴奋剂
+    - 禁药
+    - 激素注射
+
+  # 极端方法词汇
+  extreme:
+    - 7天瘦
+    - 快速减
+    - 暴瘦
+    - 极速
+    - 不吃饭
+    - 只喝水
+    - 零碳水
+
+# 内容标识配置
+content_labels:
+  default: |
+    
+    ---
+    本内容由智能系统辅助生成，仅供参考。
+  
+  training_plan: |
+    
+    ---
+    训练计划基于专业数据库生成，请根据个人情况调整。如有不适请立即停止训练。
+  
+  nutrition: |
+    
+    ---
+    营养建议仅供参考，如有特殊健康状况请咨询专业医生或营养师。
+  
+  medical_warning: |
+    
+    ⚠️ 健身建议仅供参考，如有健康问题请咨询专业医生。
+  
+  safety_warning: |
+    
+    ⚠️ 请在安全环境下进行训练，量力而行，如有不适请立即停止。
+
+# 风险等级配置
+risk_levels:
+  safe:
+    description: 安全，可直接输出
+    action: pass
+  
+  low:
+    description: 低风险，添加提示后输出
+    action: add_disclaimer
+  
+  medium:
+    description: 中风险，添加警告后输出
+    action: add_warning
+  
+  high:
+    description: 高风险，需要人工审核
+    action: review
+  
+  blocked:
+    description: 禁止，拒绝输出
+    action: block
+
+# 过滤规则配置
+filter_rules:
+  # 输入过滤
+  input:
+    enabled: true
+    block_on_political: true
+    block_on_illegal: true
+    warn_on_medical: true
+    warn_on_dangerous: true
+  
+  # 输出过滤
+  output:
+    enabled: true
+    always_add_label: true
+    add_medical_disclaimer: true
+    add_safety_warning: true
+
+# 日志配置
+logging:
+  enabled: true
+  log_blocked_content: true
+  log_warnings: true
+  retention_days: 180  # 保留6个月

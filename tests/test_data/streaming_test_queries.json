@@ -1,0 +1,111 @@
+{
+  "test_queries": {
+    "simple": [
+      {
+        "query": "你好",
+        "description": "简单问候",
+        "expected_response_type": "greeting"
+      },
+      {
+        "query": "谢谢",
+        "description": "简单感谢",
+        "expected_response_type": "acknowledgment"
+      },
+      {
+        "query": "再见",
+        "description": "简单告别",
+        "expected_response_type": "farewell"
+      }
+    ],
+    "medium": [
+      {
+        "query": "介绍深蹲动作",
+        "description": "单个动作查询",
+        "expected_response_type": "exercise_info",
+        "expected_tools": ["search_exercises"]
+      },
+      {
+        "query": "如何增肌",
+        "description": "训练建议查询",
+        "expected_response_type": "training_advice",
+        "expected_tools": ["search_exercises", "get_muscle_info"]
+      },
+      {
+        "query": "营养建议",
+        "description": "营养咨询",
+        "expected_response_type": "nutrition_advice",
+        "expected_tools": ["search_foods"]
+      },
+      {
+        "query": "胸肌训练动作有哪些",
+        "description": "肌肉群动作查询",
+        "expected_response_type": "exercise_list",
+        "expected_tools": ["search_exercises", "get_muscle_info"]
+      }
+    ],
+    "complex": [
+      {
+        "query": "设计一个4周增肌训练计划",
+        "description": "完整训练计划生成",
+        "expected_response_type": "training_plan",
+        "expected_structured_data": true,
+        "expected_tools": ["search_exercises", "get_muscle_info", "create_training_plan"]
+      },
+      {
+        "query": "分析我的训练进度并给出优化建议",
+        "description": "训练分析和建议",
+        "expected_response_type": "analysis_and_advice",
+        "expected_tools": ["get_user_profile", "get_training_records", "analyze_progress"]
+      },
+      {
+        "query": "制定完整的营养和训练方案",
+        "description": "综合方案制定",
+        "expected_response_type": "comprehensive_plan",
+        "expected_structured_data": true,
+        "expected_tools": ["search_exercises", "search_foods", "get_user_profile"]
+      }
+    ]
+  },
+  "test_users": [
+    {
+      "user_id": "test_user_1",
+      "level": "beginner",
+      "description": "初学者用户"
+    },
+    {
+      "user_id": "test_user_2",
+      "level": "intermediate",
+      "description": "中级用户"
+    },
+    {
+      "user_id": "test_user_3",
+      "level": "advanced",
+      "description": "高级用户"
+    },
+    {
+      "user_id": "load_test_user",
+      "level": "intermediate",
+      "description": "压力测试用户（模板）"
+    }
+  ],
+  "performance_targets": {
+    "ttfb_ms": 5000,
+    "generation_speed_tokens_per_second": 15,
+    "total_duration_ms": 30000,
+    "concurrent_success_rate": 0.90
+  },
+  "monitoring_metrics": [
+    "streaming_sessions_total",
+    "streaming_ttfb_seconds",
+    "streaming_generation_speed_tokens_per_second",
+    "streaming_total_duration_seconds",
+    "streaming_content_length_bytes",
+    "streaming_active_connections",
+    "streaming_errors_total",
+    "streaming_success_rate",
+    "streaming_structured_data_count",
+    "streaming_retry_count",
+    "streaming_tokens_generated_total",
+    "streaming_chunks_sent_total"
+  ]
+}

@@ -1,0 +1,293 @@
+{
+  "version": "1.0.0",
+  "created_date": "2025-11-20",
+  "description": "LLM个性化推荐测试用例，涵盖不同训练水平和目标的用户场景",
+  "test_cases": [
+    {
+      "case_id": "test_001",
+      "name": "初学者增肌测试",
+      "user_profile": {
+        "basic_info": {
+          "nickname": "健身新手小李",
+          "age": 25,
+          "gender": "male",
+          "height": 175,
+          "weight": 70,
+          "body_fat_percentage": 18,
+          "fitness_level": "beginner",
+          "sleep_hours": 7.5
+        },
+        "fitness_goals": {
+          "primary_goals": ["增肌"],
+          "secondary_goals": ["提升体能"],
+          "target_weight": 75,
+          "goal_priority": {"增肌": 1, "提升体能": 2},
+          "training_split": "全身训练"
+        },
+        "training_preferences": {
+          "training_location": "健身房",
+          "available_equipment": ["哑铃", "杠铃", "跑步机"],
+          "training_intensity": "moderate"
+        },
+        "health_status": {
+          "injuries": [],
+          "medical_conditions": [],
+          "limitations": []
+        }
+      },
+      "user_query": "我是健身新手，想增肌，请帮我设计训练计划",
+      "expected_aspects": [
+        "使用线性周期化模型",
+        "全身训练分化",
+        "基础动作重点",
+        "循序渐进指导",
+        "安全提示"
+      ],
+      "success_criteria": [
+        "推荐Linear Periodization",
+        "包含3-4天/周训练频率",
+        "推荐复合动作优先",
+        "包含热身和安全要点",
+        "有阶段性目标设定"
+      ]
+    },
+    {
+      "case_id": "test_002",
+      "name": "中级训练者膝盖受伤测试",
+      "user_profile": {
+        "basic_info": {
+          "nickname": "进阶训练者Vivy",
+          "age": 28,
+          "gender": "female",
+          "height": 165,
+          "weight": 55,
+          "body_fat_percentage": 22,
+          "fitness_level": "intermediate",
+          "sleep_hours": 8
+        },
+        "fitness_goals": {
+          "primary_goals": ["力量提升"],
+          "secondary_goals": ["体型改善"],
+          "target_weight": 53,
+          "goal_priority": {"力量提升": 1, "体型改善": 2},
+          "training_split": "上下分化"
+        },
+        "training_preferences": {
+          "training_location": "家里",
+          "available_equipment": ["哑铃", "弹力带", "瑜伽垫"],
+          "training_intensity": "high",
+          "disliked_exercises": ["重器械深蹲"]
+        },
+        "health_status": {
+          "injuries": ["右膝旧伤"],
+          "medical_conditions": [],
+          "limitations": ["避免高冲击跳跃"]
+        }
+      },
+      "user_query": "我右膝有旧伤，在家训练，想提升力量",
+      "expected_aspects": [
+        "考虑膝盖伤病限制",
+        "推荐家庭训练动作",
+        "使用波浪式周期化",
+        "上下肢分化",
+        "器械替代方案"
+      ],
+      "success_criteria": [
+        "明确避免高冲击动作",
+        "推荐膝盖友好动作",
+        "使用DUP周期化模型",
+        "提供家庭器械替代",
+        "包含康复建议"
+      ]
+    },
+    {
+      "case_id": "test_003",
+      "name": "高级训练者增肌测试",
+      "user_profile": {
+        "basic_info": {
+          "nickname": "资深健身达人",
+          "age": 35,
+          "gender": "male",
+          "height": 180,
+          "weight": 85,
+          "body_fat_percentage": 15,
+          "fitness_level": "advanced",
+          "sleep_hours": 7
+        },
+        "fitness_goals": {
+          "primary_goals": ["力量突破"],
+          "secondary_goals": ["肌肉分离度"],
+          "target_weight": 88,
+          "goal_priority": {"力量突破": 1, "肌肉分离度": 2},
+          "training_split": "五分化"
+        },
+        "training_preferences": {
+          "training_location": "健身房",
+          "available_equipment": ["全套器械", "龙门架", "史密斯机"],
+          "training_intensity": "high"
+        },
+        "health_status": {
+          "injuries": [],
+          "medical_conditions": [],
+          "limitations": []
+        }
+      },
+      "user_query": "我是高级训练者，想突破力量瓶颈，达到新水平",
+      "expected_aspects": [
+        "分块或结合周期化",
+        "专业级训练参数",
+        "弱点分析",
+        "恢复管理",
+        "营养补充建议"
+      ],
+      "success_criteria": [
+        "推荐Block或Conjugate Periodization",
+        "包含具体强度百分比范围",
+        "提供弱点肌群分析",
+        "包含恢复周期安排",
+        "考虑营养时机"
+      ]
+    },
+    {
+      "case_id": "test_004",
+      "name": "减脂新手测试",
+      "user_profile": {
+        "basic_info": {
+          "nickname": "减脂新手小张",
+          "age": 30,
+          "gender": "male",
+          "height": 170,
+          "weight": 85,
+          "body_fat_percentage": 28,
+          "fitness_level": "beginner",
+          "sleep_hours": 6.5
+        },
+        "fitness_goals": {
+          "primary_goals": ["减脂"],
+          "secondary_goals": ["改善体型"],
+          "target_weight": 70,
+          "goal_priority": {"减脂": 1, "改善体型": 2},
+          "training_split": "全身训练"
+        },
+        "training_preferences": {
+          "training_location": "健身房",
+          "available_equipment": ["跑步机", "椭圆机", "轻量哑铃"],
+          "training_intensity": "moderate"
+        },
+        "health_status": {
+          "injuries": [],
+          "medical_conditions": ["轻度高血压"],
+          "limitations": ["避免极高强度训练"]
+        }
+      },
+      "user_query": "我想减脂塑形，体重85kg目标70kg，请制定计划",
+      "expected_aspects": [
+        "考虑高血压限制",
+        "有氧+无氧结合",
+        "合理的热量缺口",
+        "渐进式减重",
+        "塑形重点"
+      ],
+      "success_criteria": [
+        "控制训练强度",
+        "推荐有氧运动",
+        "包含饮食建议",
+        "设定安全减重速度",
+        "重点关注体型改善"
+      ]
+    },
+    {
+      "case_id": "test_005",
+      "name": "产后恢复测试",
+      "user_profile": {
+        "basic_info": {
+          "nickname": "产后恢复妈妈",
+          "age": 32,
+          "gender": "female",
+          "height": 162,
+          "weight": 60,
+          "body_fat_percentage": 25,
+          "fitness_level": "novice",
+          "sleep_hours": 6
+        },
+        "fitness_goals": {
+          "primary_goals": ["体型恢复"],
+          "secondary_goals": ["核心力量"],
+          "target_weight": 55,
+          "goal_priority": {"体型恢复": 1, "核心力量": 2},
+          "training_split": "全身训练"
+        },
+        "training_preferences": {
+          "training_location": "家里",
+          "available_equipment": ["瑜伽垫", "弹力带", "小哑铃"],
+          "training_intensity": "low"
+        },
+        "health_status": {
+          "injuries": [],
+          "medical_conditions": [],
+          "limitations": ["避免腹部压力过大"]
+        }
+      },
+      "user_query": "产后6个月，想恢复体型和核心力量，在家里训练",
+      "expected_aspects": [
+        "产后安全考虑",
+        "核心训练重点",
+        "温和训练强度",
+        "家庭训练方案",
+        "恢复时间安排"
+      ],
+      "success_criteria": [
+        "避免高强度训练",
+        "重点训练核心肌群",
+        "推荐渐进式恢复",
+        "包含盆底肌训练",
+        "考虑休息和恢复"
+      ]
+    }
+  ],
+  "evaluation_dimensions": {
+    "personalization": {
+      "description": "个性化程度",
+      "weight": 0.3,
+      "criteria": [
+        "根据用户水平选择合适的训练模型",
+        "考虑用户伤病和限制条件",
+        "匹配用户目标和偏好",
+        "适应可用器械和场地"
+      ]
+    },
+    "professionalism": {
+      "description": "专业程度",
+      "weight": 0.25,
+      "criteria": [
+        "使用科学的周期化模型",
+        "提供合理的训练参数",
+        "包含安全注意事项",
+        "有理论依据支撑",
+        "考虑恢复和营养"
+      ]
+    },
+    "safety": {
+      "description": "安全性",
+      "weight": 0.25,
+      "criteria": [
+        "识别和处理伤病限制",
+        "避免危险动作",
+        "控制训练强度",
+        "提供安全替代方案",
+        "包含风险提示"
+      ]
+    },
+    "completeness": {
+      "description": "完整性",
+      "weight": 0.2,
+      "criteria": [
+        "包含训练计划大纲",
+        "提供具体动作建议",
+        "包含热身和拉伸",
+        "考虑营养补充",
+        "提供进度跟踪方法"
+      ]
+    }
+  }
+}

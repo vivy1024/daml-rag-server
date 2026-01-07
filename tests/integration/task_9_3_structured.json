@@ -1,0 +1,10 @@
+[
+  {
+    "type": "structured_data",
+    "data": {
+      "mcp_tools_called": [],
+      "dag_template_id": "complete_training_plan",
+      "complexity_level": "complex"
+    }
+  }
+]

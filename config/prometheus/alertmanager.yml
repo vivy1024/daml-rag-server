@@ -1,0 +1,133 @@
+# Alertmanager 配置文件
+# 版本: v1.0.0
+# 创建日期: 2025-12-21
+# 需求: 6.4
+
+global:
+  # 全局配置
+  resolve_timeout: 5m
+  
+# 告警路由配置
+route:
+  # 默认接收器
+  receiver: 'default'
+  
+  # 分组配置
+  group_by: ['alertname', 'category', 'severity']
+  group_wait: 10s        # 等待时间，收集同组告警
+  group_interval: 10s    # 发送间隔
+  repeat_interval: 12h   # 重复告警间隔
+  
+  # 子路由
+  routes:
+    # 严重告警立即通知
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 0s
+      repeat_interval: 1h
+      
+    # 性能告警
+    - match:
+        category: performance
+      receiver: 'performance-alerts'
+      group_wait: 30s
+      repeat_interval: 6h
+      
+    # 资源告警
+    - match:
+        category: resource
+      receiver: 'resource-alerts'
+      group_wait: 1m
+      repeat_interval: 6h
+      
+    # 并发控制告警
+    - match:
+        category: concurrency
+      receiver: 'concurrency-alerts'
+      group_wait: 30s
+      repeat_interval: 3h
+      
+    # 可用性告警
+    - match:
+        category: availability
+      receiver: 'availability-alerts'
+      group_wait: 0s
+      repeat_interval: 30m
+
+# 抑制规则
+inhibit_rules:
+  # 服务不可用时，抑制其他告警
+  - source_match:
+      severity: 'critical'
+      category: 'availability'
+    target_match:
+      severity: 'warning'
+    equal: ['job']
+    
+  # CPU严重告警时，抑制CPU警告
+  - source_match:
+      alertname: 'CPUUsageCritical'
+    target_match:
+      alertname: 'CPUUsageHigh'
+    equal: ['instance']
+    
+  # 内存严重告警时，抑制内存警告
+  - source_match:
+      alertname: 'MemoryUsageCritical'
+    target_match:
+      alertname: 'MemoryUsageHigh'
+    equal: ['instance']
+
+# 接收器配置
+receivers:
+  # 默认接收器（日志）
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://localhost:8001/api/alerts/webhook'
+        send_resolved: true
+        
+  # 严重告警接收器
+  - name: 'critical-alerts'
+    webhook_configs:
+      - url: 'http://localhost:8001/api/alerts/webhook/critical'
+        send_resolved: true
+    # 可以添加其他通知方式
+    # email_configs:
+    #   - to: 'admin@example.com'
+    #     from: 'alertmanager@example.com'
+    #     smarthost: 'smtp.example.com:587'
+    #     auth_username: 'alertmanager@example.com'
+    #     auth_password: 'password'
+    # slack_configs:
+    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+    #     channel: '#alerts-critical'
+    #     title: '严重告警'
+        
+  # 性能告警接收器
+  - name: 'performance-alerts'
+    webhook_configs:
+      - url: 'http://localhost:8001/api/alerts/webhook/performance'
+        send_resolved: true
+        
+  # 资源告警接收器
+  - name: 'resource-alerts'
+    webhook_configs:
+      - url: 'http://localhost:8001/api/alerts/webhook/resource'
+        send_resolved: true
+        
+  # 并发控制告警接收器
+  - name: 'concurrency-alerts'
+    webhook_configs:
+      - url: 'http://localhost:8001/api/alerts/webhook/concurrency'
+        send_resolved: true
+        
+  # 可用性告警接收器
+  - name: 'availability-alerts'
+    webhook_configs:
+      - url: 'http://localhost:8001/api/alerts/webhook/availability'
+        send_resolved: true
+
+# 模板配置
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'

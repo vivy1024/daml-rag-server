@@ -1,0 +1,750 @@
+# 参数映射配置文件
+# 定义MCP工具的参数映射规则、中英文转换映射表、重试策略和缓存配置
+#
+# 版本: v2.2.0
+# 日期: 2025-12-29
+# 作者: BUILD_BODY Team
+# 
+# ⚠️ 重要：required_params必须与工具的Pydantic Input Schema完全匹配！
+# 
+# 更新记录:
+# - v2.2.0 (2025-12-29): 添加_common_mappings配置
+#   - 添加context任务的通用映射（user_id, query, session_id, user_profile）
+#   - 添加query_analysis任务的通用映射（intent, entities, constraints, complexity, confidence）
+#   - 支持EnhancedParameterExtractor的workflow state回退功能
+#   - Requirements: 7.4, 7.5
+# - v2.1.0 (2025-12-27): 补充所有缺失的参数映射规则
+#   - 添加get_user_profile.user_id映射
+#   - 添加exercise_alternative_finder.reason映射
+#   - 添加safe_exercise_modifier.modification_purpose映射
+#   - 添加injury_risk_assessor参数映射
+#   - 添加professional_program_designer参数映射
+#   - 添加periodized_program_designer参数映射
+#   - 添加training_split_designer参数映射
+#   - 添加tdee_calculator参数映射
+#   - 添加meal_plan_designer参数映射
+#   - 添加nutrition_intake_analyzer参数映射
+#   - 添加exercise_nutrition_optimization参数映射
+
+# ============================================================================
+# 通用参数映射（所有工具共享）
+# ============================================================================
+# 这些映射定义了从workflow state提取标准参数的规则
+# 当上游任务不在DAG执行结果中时，EnhancedParameterExtractor会使用这些映射
+# Requirements: 7.4, 7.5
+_common_mappings:
+  # context任务的通用映射
+  # 这些参数可以从workflow state直接提取
+  context:
+    - source_path: user_id
+      target_param: user_id
+      description: "用户ID，从workflow state的user_id字段提取"
+    - source_path: query
+      target_param: query
+      description: "用户查询，从workflow state的query字段提取"
+    - source_path: session_id
+      target_param: session_id
+      description: "会话ID，从workflow state的session_id字段提取"
+    - source_path: user_profile
+      target_param: user_profile
+      description: "用户档案，从workflow state的user_profile字段提取"
+  
+  # query_analysis任务的通用映射
+  # 这些参数可以从workflow state的query_analysis对象提取
+  query_analysis:
+    - source_path: intent
+      target_param: intent
+      description: "用户意图，从workflow state的query_analysis.intent字段提取"
+    - source_path: entities
+      target_param: entities
+      description: "实体列表，从workflow state的query_analysis.entities字段提取"
+    - source_path: constraints
+      target_param: constraints
+      description: "约束条件，从workflow state的query_analysis.constraints字段提取"
+    - source_path: complexity
+      target_param: complexity
+      description: "查询复杂度，从workflow state的query_analysis.complexity字段提取"
+    - source_path: confidence
+      target_param: confidence
+      description: "置信度，从workflow state的query_analysis.confidence字段提取"
+
+# ============================================================================
+# 工具参数映射规则
+# ============================================================================
+tools:
+  # 用户档案工具 - Requirements 2.1
+  get_user_profile:
+    param_mappings:
+      - source_task: context
+        source_path: user_id
+        target_param: user_id
+    required_params:
+      - user_id
+    optional_params: []
+
+  # 禁忌症检查器 - ContraindicationsCheckerInput
+  contraindications_checker:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: intelligent_exercise_selector
+        source_path: recommendations[*].exercise_id
+        target_param: exercise_ids
+        default_value: []
+    required_params:
+      - user_id
+      - exercise_ids
+    optional_params:
+      - health_conditions
+      - include_recommendations
+      - strict_mode
+
+  # 智能动作选择器 - IntelligentExerciseSelectorInput
+  intelligent_exercise_selector:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: get_user_profile
+        source_path: fitness_goals.primary_goals[0]
+        target_param: training_goal
+        converter: chinese_to_enum
+        converter_type: training_goal
+        default_value: general_fitness
+      - source_task: get_user_profile
+        source_path: basic_info.fitness_level
+        target_param: difficulty_level
+        converter: chinese_to_enum
+        converter_type: fitness_level
+        default_value: beginner
+      - source_task: get_user_profile
+        source_path: target_muscle_groups[0]
+        target_param: muscle_group
+        default_value: "胸部"
+    required_params:
+      - user_id
+      - muscle_group
+      - training_goal
+      - difficulty_level
+    optional_params:
+      - available_equipment
+      - safety_priority
+
+  # 动作替代查找器 - ExerciseAlternativeFinderInput - Requirements 2.2
+  # ⚠️ 注意：original_exercise_id 依赖于 intelligent_exercise_selector 的输出
+  # 当上游任务没有返回有效的推荐时，使用默认值（空字符串会触发跳过逻辑）
+  exercise_alternative_finder:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: intelligent_exercise_selector
+        source_path: recommendations[0].exercise_id
+        target_param: original_exercise_id
+        default_value: ""  # 空字符串表示无法获取，工具应该被跳过
+      - source_task: query_analysis
+        source_path: intent
+        target_param: reason
+        converter: chinese_to_enum
+        converter_type: alternative_reason
+        default_value: equipment_unavailable
+    required_params:
+      - user_id
+      - original_exercise_id
+      - reason
+    optional_params:
+      - constraints
+    # 跳过条件：当 original_exercise_id 为空时跳过此工具
+    skip_conditions:
+      - param: original_exercise_id
+        condition: empty
+        message: "跳过exercise_alternative_finder：无法从上游任务获取original_exercise_id"
+
+  # 安全动作修改器 - SafeExerciseModifierInput - Requirements 2.3
+  # ⚠️ 注意：exercise_id 依赖于 intelligent_exercise_selector 的输出
+  # 当上游任务没有返回有效的推荐时，使用默认值（空字符串会触发跳过逻辑）
+  safe_exercise_modifier:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: intelligent_exercise_selector
+        source_path: recommendations[0].exercise_id
+        target_param: exercise_id
+        default_value: ""  # 空字符串表示无法获取，工具应该被跳过
+      - source_task: query_analysis
+        source_path: intent
+        target_param: modification_purpose
+        converter: chinese_to_enum
+        converter_type: modification_purpose
+        default_value: injury_prevention
+    required_params:
+      - user_id
+      - exercise_id
+      - modification_purpose
+    optional_params:
+      - user_injuries
+      - safety_requirements
+      - available_equipment
+      - modification_preference
+
+  # 损伤风险评估器 - InjuryRiskAssessorInput - Requirements 2.4
+  injury_risk_assessor:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: intelligent_exercise_selector
+        source_path: recommendations[*].exercise_id
+        target_param: planned_exercises
+        default_value: []
+      - source_task: get_user_profile
+        source_path: training_config.training_intensity
+        target_param: training_intensity
+        converter: chinese_to_enum
+        converter_type: training_intensity
+        default_value: moderate
+      - source_task: get_user_profile
+        source_path: training_config.session_duration_minutes
+        target_param: session_duration_minutes
+        default_value: 60
+    required_params:
+      - user_id
+      - planned_exercises
+      - training_intensity
+      - session_duration_minutes
+    optional_params:
+      - include_prevention_plan
+      - risk_tolerance_level
+      - previous_injuries
+      - current_pain_areas
+
+  # 专业训练计划设计器 - ProfessionalProgramDesignerInput - Requirements 2.5
+  professional_program_designer:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: get_user_profile
+        source_path: fitness_goals.primary_goals[0]
+        target_param: training_goal
+        converter: chinese_to_enum
+        converter_type: training_goal
+        default_value: hypertrophy
+      - source_task: get_user_profile
+        source_path: basic_info.fitness_level
+        target_param: difficulty_level
+        converter: chinese_to_enum
+        converter_type: fitness_level
+        default_value: beginner
+      - source_task: get_user_profile
+        source_path: training_config.available_equipment
+        target_param: available_equipment
+        default_value: ["哑铃", "杠铃"]
+      - source_task: get_user_profile
+        source_path: training_config.training_split
+        target_param: training_split
+        converter: chinese_to_enum
+        converter_type: split_type
+        default_value: push_pull_legs
+      - source_task: get_user_profile
+        source_path: training_config.preferred_training_days
+        target_param: training_days_per_week
+        default_value: 3
+    required_params:
+      - user_id
+      - training_goal
+      - training_split
+      - training_days_per_week
+      - difficulty_level
+      - available_equipment
+    optional_params:
+      - injury_history
+      - target_muscle_groups
+
+  # 周期化训练计划设计器 - PeriodizedProgramDesignerInput - Requirements 2.6
+  periodized_program_designer:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: get_user_profile
+        source_path: fitness_goals.primary_goals[0]
+        target_param: training_goal
+        converter: chinese_to_enum
+        converter_type: training_goal
+        default_value: hypertrophy
+      - source_task: get_user_profile
+        source_path: basic_info.fitness_level
+        target_param: difficulty_level
+        converter: chinese_to_enum
+        converter_type: fitness_level
+        default_value: beginner
+      - source_task: get_user_profile
+        source_path: training_config.available_equipment
+        target_param: available_equipment
+        default_value: ["哑铃", "杠铃"]
+      - source_task: query_analysis
+        source_path: program_duration_weeks
+        target_param: program_duration_weeks
+        default_value: 12
+      - source_task: get_user_profile
+        source_path: training_config.preferred_training_days
+        target_param: training_days_per_week
+        default_value: 3
+    required_params:
+      - user_id
+      - training_goal
+      - difficulty_level
+      - program_duration_weeks
+      - training_days_per_week
+      - available_equipment
+    optional_params:
+      - injury_history
+      - target_muscle_groups
+      - periodization_model
+      - include_deload_weeks
+      - auto_progression
+
+  # 训练分化设计器 - TrainingSplitDesignerInput - Requirements 2.7
+  training_split_designer:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: get_user_profile
+        source_path: basic_info.fitness_level
+        target_param: training_level
+        converter: chinese_to_enum
+        converter_type: fitness_level
+        default_value: beginner
+      - source_task: get_user_profile
+        source_path: fitness_goals.primary_goals[0]
+        target_param: primary_goal
+        converter: chinese_to_enum
+        converter_type: training_goal
+        default_value: hypertrophy
+      - source_task: get_user_profile
+        source_path: training_config.available_equipment
+        target_param: available_equipment
+        default_value: ["哑铃", "杠铃"]
+      - source_task: get_user_profile
+        source_path: training_config.preferred_training_days
+        target_param: training_days_per_week
+        default_value: 3
+      - source_task: get_user_profile
+        source_path: training_config.session_duration_minutes
+        target_param: session_duration_minutes
+        default_value: 60
+    required_params:
+      - user_id
+      - training_level
+      - primary_goal
+      - training_days_per_week
+      - session_duration_minutes
+      - available_equipment
+    optional_params:
+      - muscle_group_focus
+      - injury_history
+      - preferred_split_type
+      - include_cardio
+      - rest_day_preference
+      - time_constraints
+
+  # TDEE计算器 - TDEECalculatorInput - Requirements 2.8
+  tdee_calculator:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: get_user_profile
+        source_path: training_config.preferred_training_days
+        target_param: training_frequency_per_week
+        default_value: 3
+      - source_task: get_user_profile
+        source_path: training_config.activity_level
+        target_param: daily_activity_level
+        converter: chinese_to_enum
+        converter_type: activity_level
+        default_value: moderately_active
+      - source_task: get_user_profile
+        source_path: training_config.training_intensity
+        target_param: training_intensity
+        converter: chinese_to_enum
+        converter_type: training_intensity
+        default_value: moderate
+      - source_task: get_user_profile
+        source_path: fitness_goals.primary_goals[0]
+        target_param: fitness_goal
+        converter: chinese_to_enum
+        converter_type: fitness_goal
+        default_value: maintenance
+    required_params:
+      - user_id
+      - training_frequency_per_week
+      - training_intensity
+      - daily_activity_level
+      - fitness_goal
+    optional_params:
+      - age
+      - gender
+      - weight_kg
+      - height_cm
+      - dietary_preference
+
+  # 膳食计划设计器 - MealPlanDesignerInput - Requirements 2.9
+  meal_plan_designer:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: tdee_calculator
+        source_path: adjusted_tdee
+        target_param: target_calories
+        default_value: 2000
+      - source_task: tdee_calculator
+        source_path: macronutrient_distribution.protein_grams
+        target_param: target_protein_grams
+        default_value: 150
+      - source_task: tdee_calculator
+        source_path: macronutrient_distribution.carbs_grams
+        target_param: target_carbs_grams
+        default_value: 200
+      - source_task: tdee_calculator
+        source_path: macronutrient_distribution.fat_grams
+        target_param: target_fat_grams
+        default_value: 70
+    required_params:
+      - user_id
+      - target_calories
+      - target_protein_grams
+      - target_carbs_grams
+      - target_fat_grams
+    optional_params:
+      - dietary_preference
+      - meals_per_day
+      - training_days_per_week
+      - fitness_goal
+
+  # 肌群训练量计算器 - MuscleGroupVolumeCalculatorInput
+  muscle_group_volume_calculator:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: get_user_profile
+        source_path: target_muscle_groups[0]
+        target_param: muscle_group
+        default_value: "胸大肌"
+      - source_task: get_user_profile
+        source_path: fitness_goals.primary_goals[0]
+        target_param: training_goal
+        converter: chinese_to_enum
+        converter_type: training_goal
+        default_value: hypertrophy
+      - source_task: get_user_profile
+        source_path: training_config.preferred_training_days
+        target_param: training_frequency_per_week
+        default_value: 3
+    required_params:
+      - user_id
+      - muscle_group
+      - training_goal
+      - training_frequency_per_week
+    optional_params:
+      - current_weekly_sets
+      - recovery_capacity
+
+  # 动作模式平衡器 - MovementPatternBalancerInput
+  movement_pattern_balancer:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: intelligent_exercise_selector
+        source_path: recommendations[*].exercise_id
+        target_param: current_program
+        default_value: []
+      - source_task: get_user_profile
+        source_path: target_muscle_groups
+        target_param: target_muscle_groups
+        default_value: ["胸部", "背部"]
+    required_params:
+      - user_id
+      - current_program
+      - target_muscle_groups
+    optional_params: []
+
+  # 智能负重计算器 - IntelligentWeightCalculatorInput
+  # ⚠️ 注意：exercise_id 依赖于 intelligent_exercise_selector 的输出
+  # 当上游任务没有返回有效的推荐时，使用默认值（空字符串会触发跳过逻辑）
+  intelligent_weight_calculator:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: intelligent_exercise_selector
+        source_path: recommendations[0].exercise_id
+        target_param: exercise_id
+        default_value: ""  # 空字符串表示无法获取，工具应该被跳过
+    required_params:
+      - user_id
+      - exercise_id
+    optional_params:
+      - training_goal
+      - target_reps
+      - target_rir
+      - one_rm
+      - recent_performance
+
+  # 营养摄入分析器 - NutritionIntakeAnalyzerInput - Requirements 2.10
+  nutrition_intake_analyzer:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: context
+        source_path: food_intake
+        target_param: daily_food_intake
+        default_value: []
+    required_params:
+      - user_id
+      - daily_food_intake
+    optional_params:
+      - target_calories
+      - target_protein_grams
+      - target_carbs_grams
+      - target_fat_grams
+      - include_micronutrients
+      - fitness_goal
+
+  # 运动营养优化器 - ExerciseNutritionOptimizationInput - Requirements 2.11
+  exercise_nutrition_optimization:
+    param_mappings:
+      - source_task: get_user_profile
+        source_path: user_id
+        target_param: user_id
+      - source_task: get_user_profile
+        source_path: basic_info.weight
+        target_param: weight_kg
+        default_value: 70
+      - source_task: query_analysis
+        source_path: training_type
+        target_param: training_type
+        converter: chinese_to_enum
+        converter_type: training_type
+        default_value: strength
+      - source_task: get_user_profile
+        source_path: training_config.session_duration_minutes
+        target_param: training_duration_minutes
+        default_value: 60
+      - source_task: get_user_profile
+        source_path: training_config.training_intensity
+        target_param: training_intensity
+        converter: chinese_to_enum
+        converter_type: training_intensity
+        default_value: moderate
+      - source_task: query_analysis
+        source_path: training_time
+        target_param: training_time
+        default_value: morning
+      - source_task: get_user_profile
+        source_path: fitness_goals.primary_goals[0]
+        target_param: fitness_goal
+        converter: chinese_to_enum
+        converter_type: fitness_goal
+        default_value: maintenance
+      - source_task: tdee_calculator
+        source_path: macronutrient_distribution.protein_grams
+        target_param: daily_protein_target
+        default_value: 150
+      - source_task: tdee_calculator
+        source_path: macronutrient_distribution.carbs_grams
+        target_param: daily_carbs_target
+        default_value: 200
+    required_params:
+      - user_id
+      - training_type
+      - training_duration_minutes
+      - training_intensity
+      - training_time
+      - weight_kg
+      - fitness_goal
+      - daily_protein_target
+      - daily_carbs_target
+    optional_params:
+      - current_supplements
+
+
+# ============================================================================
+# 中英文转换映射表（已废弃 - v8.62.0）
+# ============================================================================
+# ⚠️ 注意：前端已统一传递英文value，Neo4j也是英文name
+# 此映射表仅作为参考保留，不再用于实际转换
+# 如需验证枚举值，请参考 parameter_converter.py 中的 VALID_* 定义
+# ============================================================================
+converters:
+  # 已废弃 - 前端直接传递英文值
+  # 保留此节作为有效值参考
+  valid_values_reference:
+    training_goal:
+      - hypertrophy
+      - strength
+      - endurance
+      - general_fitness
+      - weight_loss
+      - power
+      - maintenance
+      - recomp
+      - fat_loss
+      - posture_correction
+      - functional
+    
+    fitness_level:
+      - novice
+      - beginner
+      - intermediate
+      - advanced
+      - expert
+    
+    activity_level:
+      - sedentary
+      - lightly_active
+      - moderately_active
+      - very_active
+      - extremely_active
+    
+    split_type:
+      - full_body
+      - upper_lower
+      - push_pull_legs
+      - bro_split
+      - body_part_split
+    
+    training_intensity:
+      - low
+      - moderate
+      - high
+      - very_high
+    
+    alternative_reason:
+      - injury
+      - equipment_unavailable
+      - difficulty_too_high
+      - preference_change
+      - variety
+    
+    modification_purpose:
+      - injury_prevention
+      - beginner_friendly
+      - rehabilitation
+      - age_appropriate
+      - equipment_limited
+
+# ============================================================================
+# 重试策略配置
+# ============================================================================
+retry_policies:
+  ValidationError:
+    should_retry: false
+    max_attempts: 1
+    reason: "参数验证错误通常是配置问题，重试无意义"
+  
+  NetworkError:
+    should_retry: true
+    max_attempts: 3
+    delay: 1.0
+    backoff: 2.0
+    reason: "网络错误可能是临时的，适合重试"
+  
+  TimeoutError:
+    should_retry: true
+    max_attempts: 2
+    delay: 2.0
+    backoff: 1.5
+    reason: "超时可能是服务繁忙，重试一次"
+  
+  MCPServerError:
+    should_retry: false
+    max_attempts: 1
+    reason: "MCP服务器错误需要人工介入"
+  
+  ConversionError:
+    should_retry: false
+    max_attempts: 1
+    reason: "数据转换错误是数据问题，重试无意义"
+  
+  default:
+    should_retry: true
+    max_attempts: 2
+    delay: 1.0
+    backoff: 2.0
+
+# ============================================================================
+# 缓存配置
+# ============================================================================
+cache_config:
+  user_profile:
+    enabled: true
+    ttl: 300
+    key_prefix: "user_profile:"
+  
+  membership_permissions:
+    enabled: true
+    ttl: 600
+    key_prefix: "membership:"
+  
+  llm_response:
+    enabled: true
+    ttl: 3600
+    key_prefix: "llm_response:"
+  
+  mcp_tool_result:
+    enabled: true
+    ttl: 1800
+    key_prefix: "mcp_tool:"
+    cacheable_tools:
+      - get_user_profile
+      - tdee_calculator
+    non_cacheable_tools:
+      - contraindications_checker
+      - injury_risk_assessor
+      - intelligent_exercise_selector
+
+# ============================================================================
+# 参数验证配置
+# ============================================================================
+validation_config:
+  strict_mode: true
+  use_default_on_failure: true
+  verbose_logging: true
+  missing_required_param_behavior: "error"
+  type_mismatch_behavior: "error"
+  invalid_enum_behavior: "warning"
+
+# ============================================================================
+# 日志配置
+# ============================================================================
+logging_config:
+  parameter_extraction:
+    enabled: true
+    level: "INFO"
+    include_values: true
+    max_value_length: 100
+  
+  parameter_conversion:
+    enabled: true
+    level: "INFO"
+    include_before_after: true
+  
+  parameter_validation:
+    enabled: true
+    level: "INFO"
+    include_error_details: true
+  
+  trace_logging:
+    enabled: true
+    level: "INFO"
+    include_timestamps: true
+    include_execution_time: true

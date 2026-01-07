@@ -1,0 +1,498 @@
+{
+  "muscles": [
+    {
+      "id": 1,
+      "name_en": "Biceps",
+      "name_zh": "肱二头肌",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 16,
+      "name_en": "Long Head Bicep",
+      "name_zh": "肱二头肌长头",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 1
+    },
+    {
+      "id": 17,
+      "name_en": "Short Head Bicep",
+      "name_zh": "肱二头肌短头",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 1
+    },
+    {
+      "id": 2,
+      "name_en": "Chest",
+      "name_zh": "胸肌",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 24,
+      "name_en": "Mid and Lower Chest",
+      "name_zh": "中下胸肌",
+      "scientific_name": "Sternocostal Head",
+      "level": 1,
+      "parent_id": 2
+    },
+    {
+      "id": 5,
+      "name_en": "Triceps",
+      "name_zh": "肱三头肌",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 19,
+      "name_en": "Anterior Deltoid",
+      "name_zh": "三角肌前束",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 6
+    },
+    {
+      "id": 23,
+      "name_en": "Upper Pectoralis",
+      "name_zh": "上胸肌",
+      "scientific_name": "Sternoclavicular Head",
+      "level": 1,
+      "parent_id": 2
+    },
+    {
+      "id": 47,
+      "name_en": "Front Shoulders",
+      "name_zh": "肩前部",
+      "scientific_name": "Front Deltoids",
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 9,
+      "name_en": "Glutes",
+      "name_zh": "臀部",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 38,
+      "name_en": "Gluteus Maximus",
+      "name_zh": "臀大肌",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 9
+    },
+    {
+      "id": 3,
+      "name_en": "Quads",
+      "name_zh": "股四头肌",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 27,
+      "name_en": "Inner Thigh",
+      "name_zh": "大腿内侧",
+      "scientific_name": "Hip Adductors",
+      "level": 1,
+      "parent_id": 3
+    },
+    {
+      "id": 28,
+      "name_en": "Inner Quadriceps",
+      "name_zh": "股四头肌内侧",
+      "scientific_name": "Vastus Medialis",
+      "level": 1,
+      "parent_id": 3
+    },
+    {
+      "id": 29,
+      "name_en": "Outer Quadricep",
+      "name_zh": "股四头肌外侧",
+      "scientific_name": "Vastus Lateralis",
+      "level": 1,
+      "parent_id": 3
+    },
+    {
+      "id": 50,
+      "name_en": "Groin",
+      "name_zh": "腹股沟",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 4,
+      "name_en": "Traps",
+      "name_zh": "斜方肌",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 41,
+      "name_en": "Upper Traps",
+      "name_zh": "上斜方肌",
+      "scientific_name": "Superior Trapezius",
+      "level": 1,
+      "parent_id": 4
+    },
+    {
+      "id": 34,
+      "name_en": "Long Head Tricep",
+      "name_zh": "肱三头肌长头",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 5
+    },
+    {
+      "id": 35,
+      "name_en": "Lateral Head Triceps",
+      "name_zh": "肱三头肌外侧头",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 5
+    },
+    {
+      "id": 36,
+      "name_en": "Medial Head Triceps",
+      "name_zh": "肱三头肌内侧头",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 5
+    },
+    {
+      "id": 6,
+      "name_en": "Shoulders",
+      "name_zh": "肩部",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 18,
+      "name_en": "Lateral Deltoid",
+      "name_zh": "三角肌中束",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 6
+    },
+    {
+      "id": 20,
+      "name_en": "Posterior Deltoid",
+      "name_zh": "三角肌后束",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 6
+    },
+    {
+      "id": 48,
+      "name_en": "Rear Shoulders",
+      "name_zh": "肩后部",
+      "scientific_name": "Rear Deltoids",
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 7,
+      "name_en": "Lats",
+      "name_zh": "背阔肌",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 42,
+      "name_en": "Lower Traps",
+      "name_zh": "下斜方肌",
+      "scientific_name": "Inferior Traps",
+      "level": 1,
+      "parent_id": 4
+    },
+    {
+      "id": 14,
+      "name_en": "Traps (mid-back)",
+      "name_zh": "中斜方肌",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 13,
+      "name_en": "Lower back",
+      "name_zh": "下背部",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 8,
+      "name_en": "Hamstrings",
+      "name_zh": "腿后肌群",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 40,
+      "name_en": "Lateral Hamstrings",
+      "name_zh": "腿后肌群外侧",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 8
+    },
+    {
+      "id": 39,
+      "name_en": "Medial Hamstrings",
+      "name_zh": "腿后肌群内侧",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 8
+    },
+    {
+      "id": 10,
+      "name_en": "Forearms",
+      "name_zh": "前臂",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 26,
+      "name_en": "Wrist Flexors",
+      "name_zh": "腕屈肌",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 10
+    },
+    {
+      "id": 11,
+      "name_en": "Calves",
+      "name_zh": "小腿",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 33,
+      "name_en": "Gastrocnemius",
+      "name_zh": "腓肠肌",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 11
+    },
+    {
+      "id": 32,
+      "name_en": "Soleus",
+      "name_zh": "比目鱼肌",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 11
+    },
+    {
+      "id": 12,
+      "name_en": "Abdominals",
+      "name_zh": "腹肌",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 22,
+      "name_en": "Upper Abdominals",
+      "name_zh": "上腹肌",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 12
+    },
+    {
+      "id": 21,
+      "name_en": "Lower Abdominals",
+      "name_zh": "下腹肌",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 12
+    },
+    {
+      "id": 15,
+      "name_en": "Obliques",
+      "name_zh": "腹斜肌",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 43,
+      "name_en": "Hands",
+      "name_zh": "手部",
+      "scientific_name": "Hands",
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 25,
+      "name_en": "Wrist Extensors",
+      "name_zh": "腕伸肌",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 10
+    },
+    {
+      "id": 37,
+      "name_en": "Gluteus Medius",
+      "name_zh": "臀中肌",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 9
+    },
+    {
+      "id": 30,
+      "name_en": "Rectus Femoris",
+      "name_zh": "股直肌",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 3
+    },
+    {
+      "id": 31,
+      "name_en": "Tibialis",
+      "name_zh": "胫骨前肌",
+      "scientific_name": null,
+      "level": 1,
+      "parent_id": 11
+    },
+    {
+      "id": 46,
+      "name_en": "Feet",
+      "name_zh": "足部",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    },
+    {
+      "id": 49,
+      "name_en": "Neck",
+      "name_zh": "颈部",
+      "scientific_name": null,
+      "level": 0,
+      "parent_id": null
+    }
+  ],
+  "parent_relations": [
+    {
+      "child_id": 31,
+      "parent_id": 11
+    },
+    {
+      "child_id": 37,
+      "parent_id": 9
+    },
+    {
+      "child_id": 28,
+      "parent_id": 3
+    },
+    {
+      "child_id": 19,
+      "parent_id": 6
+    },
+    {
+      "child_id": 30,
+      "parent_id": 3
+    },
+    {
+      "child_id": 24,
+      "parent_id": 2
+    },
+    {
+      "child_id": 33,
+      "parent_id": 11
+    },
+    {
+      "child_id": 35,
+      "parent_id": 5
+    },
+    {
+      "child_id": 16,
+      "parent_id": 1
+    },
+    {
+      "child_id": 25,
+      "parent_id": 10
+    },
+    {
+      "child_id": 39,
+      "parent_id": 8
+    },
+    {
+      "child_id": 21,
+      "parent_id": 12
+    },
+    {
+      "child_id": 42,
+      "parent_id": 4
+    },
+    {
+      "child_id": 27,
+      "parent_id": 3
+    },
+    {
+      "child_id": 32,
+      "parent_id": 11
+    },
+    {
+      "child_id": 38,
+      "parent_id": 9
+    },
+    {
+      "child_id": 29,
+      "parent_id": 3
+    },
+    {
+      "child_id": 26,
+      "parent_id": 10
+    },
+    {
+      "child_id": 20,
+      "parent_id": 6
+    },
+    {
+      "child_id": 18,
+      "parent_id": 6
+    },
+    {
+      "child_id": 23,
+      "parent_id": 2
+    },
+    {
+      "child_id": 34,
+      "parent_id": 5
+    },
+    {
+      "child_id": 36,
+      "parent_id": 5
+    },
+    {
+      "child_id": 22,
+      "parent_id": 12
+    },
+    {
+      "child_id": 17,
+      "parent_id": 1
+    },
+    {
+      "child_id": 41,
+      "parent_id": 4
+    },
+    {
+      "child_id": 40,
+      "parent_id": 8
+    }
+  ]
+}

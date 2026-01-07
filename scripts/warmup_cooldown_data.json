@@ -1,0 +1,3526 @@
+{
+  "recovery": [
+    {
+      "id": 1289,
+      "name": "坐姿侧平举",
+      "name_en": null,
+      "muscle": "三角肌中束",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "open_chain"
+    },
+    {
+      "id": 1288,
+      "name": "站姿侧平举",
+      "name_en": null,
+      "muscle": "三角肌中束",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "open_chain"
+    },
+    {
+      "id": 1465,
+      "name": "俯卧",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1598,
+      "name": "墙上天使",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1471,
+      "name": "开髋动作",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1285,
+      "name": "弹力带肩部Y举",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1395,
+      "name": "核心稳定 1：四点支撑对侧抬肢",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1392,
+      "name": "核心稳定 2：对侧触肩（四点支撑位）",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1391,
+      "name": "核心稳定 4：俯卧撑位对侧抬臂抬腿",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1389,
+      "name": "核心稳定5：对侧手脚抬起并转入膝肘收紧的俯卧撑位",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1211,
+      "name": "核心稳定性退阶：俯卧撑位对侧抬臂抬腿",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1421,
+      "name": "背阔肌与肩部外旋拉伸 1 — 跪姿（使用木棒）",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1208,
+      "name": "背阔肌与肩部外旋拉伸 3（跪姿木棍）",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1207,
+      "name": "跪姿木杆背阔肌与肩部外旋拉伸 2",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1224,
+      "name": "随时随地简化您的训练",
+      "name_en": null,
+      "muscle": "三角肌后束",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1300,
+      "name": "耸肩",
+      "name_en": null,
+      "muscle": "上斜方肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1467,
+      "name": "I 变成 W",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1403,
+      "name": "下背伸展 3",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1404,
+      "name": "下背部伸展 2",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1402,
+      "name": "下背部伸展 4",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1251,
+      "name": "交替环绕",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1400,
+      "name": "仰卧双膝抱胸",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1401,
+      "name": "仰卧屈膝腰背伸肌松动（花生球）",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1405,
+      "name": "双人下背部伸展",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1314,
+      "name": "地面泡沫轴腰方肌放松",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1594,
+      "name": "尺蠖爬行",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1434,
+      "name": "抱膝与腰部旋转",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1252,
+      "name": "滑动浏览",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1397,
+      "name": "眼镜蛇式伸展 2",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1398,
+      "name": "眼镜蛇式拉伸 1",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1383,
+      "name": "硬拉反弹拉伸",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1319,
+      "name": "祈祷式拉伸 1",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1315,
+      "name": "祈祷式拉伸 2（泡沫轴）",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1268,
+      "name": "箱支撑单腿硬拉",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1396,
+      "name": "腰部旋转 1",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1394,
+      "name": "腰部旋转 2",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1390,
+      "name": "腰部旋转 3",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1388,
+      "name": "腰部旋转 5",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1393,
+      "name": "腰部旋转4",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1385,
+      "name": "自重硬拉",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1264,
+      "name": "超人式",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1414,
+      "name": "仰卧腿下放",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1219,
+      "name": "卧推起杠（主动）",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1458,
+      "name": "卧推起杠（静态）",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1216,
+      "name": "交叉对侧核心稳定（单侧壶铃负重）",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1227,
+      "name": "坐姿手腕伸肌拉伸",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1226,
+      "name": "坐姿手腕屈肌拉伸",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1228,
+      "name": "手腕伸肌松动",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1234,
+      "name": "手腕尺偏",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1229,
+      "name": "跪姿腕伸肌静力保持",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1464,
+      "name": "单腿平衡 2",
+      "name_en": null,
+      "muscle": "双脚",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1459,
+      "name": "单腿波速球球平衡 2",
+      "name_en": null,
+      "muscle": "双脚",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1455,
+      "name": "坐姿弹力带反向练习",
+      "name_en": null,
+      "muscle": "双脚",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1217,
+      "name": "坐姿拱足",
+      "name_en": null,
+      "muscle": "双脚",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1375,
+      "name": "外翻",
+      "name_en": null,
+      "muscle": "双脚",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1457,
+      "name": "大拇趾外展",
+      "name_en": null,
+      "muscle": "双脚",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1456,
+      "name": "大脚趾背屈",
+      "name_en": null,
+      "muscle": "双脚",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1468,
+      "name": "字母表",
+      "name_en": null,
+      "muscle": "双脚",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1460,
+      "name": "站立倒置保持",
+      "name_en": null,
+      "muscle": "双脚",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1382,
+      "name": "站立拱足",
+      "name_en": null,
+      "muscle": "双脚",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1473,
+      "name": "4点支撑位单侧动态内收肌拉伸",
+      "name_en": null,
+      "muscle": "大腿内侧",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1482,
+      "name": "侧卧内收抬腿",
+      "name_en": null,
+      "muscle": "大腿内侧",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1477,
+      "name": "侧卧内收抬腿（短杠杆）",
+      "name_en": null,
+      "muscle": "大腿内侧",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1481,
+      "name": "侧卧内收抬腿（等长）",
+      "name_en": null,
+      "muscle": "大腿内侧",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1478,
+      "name": "侧卧长力臂内收抬腿",
+      "name_en": null,
+      "muscle": "大腿内侧",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1470,
+      "name": "坐姿双侧内收肌静态拉伸",
+      "name_en": null,
+      "muscle": "大腿内侧",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1472,
+      "name": "坐姿双侧动态内收肌拉伸",
+      "name_en": null,
+      "muscle": "大腿内侧",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1475,
+      "name": "站立交替动态内收肌拉伸",
+      "name_en": null,
+      "muscle": "大腿内侧",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1437,
+      "name": "2D单腿箱上提踵",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1204,
+      "name": "俯卧撑姿势下的腓肠肌拉伸",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1441,
+      "name": "单侧地面提踵 2B",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1223,
+      "name": "单腿等长提踵",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1222,
+      "name": "双侧箱上小腿拉伸",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1444,
+      "name": "地板双腿等长提踵 1E",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1453,
+      "name": "坐姿地面小腿滚筒放松",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1331,
+      "name": "坐姿提踵",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1451,
+      "name": "提踵 1A 双腿 离心 地面",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1450,
+      "name": "提踵 1B（双腿，地面）",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1449,
+      "name": "提踵 1C（箱上双腿离心）",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1442,
+      "name": "提踵 2A（地板单侧离心）",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1435,
+      "name": "提踵 3A（比目鱼肌偏重，双腿）",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1433,
+      "name": "提踵 3B（偏重比目鱼肌，单腿）",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1262,
+      "name": "比目鱼肌拉伸",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1439,
+      "name": "箱上单腿缓降提踵 2C",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1366,
+      "name": "箱上单腿腓肠肌拉伸",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1369,
+      "name": "箱上双侧腓肠肌拉伸",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1447,
+      "name": "箱上双腿提踵 1D",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1600,
+      "name": "脚踝画圈",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1454,
+      "name": "踏板上小腿等长收缩",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1367,
+      "name": "靠墙单侧腓肠肌拉伸",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1231,
+      "name": "坐姿上斜方肌和冈上肌拉伸",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1246,
+      "name": "泡沫轴胸椎伸展",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1245,
+      "name": "肩屈曲与胸椎伸展",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1244,
+      "name": "胸椎屈伸",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1301,
+      "name": "肩胛下压",
+      "name_en": null,
+      "muscle": "斜方肌下部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1250,
+      "name": "俯卧T字抬臂",
+      "name_en": null,
+      "muscle": "斜方肌（中背）",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1298,
+      "name": "肩胛收缩",
+      "name_en": null,
+      "muscle": "斜方肌（中背）",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1426,
+      "name": "仰卧颈部伸肌放松（花生球）",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1422,
+      "name": "仰卧颈部屈曲 2",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1423,
+      "name": "仰卧颈部屈曲等长",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1220,
+      "name": "侧卧肩胛稳定圈",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1303,
+      "name": "侧卧肩袖外旋拉伸",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1286,
+      "name": "俯卧撑姿势：肩部时钟",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1406,
+      "name": "卧位肩胛提肌按摩球松解",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1413,
+      "name": "坐姿弹力带颈部侧屈",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1418,
+      "name": "坐姿弹力带颈部侧屈静力保持",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1415,
+      "name": "坐姿弹力带颈部侧屈（离心）",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1361,
+      "name": "坐姿正中神经拉伸",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1364,
+      "name": "坐姿正中神经滑动",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1427,
+      "name": "坐姿颈部伸肌手法松动",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1419,
+      "name": "坐姿颈部侧屈保持",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1424,
+      "name": "坐姿颈部屈曲等长收缩",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1420,
+      "name": "坐姿颈部旋转保持",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1278,
+      "name": "壶铃肩前举（弯肘保持）",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1277,
+      "name": "壶铃行走肩屈曲（弯肘保持）",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1218,
+      "name": "壶铃跪姿起立：肩屈曲（弯肘保持）",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1310,
+      "name": "带阻力的手腕向拇指侧偏移",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1412,
+      "name": "平躺下巴收回",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1430,
+      "name": "弹力带颈部伸展静力保持",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1429,
+      "name": "弹力带颈部后伸（离心）",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1466,
+      "name": "泡沫轴天使",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1461,
+      "name": "波速球 球 单腿平衡",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1280,
+      "name": "站立肩部屈曲活动性",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1283,
+      "name": "肩外旋/肩内旋",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1284,
+      "name": "肩外旋减速",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1299,
+      "name": "肩胛前伸",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1221,
+      "name": "肩胛稳定圈",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1462,
+      "name": "肩胛肌收缩",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1306,
+      "name": "肩袖外旋 1",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1305,
+      "name": "肩袖外旋 2",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1304,
+      "name": "肩袖外旋 3",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1324,
+      "name": "肩袖放松（拉克罗斯球）",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1287,
+      "name": "肩部外展拉伸",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1279,
+      "name": "靠墙肩部屈曲拉伸",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1431,
+      "name": "颈部伸展保持",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1428,
+      "name": "颈部伸展弹力带",
+      "name_en": null,
+      "muscle": "未知",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1312,
+      "name": "地面阻力带大腿前侧拉伸",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1436,
+      "name": "坐姿半程腿屈伸",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "open_chain"
+    },
+    {
+      "id": 1316,
+      "name": "坐姿抬腿保持",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1311,
+      "name": "坐姿股四头肌拉伸",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1440,
+      "name": "弹力带膝盖伸展",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1215,
+      "name": "毛巾滑动膝伸展",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1438,
+      "name": "毛巾辅助膝盖伸直保持",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1313,
+      "name": "泡沫轴股四头肌放松",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1483,
+      "name": "站立迷你阻力带髋屈",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1371,
+      "name": "股神经松动",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1476,
+      "name": "跪姿弓步髋屈肌拉伸 2",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1212,
+      "name": "跪姿股四头肌拉伸",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1474,
+      "name": "髋屈肌拉伸 — 跪姿弓步 3",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1479,
+      "name": "髋屈肌拉伸：跪姿弓步 1",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1480,
+      "name": "弹力带直腿髋屈",
+      "name_en": null,
+      "muscle": "股直肌",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1410,
+      "name": "斜板抬腿",
+      "name_en": null,
+      "muscle": "股直肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1432,
+      "name": "站姿抬膝保持",
+      "name_en": null,
+      "muscle": "股直肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1378,
+      "name": "坐姿哑铃头顶肱三头肌等长收缩",
+      "name_en": null,
+      "muscle": "肱三头肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1376,
+      "name": "跪姿三头肌拉克罗斯球松动",
+      "name_en": null,
+      "muscle": "肱三头肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1290,
+      "name": "哑铃辅助动作",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1233,
+      "name": "坐姿尺神经滑动",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1232,
+      "name": "坐姿尺神经牵张",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1282,
+      "name": "哑铃仰卧上拉（离心）",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1417,
+      "name": "地面泡沫轴背阔肌活动",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1379,
+      "name": "踝背屈保持",
+      "name_en": null,
+      "muscle": "胫骨前肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1380,
+      "name": "靠墙踝背屈",
+      "name_en": null,
+      "muscle": "胫骨前肌",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1295,
+      "name": "前锯肌激活平板支撑",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1291,
+      "name": "前锯肌激活：反手直拳",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1294,
+      "name": "波速球前锯肌激活平板支撑",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1320,
+      "name": "合十侧弯",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1416,
+      "name": "坐姿侧链拉伸",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1425,
+      "name": "背阔肌与体侧拉伸",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1387,
+      "name": "交叉对侧死虫式",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1293,
+      "name": "前锯肌激活：主动平板支撑",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1386,
+      "name": "同侧死虫式",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1292,
+      "name": "波速球 前锯肌激活——动态平板支撑",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1335,
+      "name": "仰卧交替动态腿后侧拉伸",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1329,
+      "name": "仰卧大腿后侧静态拉伸",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1203,
+      "name": "仰卧弹力带动态腿后侧拉伸",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1202,
+      "name": "仰卧腿后侧滑动拉伸",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1330,
+      "name": "单腿站立静态腿后侧拉伸",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1332,
+      "name": "坐姿单腿等长腘绳肌拉伸",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1334,
+      "name": "坐姿单腿腘绳肌拉伸",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1338,
+      "name": "坐姿腿后肌拉克罗斯球松解",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1337,
+      "name": "站立双侧动态大腿后侧拉伸",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1445,
+      "name": "上箱下箱跳",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1448,
+      "name": "从箱上跳下单脚着地",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1356,
+      "name": "仰卧臀部外旋拉伸",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1407,
+      "name": "侧卧加阻力蛤壳式 4",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1485,
+      "name": "侧卧外展抬腿",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1484,
+      "name": "侧卧外展抬腿（等长保持）",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1409,
+      "name": "侧卧蛤壳 2",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1408,
+      "name": "侧卧贝壳式：3 次，内旋/外旋",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1270,
+      "name": "侧步上下箱",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1321,
+      "name": "俯卧单腿后抬保持",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1359,
+      "name": "单侧臀部静态拉伸",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1260,
+      "name": "单腿上升相深蹲",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1258,
+      "name": "单腿慢放箱式深蹲",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1323,
+      "name": "四点位：髋部伸展并外旋",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1325,
+      "name": "四点支撑位髋伸展保持",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1322,
+      "name": "四点支撑位髋部伸展外旋脉冲",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1214,
+      "name": "坐姿臀外旋肌拉伸 3",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1355,
+      "name": "坐姿臀部与髋旋转肌拉伸 1",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1354,
+      "name": "坐姿臀部外旋拉伸 2",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1469,
+      "name": "弹力带臀桥",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1317,
+      "name": "弹力带臀部后踢（保持）",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1399,
+      "name": "时钟触碰",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1230,
+      "name": "波速球 球 单腿深蹲",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1265,
+      "name": "滑板式单腿深蹲",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "closed_chain"
+    },
+    {
+      "id": 1463,
+      "name": "站立八字髋关节活动",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1357,
+      "name": "站立动态臀部拉伸（抱膝）",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1318,
+      "name": "臀部伸展转侧弯",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1353,
+      "name": "臀部梨状肌放松 1 地面坐姿 拉克罗斯球",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1411,
+      "name": "贝壳式 1 侧卧",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1452,
+      "name": "跳跃并单腿着地",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1309,
+      "name": "坐姿桡神经滑动",
+      "name_en": null,
+      "muscle": "颈部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1308,
+      "name": "坐姿桡神经牵张",
+      "name_en": null,
+      "muscle": "颈部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1346,
+      "name": "站姿颈部前屈",
+      "name_en": null,
+      "muscle": "颈部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1348,
+      "name": "站立颈部伸展",
+      "name_en": null,
+      "muscle": "颈部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1341,
+      "name": "站立颈部侧屈",
+      "name_en": null,
+      "muscle": "颈部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1343,
+      "name": "站立颈部旋转",
+      "name_en": null,
+      "muscle": "颈部",
+      "secondary": null,
+      "force": "pull",
+      "kinetic": "mixed"
+    },
+    {
+      "id": 1358,
+      "name": "站立颈部绕圈",
+      "name_en": null,
+      "muscle": "颈部",
+      "secondary": null,
+      "force": "push",
+      "kinetic": "mixed"
+    }
+  ],
+  "stretch": [
+    {
+      "id": 1130,
+      "name": "交替杆旋转",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "pull"
+    },
+    {
+      "id": 1131,
+      "name": "杆旋转",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "pull"
+    },
+    {
+      "id": 141,
+      "name": "肩部拉伸 — 变体一",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 139,
+      "name": "肩部拉伸 — 变体三",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 140,
+      "name": "肩部拉伸（变体二）",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 138,
+      "name": "肩部拉伸（变体四）",
+      "name_en": null,
+      "muscle": "三角肌后束",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 166,
+      "name": "下背部拉伸（变体一）",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 165,
+      "name": "下背部拉伸（变体二）",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 163,
+      "name": "下背部拉伸（变体四）",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 164,
+      "name": "下背部拉伸（变式三）",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 155,
+      "name": "前臂拉伸（变体一）",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 153,
+      "name": "前臂拉伸（变体三）",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 154,
+      "name": "前臂拉伸（变体二）",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 152,
+      "name": "前臂拉伸（变式四）",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 158,
+      "name": "小腿拉伸（变体一）",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 156,
+      "name": "小腿拉伸（变体三）",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 157,
+      "name": "小腿拉伸（变式二）",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 132,
+      "name": "斜方肌拉伸（变体三）",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 133,
+      "name": "斜方肌拉伸（变体二）",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 134,
+      "name": "斜方肌拉伸（变式一）",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 168,
+      "name": "斜方肌/中背拉伸（变体一）",
+      "name_en": null,
+      "muscle": "斜方肌（中背）",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 167,
+      "name": "斜方肌/中背拉伸（变体二）",
+      "name_en": null,
+      "muscle": "斜方肌（中背）",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 131,
+      "name": "大腿前侧拉伸（变体一）",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 129,
+      "name": "股四头肌拉伸（变体三）",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 130,
+      "name": "股四头肌拉伸（变式二）",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 128,
+      "name": "股四头肌拉伸：变体四",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 135,
+      "name": "三头肌拉伸（变体三）",
+      "name_en": null,
+      "muscle": "肱三头肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 136,
+      "name": "三头肌拉伸（变体二）",
+      "name_en": null,
+      "muscle": "肱三头肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 137,
+      "name": "肱三头肌拉伸（变体一）",
+      "name_en": null,
+      "muscle": "肱三头肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 123,
+      "name": "二头肌拉伸（变体一）",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 121,
+      "name": "二头肌拉伸（变体三）",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 122,
+      "name": "二头肌拉伸（变体二）",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 120,
+      "name": "二头肌拉伸（变体四）",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 119,
+      "name": "肱二头肌拉伸（变式五）",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 143,
+      "name": "背阔肌拉伸 — 变体二",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 142,
+      "name": "背阔肌拉伸（变体三）",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 144,
+      "name": "背阔肌拉伸（变式一）",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 127,
+      "name": "胸肌拉伸（变体一）",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 125,
+      "name": "胸肌拉伸（变体三）",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 124,
+      "name": "胸部拉伸（变体四）",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 126,
+      "name": "胸部拉伸（变式二）",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 159,
+      "name": "腹肌拉伸 — 变式四",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 160,
+      "name": "腹肌拉伸 变体三",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 162,
+      "name": "腹肌拉伸（变体一）",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 161,
+      "name": "腹肌拉伸（变体二）",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 147,
+      "name": "腘绳肌拉伸（变式二）",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 146,
+      "name": "腿后侧拉伸 变式三",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 148,
+      "name": "腿后侧拉伸（变体一）",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 145,
+      "name": "腿后侧拉伸（变体四）",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 151,
+      "name": "臀部拉伸（变体一）",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 149,
+      "name": "臀部拉伸（变体三）",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": ""
+    },
+    {
+      "id": 150,
+      "name": "臀部拉伸（变体二）",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": ""
+    }
+  ],
+  "yoga": [
+    {
+      "id": 668,
+      "name": "反向祈祷式",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 651,
+      "name": "头倒立",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 659,
+      "name": "开腿前屈",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 660,
+      "name": "小狗式",
+      "name_en": null,
+      "muscle": "三角肌后束",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 650,
+      "name": "快乐婴儿式",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 678,
+      "name": "斯芬克斯式",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 861,
+      "name": "眼镜蛇式",
+      "name_en": null,
+      "muscle": "下背部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 622,
+      "name": "桌面式变体3",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 621,
+      "name": "桌面式（变体 2）",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 620,
+      "name": "桌面式（变体1）",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 689,
+      "name": "金刚坐 变体 2",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 688,
+      "name": "金刚坐变体1",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 636,
+      "name": "下犬式：脚尖到脚跟",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 690,
+      "name": "在下犬式中交替迈步",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 662,
+      "name": "金字塔式（小腿瑜伽砖）",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 624,
+      "name": "交叉蝴蝶式",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 649,
+      "name": "半圈颈部环绕",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 684,
+      "name": "穿针式：臀部在膝盖上方",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 641,
+      "name": "简单坐姿颈部拉伸",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 638,
+      "name": "鹰式手臂：下巴收向胸",
+      "name_en": null,
+      "muscle": "斜方肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 671,
+      "name": "合十手扭转侧角式（初级）",
+      "name_en": null,
+      "muscle": "斜方肌（中背）",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 677,
+      "name": "坐姿扭转",
+      "name_en": null,
+      "muscle": "斜方肌（中背）",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 672,
+      "name": "扭转侧角式（双手合十）",
+      "name_en": null,
+      "muscle": "斜方肌（中背）",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 625,
+      "name": "猫式",
+      "name_en": null,
+      "muscle": "斜方肌（中背）",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 642,
+      "name": "简易坐姿扭转式",
+      "name_en": null,
+      "muscle": "斜方肌（中背）",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 630,
+      "name": "新月式",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 631,
+      "name": "新月式大腿前侧拉伸",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 626,
+      "name": "椅式",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 653,
+      "name": "猴式",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 632,
+      "name": "瑜伽砖辅助新月式大腿前侧拉伸",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 652,
+      "name": "舞蹈之王",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 673,
+      "name": "跑者弓步",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 639,
+      "name": "鹰式手臂",
+      "name_en": null,
+      "muscle": "肩部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 627,
+      "name": "儿童式：肘部放在瑜伽砖上",
+      "name_en": null,
+      "muscle": "肱三头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 656,
+      "name": "单臂牛面式",
+      "name_en": null,
+      "muscle": "肱三头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 664,
+      "name": "金字塔祈祷",
+      "name_en": null,
+      "muscle": "肱三头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 635,
+      "name": "下犬式",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 633,
+      "name": "乌鸦式",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 675,
+      "name": "坐姿手臂拉伸",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 629,
+      "name": "尸体式",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 637,
+      "name": "手指朝脚的下犬式",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 674,
+      "name": "蝎式扭转",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 617,
+      "name": "儿童式（双臂前伸）",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 619,
+      "name": "儿童式（双臂贴身）",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 618,
+      "name": "儿童式（手臂前伸） 左/右",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 686,
+      "name": "双臂牛面式",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 644,
+      "name": "带瑜伽砖的扩展侧角式",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 643,
+      "name": "扩展侧角式",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 646,
+      "name": "门式：脊柱圆背，抬头向上看",
+      "name_en": null,
+      "muscle": "背阔肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 655,
+      "name": "山",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 623,
+      "name": "弓式",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 691,
+      "name": "战士一式",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 693,
+      "name": "战士二式",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 685,
+      "name": "树式",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 696,
+      "name": "瑜伽手臂时钟",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 683,
+      "name": "辅助鱼式",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 682,
+      "name": "仰卧扭转",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 676,
+      "name": "坐姿侧弯式",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 670,
+      "name": "扭转头碰膝式",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 695,
+      "name": "野性之舞式",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 645,
+      "name": "门式变体：手臂侧伸",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 687,
+      "name": "上 弓式 轮式",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 648,
+      "name": "半猴式",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 657,
+      "name": "坐姿前屈",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 694,
+      "name": "宽距站立前屈，握住脚跟",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 692,
+      "name": "战士三式",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 681,
+      "name": "站姿前屈",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 680,
+      "name": "站姿前屈（瑜伽砖）",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 663,
+      "name": "金字塔式",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 661,
+      "name": "金字塔式（瑜伽砖）",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 665,
+      "name": "仰卧鸽式",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 647,
+      "name": "半莲花坐",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 634,
+      "name": "双腿鸽式",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 666,
+      "name": "放松牛面式（腿部）",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 658,
+      "name": "鸽子式",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold"
+    }
+  ],
+  "cardio": [
+    {
+      "id": 1089,
+      "name": "有氧 突击 单车",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1095,
+      "name": "有氧交叉开合跳",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1102,
+      "name": "有氧开合跳",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1091,
+      "name": "阻力带按压开合跳",
+      "name_en": null,
+      "muscle": "三角肌前束",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1092,
+      "name": "弹力带反向飞鸟开合跳",
+      "name_en": null,
+      "muscle": "三角肌后束",
+      "secondary": null,
+      "force": "pull"
+    },
+    {
+      "id": 1099,
+      "name": "有氧 前进进出步",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1098,
+      "name": "有氧前剪刀腿",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 704,
+      "name": "脚尖点地",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1100,
+      "name": "有氧 — 进出动作",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1116,
+      "name": "有氧 单腿向前跳",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1097,
+      "name": "有氧8字冲刺",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1105,
+      "name": "有氧·侧向快速踏步",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1124,
+      "name": "有氧三步海斯曼",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1106,
+      "name": "有氧侧向滑步",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1121,
+      "name": "有氧原地冲刺",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1115,
+      "name": "有氧折返冲刺",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1114,
+      "name": "有氧海豹开合跳",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1107,
+      "name": "有氧立定跳远",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1104,
+      "name": "有氧膝部点触",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1096,
+      "name": "有氧钻石跳",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1101,
+      "name": "有氧：内内外外侧移步",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1117,
+      "name": "有氧：单腿侧跳",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1109,
+      "name": "有氧：快速脚步",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1108,
+      "name": "有氧：跳远后退滑步",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1119,
+      "name": "滑步跳到单腿波比",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1200,
+      "name": "跑步机冲刺",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1199,
+      "name": "跑步机慢跑",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1201,
+      "name": "跑步机步行",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1597,
+      "name": "跳绳",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1094,
+      "name": "踏箱快速脚步",
+      "name_en": null,
+      "muscle": "小腿",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1486,
+      "name": "跑步机倒退行走",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1090,
+      "name": "弹力带锤式弯举开合跳",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1112,
+      "name": "有氧 划船 划船机 划船器",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1111,
+      "name": "有氧划船 划船机 四拍冲刺起步",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1110,
+      "name": "有氧划船机（仅用手臂）",
+      "name_en": null,
+      "muscle": "肱二头肌",
+      "secondary": null,
+      "force": "pull"
+    },
+    {
+      "id": 1088,
+      "name": "有氧 突击 单车（仅用手臂）",
+      "name_en": null,
+      "muscle": "胸部",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1120,
+      "name": "有氧滑雪机",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "pull"
+    },
+    {
+      "id": 1599,
+      "name": "踢臀跑",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "pull"
+    },
+    {
+      "id": 1093,
+      "name": "阻力带海豹开合跳",
+      "name_en": null,
+      "muscle": "臀中肌",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1569,
+      "name": "动感单车",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1113,
+      "name": "有氧划船（仅用腿部）",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1103,
+      "name": "有氧卡拉OK",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1122,
+      "name": "有氧踏步开合跳",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1696,
+      "name": "椭圆机",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1118,
+      "name": "滑冰跳",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push"
+    },
+    {
+      "id": 1487,
+      "name": "跑步机侧向滑步",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "push"
+    }
+  ],
+  "hold": [
+    {
+      "id": 871,
+      "name": "前臂平板支撑（长杠杆）",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1642,
+      "name": "悬垂L坐",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 327,
+      "name": "直臂平板支撑",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 328,
+      "name": "空心支撑",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 324,
+      "name": "长杠杆平板支撑",
+      "name_en": null,
+      "muscle": "下腹部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1643,
+      "name": "悬垂",
+      "name_en": null,
+      "muscle": "前臂肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1596,
+      "name": "靠墙静蹲",
+      "name_en": null,
+      "muscle": "股四头肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 326,
+      "name": "侧平板支撑（手撑）",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1572,
+      "name": "徒手胸椎旋转",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 325,
+      "name": "肘部侧平板支撑",
+      "name_en": null,
+      "muscle": "腹斜肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1522,
+      "name": "交替触脚跟",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1774,
+      "name": "健身球绕圈",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 204,
+      "name": "前臂平板支撑",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1593,
+      "name": "平板支撑抬臂",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1592,
+      "name": "自重平板支撑开合跳",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1333,
+      "name": "锯式平板支撑",
+      "name_en": null,
+      "muscle": "腹直肌",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1570,
+      "name": "自重蝴蝶式拉伸",
+      "name_en": null,
+      "muscle": "腹股沟",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1573,
+      "name": "自重单腿稳定平衡",
+      "name_en": null,
+      "muscle": "腿后肌群",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1363,
+      "name": "单腿交替臀桥等长保持",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1352,
+      "name": "开角等长腘绳肌桥",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold"
+    },
+    {
+      "id": 1571,
+      "name": "自重90/90髋部拉伸",
+      "name_en": null,
+      "muscle": "臀部",
+      "secondary": null,
+      "force": "hold"
+    }
+  ]
+}

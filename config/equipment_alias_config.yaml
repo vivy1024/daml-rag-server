@@ -1,0 +1,261 @@
+# 中国健身房器械别名配置
+# 版本: 1.0.0
+# 更新日期: 2025-12-26
+# 说明: 将中国健身房常用的器械名称映射到MuscleWiki英文名称
+# 注意: 不修改Neo4j数据库，仅在代码层面添加别名映射
+
+# 别名映射规则:
+# - 中文别名 → MuscleWiki英文名称
+# - 支持多个中文别名映射到同一个英文名称
+# - 英文名称必须与Neo4j中Exercise节点的equipment_zh字段匹配
+
+equipment_aliases:
+  # ==================== 绳索/龙门架类 ====================
+  # MuscleWiki名称: Cable
+  cable:
+    english_name: "Cable"
+    chinese_aliases:
+      - "龙门架"
+      - "绳索"
+      - "拉力器"
+      - "大飞鸟"
+      - "小飞鸟"
+      - "绳索机"
+      - "缆绳"
+      - "滑轮"
+    description: "绳索/龙门架类器械，适合各种拉力训练"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # ==================== 史密斯机 ====================
+  # MuscleWiki名称: Smith Machine
+  smith_machine:
+    english_name: "Smith Machine"
+    chinese_aliases:
+      - "史密斯机"
+      - "史密斯架"
+      - "固定杠铃架"
+    description: "固定轨道杠铃架，适合新手安全训练"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # ==================== 自由重量 ====================
+  # MuscleWiki名称: Barbell
+  barbell:
+    english_name: "Barbell"
+    chinese_aliases:
+      - "杠铃"
+      - "奥林匹克杠铃"
+      - "标准杠铃"
+      - "曲杆"
+      - "EZ杆"
+      - "W杆"
+    description: "杠铃类器械，力量训练核心器械"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # MuscleWiki名称: Dumbbell
+  dumbbell:
+    english_name: "Dumbbell"
+    chinese_aliases:
+      - "哑铃"
+      - "可调节哑铃"
+      - "固定哑铃"
+      - "六角哑铃"
+    description: "哑铃类器械，最基础的自由重量器械"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # MuscleWiki名称: Kettlebell
+  kettlebell:
+    english_name: "Kettlebell"
+    chinese_aliases:
+      - "壶铃"
+      - "俄式壶铃"
+    description: "壶铃，适合功能性训练和爆发力训练"
+    common_in_gyms: true
+    university_gym_available: false
+
+  # ==================== 固定器械 ====================
+  # MuscleWiki名称: Machine
+  machine:
+    english_name: "Machine"
+    chinese_aliases:
+      - "器械"
+      - "固定器械"
+      - "坐姿推胸机"
+      - "高位下拉机"
+      - "腿举机"
+      - "蝴蝶机"
+      - "夹胸机"
+      - "腿屈伸机"
+      - "腿弯举机"
+      - "坐姿划船机"
+      - "肩推机"
+      - "臂屈伸机"
+      - "二头弯举机"
+      - "腹肌机"
+      - "背部伸展机"
+      - "臀桥机"
+      - "内收机"
+      - "外展机"
+      - "小腿提踵机"
+    description: "固定器械，轨道固定，适合新手和孤立训练"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # ==================== 自重训练 ====================
+  # MuscleWiki名称: Body Weight
+  body_weight:
+    english_name: "Body Weight"
+    chinese_aliases:
+      - "徒手"
+      - "自重"
+      - "无器械"
+      - "自身体重"
+    description: "自重训练，无需器械"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # ==================== 辅助器械 ====================
+  # MuscleWiki名称: Bench
+  bench:
+    english_name: "Bench"
+    chinese_aliases:
+      - "卧推凳"
+      - "训练凳"
+      - "可调节凳"
+      - "平板凳"
+      - "斜板凳"
+      - "上斜凳"
+      - "下斜凳"
+      - "罗马椅"
+    description: "训练凳，配合其他器械使用"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # MuscleWiki名称: Pull-up Bar
+  pull_up_bar:
+    english_name: "Pull-up Bar"
+    chinese_aliases:
+      - "引体向上杆"
+      - "单杠"
+      - "引体杆"
+      - "吊杠"
+    description: "引体向上杆，背部训练必备"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # MuscleWiki名称: Dip Station
+  dip_station:
+    english_name: "Dip Station"
+    chinese_aliases:
+      - "双杠"
+      - "臂屈伸架"
+      - "双杠架"
+    description: "双杠，胸部和三头肌训练"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # ==================== 有氧器械 ====================
+  # MuscleWiki名称: Treadmill
+  treadmill:
+    english_name: "Treadmill"
+    chinese_aliases:
+      - "跑步机"
+      - "电动跑步机"
+    description: "跑步机，有氧训练器械"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # MuscleWiki名称: Rowing Machine
+  rowing_machine:
+    english_name: "Rowing Machine"
+    chinese_aliases:
+      - "划船机"
+      - "风阻划船机"
+      - "水阻划船机"
+    description: "划船机，全身有氧训练"
+    common_in_gyms: true
+    university_gym_available: false
+
+  # MuscleWiki名称: Exercise Ball
+  exercise_ball:
+    english_name: "Exercise Ball"
+    chinese_aliases:
+      - "瑜伽球"
+      - "健身球"
+      - "稳定球"
+      - "瑞士球"
+    description: "健身球，核心稳定性训练"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # ==================== 其他器械 ====================
+  # MuscleWiki名称: Resistance Band
+  resistance_band:
+    english_name: "Resistance Band"
+    chinese_aliases:
+      - "弹力带"
+      - "阻力带"
+      - "拉力带"
+      - "弹力绳"
+    description: "弹力带，便携式阻力训练器械"
+    common_in_gyms: true
+    university_gym_available: true
+
+  # MuscleWiki名称: Medicine Ball
+  medicine_ball:
+    english_name: "Medicine Ball"
+    chinese_aliases:
+      - "药球"
+      - "实心球"
+      - "重力球"
+    description: "药球，功能性训练和爆发力训练"
+    common_in_gyms: true
+    university_gym_available: false
+
+  # MuscleWiki名称: Foam Roller
+  foam_roller:
+    english_name: "Foam Roller"
+    chinese_aliases:
+      - "泡沫轴"
+      - "滚筒"
+      - "筋膜放松轴"
+    description: "泡沫轴，肌肉放松和恢复"
+    common_in_gyms: true
+    university_gym_available: true
+
+# ==================== 大学健身房基础配置 ====================
+# 大学健身房通常配备的基础器械列表
+university_gym_basic_equipment:
+  - "哑铃"
+  - "杠铃"
+  - "卧推凳"
+  - "单杠"
+  - "双杠"
+  - "龙门架"
+  - "史密斯机"
+  - "固定器械"
+  - "跑步机"
+  - "瑜伽球"
+  - "弹力带"
+
+# ==================== 商业健身房标准配置 ====================
+# 商业健身房通常配备的器械列表
+commercial_gym_standard_equipment:
+  - "哑铃"
+  - "杠铃"
+  - "壶铃"
+  - "卧推凳"
+  - "单杠"
+  - "双杠"
+  - "龙门架"
+  - "史密斯机"
+  - "固定器械"
+  - "跑步机"
+  - "划船机"
+  - "瑜伽球"
+  - "弹力带"
+  - "药球"
+  - "泡沫轴"
