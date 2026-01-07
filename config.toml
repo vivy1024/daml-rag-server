@@ -1,0 +1,114 @@
+# Meta-Learning MCP配置文件
+
+[server]
+name = "meta-learning-mcp"
+version = "1.0.0"
+description = "通用元学习MCP服务器"
+
+[storage]
+# 向量存储类型: "faiss" | "chromadb" | "qdrant"
+type = "faiss"
+path = "./data/vectors"
+dimension = 1024  # GTE-Large-zh维度（1024维，阿里达摩院，中文优化）
+
+# faiss索引类型选择（根据规模）
+# - "IndexFlatL2": 精确检索，<10万向量（当前默认）
+# - "IndexIVFFlat": 聚类加速，10-50万向量
+# - "IndexHNSW": 图索引，50-100万向量
+index_type = "IndexFlatL2"
+
+# IVF索引参数（仅当index_type="IndexIVFFlat"时有效）
+nlist = 100      # 聚类数（建议: sqrt(n))
+nprobe = 10      # 搜索的聚类数（越大越准确但越慢）
+
+# HNSW索引参数（仅当index_type="IndexHNSW"时有效）
+M = 32                # 每个节点的连接数（16-64）
+efConstruction = 200  # 构建时搜索深度
+efSearch = 100        # 查询时搜索深度
+
+# 参考文档: docs/理论基础/向量存储选型指南.md
+
+[embedding]
+# 嵌入模型选择（影响dimension配置）
+# 推荐选项:
+# - "thenlper/gte-large-zh" (1024维, 阿里达摩院, 中文优化, 相关性94.4%) ← 生产模式
+# - "sentence-transformers/all-MiniLM-L6-v2" (384维, 快速, 通用)
+# - "sentence-transformers/all-mpnet-base-v2" (768维, 高质量, 慢)
+# - "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2" (384维, 多语言)
+model = "thenlper/gte-large-zh"
+batch_size = 32
+
+# 性能vs质量权衡:
+# - MiniLM-L6: 42ms/100条, 80MB内存, MTEB 58.8分 (推荐)
+# - mpnet-base: 156ms/100条, 420MB内存, MTEB 63.3分
+# 参考: docs/理论基础/向量存储选型指南.md#嵌入模型选择
+
+[memory]
+# Session Memory (Redis)
+redis_host = "localhost"
+redis_port = 6379
+redis_db = 0
+session_ttl = 3600  # 1小时
+
+# Metadata DB (SQLite)
+metadata_db_path = "./data/metadata.db"
+
+[quality]
+# 质量监控阈值
+min_similarity = 0.6      # 最小相似度
+min_reward = 3.5          # 最小奖励分数（1-5）
+reteach_threshold = 0.85  # 重新教学阈值
+
+[knowledge_graph]
+# Neo4j配置（Docker环境）
+enabled = true
+uri = "bolt://neo4j:7687"
+user = "neo4j"
+password = "fitness123"
+
+[performance]
+# VCP验证的性能优化配置
+# Worker Pool配置
+embedding_workers = 4          # 并发worker数量
+embedding_batch_size = 10      # 每批处理文本数
+
+# SearchCache配置  
+cache_max_size = 100           # 最大缓存条目数
+cache_ttl_seconds = 60         # 缓存过期时间(秒)
+
+# LRU内存管理配置
+max_memory_mb = 500            # 最大内存使用(MB)
+memory_eviction_threshold = 0.8  # 淘汰阈值(80%)
+prewarm_count = 5              # 预热top N领域
+
+# Retry配置
+max_retry_attempts = 3         # 最大重试次数
+base_delay_ms = 1000           # 基础延迟(毫秒)
+max_delay_ms = 10000           # 最大延迟(毫秒)
+
+# VCP生产验证数据:
+# - 向量化吞吐量提升70%
+# - 缓存命中率60%+
+# - API稳定性从85%提升到98%
+# - 内存使用稳定在阈值以下
+
+[query_complexity]
+# 查询复杂度分类配置（v3.2.0新增）
+# 使用GTE-Large-zh向量模型替代硬编码关键词，智能判断查询复杂度
+bge_model_name = "thenlper/gte-large-zh"  # 更新为GTE-Large-zh
+similarity_threshold = 0.7    # >= 此值判定为复杂查询 → DeepSeek
+moderate_threshold = 0.5      # < 此值判定为简单查询 → Ollama
+use_fallback_keywords = true  # 模型加载失败时使用关键词兜底
+enable_vector_cache = true    # 启用向量缓存（预计算复杂查询向量库）
+lazy_load_model = true        # 懒加载模型（首次使用时才加载）
+
+# 分类策略:
+# - 高相似度（>= 0.7）: 与复杂查询示例高度相似 → 使用教师模型（DeepSeek）
+# - 低相似度（< 0.5）: 简单查询 → 使用学生模型（Ollama）
+# - 中等相似度（0.5-0.7）: 需要结合Few-Shot判断 → 保守策略（DeepSeek）
+
+[logging]
+level = "INFO"
+format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+json_format = false  # 结构化JSON日志（生产环境建议true）
+

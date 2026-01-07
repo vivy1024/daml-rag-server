@@ -1,0 +1,405 @@
+{
+  "title": "DAML-RAG 性能监控",
+  "tags": ["daml-rag", "performance", "monitoring"],
+  "timezone": "browser",
+  "schemaVersion": 16,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+      {
+        "id": 1,
+        "title": "请求耗时 (P95)",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(request_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{endpoint}} - {{method}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Duration"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "请求速率",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(requests_total[5m])",
+            "legendFormat": "{{endpoint}} - {{status}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "reqps",
+            "label": "Requests/sec"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "错误率",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(errors_total[5m])",
+            "legendFormat": "{{error_type}} - {{component}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Errors/sec"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "缓存命中率",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(cache_hits_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m]))",
+            "legendFormat": "{{cache_type}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percentunit",
+            "label": "Hit Rate",
+            "max": 1,
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "CPU使用率",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 16,
+          "w": 8,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "cpu_usage_percent",
+            "legendFormat": "CPU",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "Usage",
+            "max": 100,
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "内存使用量",
+        "type": "graph",
+        "gridPos": {
+          "x": 8,
+          "y": 16,
+          "w": 8,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "memory_usage_bytes",
+            "legendFormat": "Memory",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "bytes",
+            "label": "Usage"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "活跃连接数",
+        "type": "graph",
+        "gridPos": {
+          "x": 16,
+          "y": 16,
+          "w": 8,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "active_connections",
+            "legendFormat": "Connections",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Count"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "检索耗时（按层级）",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 24,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(retrieval_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{layer}} - {{query_type}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Duration"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "LLM调用耗时",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 24,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(llm_call_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{model}} - {{call_type}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Duration"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "系统健康状态",
+        "type": "stat",
+        "gridPos": {
+          "x": 0,
+          "y": 32,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "up",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "center",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": ["lastNotNull"],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "value_and_name"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "DOWN",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "UP",
+                    "color": "green"
+                  }
+                }
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "red"
+                },
+                {
+                  "value": 1,
+                  "color": "green"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "总请求数 (24小时)",
+        "type": "stat",
+        "gridPos": {
+          "x": 6,
+          "y": 32,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(requests_total[24h]))",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": ["lastNotNull"],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 12,
+        "title": "平均响应时间",
+        "type": "stat",
+        "gridPos": {
+          "x": 12,
+          "y": 32,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "avg(rate(request_duration_seconds_sum[5m]) / rate(request_duration_seconds_count[5m]))",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": ["lastNotNull"],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "value_and_name"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 13,
+        "title": "错误计数 (1小时)",
+        "type": "stat",
+        "gridPos": {
+          "x": 18,
+          "y": 32,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(errors_total[1h]))",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": ["lastNotNull"],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "value_and_name"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "green"
+                },
+                {
+                  "value": 10,
+                  "color": "yellow"
+                },
+                {
+                  "value": 50,
+                  "color": "red"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  
+}

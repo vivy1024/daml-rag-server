@@ -1,0 +1,1190 @@
+# -*- coding: utf-8 -*-
+"""
+Layer3 业务规则引擎 - 增强版
+
+基于设计文档Requirements 11.1-11.6, 18.1-18.6实现的专业规则引擎。
+
+规则分类:
+1. 运动学规则 (kinetic_chain_rule, force_balance_rule)
+2. 安全规则 (joint_load_rule, postural_correction_rule)
+3. 恢复规则 (recovery_time_rule)
+4. 领域专业约束 (goal_alignment, progressive_overload, nutrition)
+
+版本: v1.0.0
+日期: 2026-01-06
+作者: 薛小川
+"""
+
+import logging
+from typing import Dict, List, Any, Optional, Tuple
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+
+logger = logging.getLogger(__name__)
+
+
+# ============ 枚举定义 ============
+
+class ForceType(Enum):
+    """力的方向类型"""
+    PUSH = "push"
+    PULL = "pull"
+    HOLD = "hold"
+    UNKNOWN = "unknown"
+
+
+class KineticChainType(Enum):
+    """动力链类型"""
+    OPEN = "open_chain"
+    CLOSED = "closed_chain"
+    MIXED = "mixed"
+    UNKNOWN = "unknown"
+
+
+class BodyType(Enum):
+    """体型分类"""
+    ECTOMORPH = "ectomorph"      # 外胚型（瘦长型）
+    MESOMORPH = "mesomorph"      # 中胚型（肌肉型）
+    ENDOMORPH = "endomorph"      # 内胚型（圆润型）
+    UNKNOWN = "unknown"
+
+
+class TrainingGoal(Enum):
+    """训练目标"""
+    MUSCLE_GAIN = "muscle_gain"           # 增肌
+    FAT_LOSS = "fat_loss"                 # 减脂
+    STRENGTH = "strength"                  # 力量
+    ENDURANCE = "endurance"               # 耐力
+    BODY_SHAPING = "body_shaping"         # 塑形
+    FUNCTIONAL = "functional"              # 功能性
+    PERFORMANCE = "performance"            # 运动表现
+    REHABILITATION = "rehabilitation"      # 康复
+    GENERAL_FITNESS = "general_fitness"   # 综合健身
+
+
+# ============ 数据类定义 ============
+
+@dataclass
+class RuleExecutionResult:
+    """规则执行结果"""
+    rule_name: str
+    applied: bool
+    candidates_before: int
+    candidates_after: int
+    execution_time_ms: float
+    details: Dict[str, Any] = field(default_factory=dict)
+    filtered_exercises: List[str] = field(default_factory=list)
+    boosted_exercises: List[str] = field(default_factory=list)
+
+
+@dataclass
+class Layer3ExecutionLog:
+    """Layer3执行日志"""
+    user_id: Optional[str]
+    query: str
+    rules_applied: List[RuleExecutionResult]
+    total_candidates: int
+    filtered_candidates: int
+    execution_time_ms: float
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+
+
+# ============ 肌肉恢复时间配置 ============
+
+MUSCLE_RECOVERY_HOURS = {
+    # 大肌群 - 需要更长恢复时间
+    "胸大肌": 72, "背阔肌": 72, "股四头肌": 72, "腘绳肌": 72, "臀大肌": 72,
+    "Pectoralis Major": 72, "Latissimus Dorsi": 72, "Quadriceps": 72, 
+    "Hamstrings": 72, "Gluteus Maximus": 72,
+    
+    # 中等肌群
+    "三角肌": 48, "斜方肌": 48, "竖脊肌": 48, "腹直肌": 48,
+    "Deltoid": 48, "Trapezius": 48, "Erector Spinae": 48, "Rectus Abdominis": 48,
+    
+    # 小肌群 - 恢复较快
+    "肱二头肌": 36, "肱三头肌": 36, "前臂": 36, "小腿": 36,
+    "Biceps": 36, "Triceps": 36, "Forearm": 36, "Calves": 36,
+    
+    # 默认值
+    "default": 48
+}
+
+
+# ============ 体态问题与肌肉关联 ============
+
+POSTURAL_ISSUE_MUSCLES = {
+    "骨盆前倾": {
+        "tight_muscles": ["髂腰肌", "股直肌", "竖脊肌"],
+        "weak_muscles": ["臀大肌", "腹直肌", "腘绳肌"],
+        "corrective_keywords": ["臀桥", "死虫", "平板支撑", "腘绳肌拉伸"],
+        "aggravating_keywords": ["深蹲", "硬拉", "弓步蹲"]
+    },
+    "骨盆后倾": {
+        "tight_muscles": ["腘绳肌", "臀大肌", "腹直肌"],
+        "weak_muscles": ["髂腰肌", "竖脊肌", "股直肌"],
+        "corrective_keywords": ["髋屈肌拉伸", "猫牛式", "超人式"],
+        "aggravating_keywords": ["卷腹", "仰卧起坐"]
+    },
+    "圆肩": {
+        "tight_muscles": ["胸大肌", "胸小肌", "前三角肌"],
+        "weak_muscles": ["菱形肌", "中下斜方肌", "后三角肌"],
+        "corrective_keywords": ["面拉", "反向飞鸟", "YTWL", "胸椎伸展"],
+        "aggravating_keywords": ["卧推", "俯卧撑", "前平举"]
+    },
+    "头前伸": {
+        "tight_muscles": ["胸锁乳突肌", "斜角肌", "上斜方肌"],
+        "weak_muscles": ["深层颈屈肌", "中下斜方肌"],
+        "corrective_keywords": ["颈部收缩", "下巴收紧", "颈部拉伸"],
+        "aggravating_keywords": ["耸肩", "颈后推举"]
+    },
+    "驼背": {
+        "tight_muscles": ["胸大肌", "腹直肌", "髂腰肌"],
+        "weak_muscles": ["竖脊肌", "菱形肌", "后三角肌"],
+        "corrective_keywords": ["胸椎伸展", "猫牛式", "眼镜蛇式", "面拉"],
+        "aggravating_keywords": ["卷腹", "仰卧起坐", "俯身划船"]
+    },
+    "脊柱侧弯": {
+        "tight_muscles": [],  # 因人而异
+        "weak_muscles": ["核心肌群"],
+        "corrective_keywords": ["侧平板", "单侧训练", "核心稳定"],
+        "aggravating_keywords": ["大重量深蹲", "大重量硬拉"]
+    }
+}
+
+
+# ============ 训练目标与动作特征匹配 ============
+
+GOAL_EXERCISE_PREFERENCES = {
+    TrainingGoal.MUSCLE_GAIN: {
+        "preferred_mechanics": ["compound", "isolation"],
+        "preferred_force": ["push", "pull"],
+        "rep_range": (8, 12),
+        "intensity_range": (0.65, 0.75),
+        "rest_seconds": (60, 90)
+    },
+    TrainingGoal.FAT_LOSS: {
+        "preferred_mechanics": ["compound"],
+        "preferred_force": ["push", "pull"],
+        "rep_range": (12, 20),
+        "intensity_range": (0.50, 0.65),
+        "rest_seconds": (30, 45)
+    },
+    TrainingGoal.STRENGTH: {
+        "preferred_mechanics": ["compound"],
+        "preferred_force": ["push", "pull"],
+        "rep_range": (1, 5),
+        "intensity_range": (0.85, 1.0),
+        "rest_seconds": (180, 300)
+    },
+    TrainingGoal.ENDURANCE: {
+        "preferred_mechanics": ["compound", "isolation"],
+        "preferred_force": ["push", "pull", "hold"],
+        "rep_range": (15, 25),
+        "intensity_range": (0.40, 0.60),
+        "rest_seconds": (15, 30)
+    },
+    TrainingGoal.REHABILITATION: {
+        "preferred_mechanics": ["isolation"],
+        "preferred_force": ["hold"],
+        "preferred_kinetic_chain": ["closed_chain"],
+        "rep_range": (12, 20),
+        "intensity_range": (0.30, 0.50),
+        "rest_seconds": (60, 90)
+    }
+}
+
+
+
+
+# ============ Layer3规则引擎类 ============
+
+class Layer3RuleEngine:
+    """
+    Layer3 业务规则引擎 - 增强版
+    
+    实现Requirements:
+    - 11.1: kinetic_chain_rule（动力链规则）
+    - 11.2: force_balance_rule（推拉平衡规则）
+    - 11.3: joint_load_rule（关节负荷规则）
+    - 11.4: recovery_time_rule（恢复时间规则）
+    - 11.5: relevancy_score（相关性评分）
+    - 11.6: 规则执行日志
+    - 18.1: body_type_constraint（体型约束）
+    - 18.2: training_frequency_constraint（训练频率约束）
+    - 18.3: session_duration_constraint（训练时长约束）
+    - 18.4: goal_alignment_constraint（目标对齐约束）
+    - 18.5: progressive_overload_constraint（渐进超负荷约束）
+    - 18.6: nutrition_constraint（营养约束）
+    """
+    
+    # 规则列表（按执行顺序）
+    RULES = [
+        # 安全规则（优先级最高）
+        "joint_load_rule",
+        "postural_correction_rule",
+        
+        # 运动学规则
+        "kinetic_chain_rule",
+        "force_balance_rule",
+        
+        # 恢复规则
+        "recovery_time_rule",
+        
+        # 领域专业约束
+        "body_type_constraint",
+        "training_frequency_constraint",
+        "session_duration_constraint",
+        "goal_alignment_constraint",
+        "progressive_overload_constraint",
+        "nutrition_constraint",
+    ]
+    
+    def __init__(self, neo4j_client=None):
+        """
+        初始化Layer3规则引擎
+        
+        Args:
+            neo4j_client: Neo4j客户端（可选，用于查询关系数据）
+        """
+        self.neo4j_client = neo4j_client
+        self.execution_logs: List[Layer3ExecutionLog] = []
+        
+        logger.info("Layer3RuleEngine initialized with %d rules", len(self.RULES))
+    
+    async def apply_all_rules(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Optional[Dict[str, Any]] = None,
+        query: str = "",
+        session_context: Optional[Dict[str, Any]] = None,
+        recent_training: Optional[List[Dict[str, Any]]] = None,
+        top_k: int = 10,
+        enabled_rules: Optional[List[str]] = None
+    ) -> Tuple[List[Dict[str, Any]], Layer3ExecutionLog]:
+        """
+        应用所有Layer3规则
+        
+        Args:
+            candidates: 候选动作列表
+            user_profile: 用户档案
+            query: 用户查询
+            session_context: 会话上下文（包含已选动作的推拉统计等）
+            recent_training: 最近训练记录
+            top_k: 返回结果数
+            enabled_rules: 启用的规则列表（None表示全部启用）
+            
+        Returns:
+            Tuple[List[Dict], Layer3ExecutionLog]: 过滤后的候选列表和执行日志
+        """
+        start_time = datetime.now()
+        user_profile = user_profile or {}
+        session_context = session_context or {}
+        recent_training = recent_training or []
+        
+        rules_to_apply = enabled_rules or self.RULES
+        rule_results: List[RuleExecutionResult] = []
+        
+        current_candidates = candidates.copy()
+        
+        logger.info(f"Layer3规则引擎开始: {len(candidates)}个候选, {len(rules_to_apply)}条规则")
+        
+        for rule_name in rules_to_apply:
+            if not hasattr(self, f"_apply_{rule_name}"):
+                logger.warning(f"规则 {rule_name} 未实现，跳过")
+                continue
+            
+            rule_start = datetime.now()
+            candidates_before = len(current_candidates)
+            
+            try:
+                rule_method = getattr(self, f"_apply_{rule_name}")
+                current_candidates, details = await rule_method(
+                    candidates=current_candidates,
+                    user_profile=user_profile,
+                    query=query,
+                    session_context=session_context,
+                    recent_training=recent_training
+                )
+                
+                rule_time = (datetime.now() - rule_start).total_seconds() * 1000
+                
+                rule_result = RuleExecutionResult(
+                    rule_name=rule_name,
+                    applied=True,
+                    candidates_before=candidates_before,
+                    candidates_after=len(current_candidates),
+                    execution_time_ms=rule_time,
+                    details=details
+                )
+                rule_results.append(rule_result)
+                
+                logger.debug(
+                    f"  → {rule_name}: {candidates_before} → {len(current_candidates)} "
+                    f"({rule_time:.1f}ms)"
+                )
+                
+            except Exception as e:
+                logger.error(f"规则 {rule_name} 执行失败: {e}")
+                rule_results.append(RuleExecutionResult(
+                    rule_name=rule_name,
+                    applied=False,
+                    candidates_before=candidates_before,
+                    candidates_after=candidates_before,
+                    execution_time_ms=0,
+                    details={"error": str(e)}
+                ))
+        
+        # 限制返回数量
+        final_candidates = current_candidates[:top_k]
+        
+        # 构建执行日志
+        total_time = (datetime.now() - start_time).total_seconds() * 1000
+        execution_log = Layer3ExecutionLog(
+            user_id=user_profile.get("user_id"),
+            query=query,
+            rules_applied=rule_results,
+            total_candidates=len(candidates),
+            filtered_candidates=len(final_candidates),
+            execution_time_ms=total_time
+        )
+        
+        self.execution_logs.append(execution_log)
+        
+        logger.info(
+            f"Layer3规则引擎完成: {len(candidates)} → {len(final_candidates)} "
+            f"({total_time:.1f}ms)"
+        )
+        
+        return final_candidates, execution_log
+    
+    # ============ 运动学规则 ============
+    
+    async def _apply_kinetic_chain_rule(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        动力链规则 - 康复场景优先闭链动作
+        
+        Requirements: 11.1
+        
+        规则逻辑:
+        - 康复阶段用户优先推荐闭链动作（closed_chain）
+        - 闭链动作更安全，关节负荷更可控
+        """
+        health_profile = user_profile.get("health_profile", {})
+        rehabilitation_phase = health_profile.get("rehabilitation_phase")
+        injuries = health_profile.get("injuries", [])
+        
+        # 如果不是康复阶段且没有伤病，不应用此规则
+        if not rehabilitation_phase and not injuries:
+            return candidates, {"skipped": True, "reason": "非康复场景"}
+        
+        # 分离闭链和开链动作
+        closed_chain = []
+        open_chain = []
+        other = []
+        
+        for candidate in candidates:
+            kinetic_chain = self._get_kinetic_chain(candidate)
+            
+            if kinetic_chain == KineticChainType.CLOSED:
+                # 闭链动作加分
+                candidate["kinetic_chain_boost"] = 0.2
+                closed_chain.append(candidate)
+            elif kinetic_chain == KineticChainType.OPEN:
+                open_chain.append(candidate)
+            else:
+                other.append(candidate)
+        
+        # 闭链优先排序
+        sorted_candidates = closed_chain + other + open_chain
+        
+        return sorted_candidates, {
+            "closed_chain_count": len(closed_chain),
+            "open_chain_count": len(open_chain),
+            "rehabilitation_phase": rehabilitation_phase,
+            "has_injuries": bool(injuries)
+        }
+    
+    async def _apply_force_balance_rule(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        推拉平衡规则 - 确保push:pull比例在1:1到2:1之间
+        
+        Requirements: 11.2
+        
+        规则逻辑:
+        - 统计当前会话的推拉比例
+        - 如果推力过多，优先推荐拉力动作
+        - 如果拉力过多，优先推荐推力动作
+        """
+        # 获取当前会话的推拉统计
+        push_count = session_context.get("push_count", 0)
+        pull_count = session_context.get("pull_count", 0)
+        
+        # 如果没有会话上下文，不调整排序
+        if push_count == 0 and pull_count == 0:
+            return candidates, {"skipped": True, "reason": "无会话上下文"}
+        
+        # 计算当前比例
+        if pull_count > 0:
+            current_ratio = push_count / pull_count
+        else:
+            current_ratio = float('inf') if push_count > 0 else 1.0
+        
+        # 根据比例调整排序
+        if current_ratio > 2.0:
+            # 推力过多，优先拉力
+            candidates = sorted(
+                candidates,
+                key=lambda x: (
+                    0 if self._get_force_type(x) == ForceType.PULL else 1,
+                    -x.get("score", 0)
+                )
+            )
+            adjustment = "prioritize_pull"
+        elif current_ratio < 1.0:
+            # 拉力过多，优先推力
+            candidates = sorted(
+                candidates,
+                key=lambda x: (
+                    0 if self._get_force_type(x) == ForceType.PUSH else 1,
+                    -x.get("score", 0)
+                )
+            )
+            adjustment = "prioritize_push"
+        else:
+            adjustment = "balanced"
+        
+        return candidates, {
+            "push_count": push_count,
+            "pull_count": pull_count,
+            "current_ratio": current_ratio,
+            "adjustment": adjustment
+        }
+    
+    # ============ 安全规则 ============
+    
+    async def _apply_joint_load_rule(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        关节负荷规则 - 排除涉及受伤关节的动作
+        
+        Requirements: 11.3
+        
+        规则逻辑:
+        - 获取用户受伤关节列表
+        - 查询INVOLVES_JOINT关系排除危险动作
+        - 高负荷关节动作优先排除
+        """
+        health_profile = user_profile.get("health_profile", {})
+        injuries = health_profile.get("injuries", [])
+        
+        if not injuries:
+            return candidates, {"skipped": True, "reason": "无伤病记录"}
+        
+        # 提取受伤关节
+        injured_joints = set()
+        for injury in injuries:
+            if isinstance(injury, dict):
+                body_part = injury.get("body_part", "")
+                if body_part:
+                    injured_joints.add(body_part.lower())
+            elif isinstance(injury, str):
+                injured_joints.add(injury.lower())
+        
+        if not injured_joints:
+            return candidates, {"skipped": True, "reason": "无关节伤病"}
+        
+        # 过滤涉及受伤关节的动作
+        safe_candidates = []
+        filtered_exercises = []
+        
+        for candidate in candidates:
+            involved_joints = self._get_involved_joints(candidate)
+            
+            # 检查是否涉及受伤关节
+            has_injured_joint = any(
+                joint.lower() in injured_joints or
+                any(ij in joint.lower() for ij in injured_joints)
+                for joint in involved_joints
+            )
+            
+            if has_injured_joint:
+                filtered_exercises.append(candidate.get("exercise_name_zh", ""))
+            else:
+                safe_candidates.append(candidate)
+        
+        return safe_candidates, {
+            "injured_joints": list(injured_joints),
+            "filtered_count": len(filtered_exercises),
+            "filtered_exercises": filtered_exercises[:5]  # 只记录前5个
+        }
+    
+    async def _apply_postural_correction_rule(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        体态矫正规则 - 推荐矫正动作并避免加重动作
+        
+        Requirements: 新增（体态矫正功能）
+        
+        规则逻辑:
+        - 获取用户体态问题
+        - 优先推荐矫正动作（CORRECTS关系）
+        - 降低或排除加重动作（AGGRAVATES关系）
+        """
+        health_profile = user_profile.get("health_profile", {})
+        postural_issues = health_profile.get("postural_issues", [])
+        
+        if not postural_issues:
+            return candidates, {"skipped": True, "reason": "无体态问题"}
+        
+        corrective_keywords = set()
+        aggravating_keywords = set()
+        
+        # 收集所有体态问题的关键词
+        for issue in postural_issues:
+            issue_name = issue if isinstance(issue, str) else issue.get("name", "")
+            if issue_name in POSTURAL_ISSUE_MUSCLES:
+                config = POSTURAL_ISSUE_MUSCLES[issue_name]
+                corrective_keywords.update(config.get("corrective_keywords", []))
+                aggravating_keywords.update(config.get("aggravating_keywords", []))
+        
+        # 分类动作
+        corrective = []
+        neutral = []
+        aggravating = []
+        
+        for candidate in candidates:
+            exercise_name = candidate.get("exercise_name_zh", "")
+            
+            # 检查是否为矫正动作
+            is_corrective = any(kw in exercise_name for kw in corrective_keywords)
+            # 检查是否为加重动作
+            is_aggravating = any(kw in exercise_name for kw in aggravating_keywords)
+            
+            if is_corrective and not is_aggravating:
+                candidate["postural_boost"] = 0.3
+                corrective.append(candidate)
+            elif is_aggravating:
+                candidate["postural_penalty"] = -0.2
+                aggravating.append(candidate)
+            else:
+                neutral.append(candidate)
+        
+        # 矫正动作优先，加重动作放最后
+        sorted_candidates = corrective + neutral + aggravating
+        
+        return sorted_candidates, {
+            "postural_issues": postural_issues,
+            "corrective_count": len(corrective),
+            "aggravating_count": len(aggravating),
+            "corrective_keywords": list(corrective_keywords)[:5]
+        }
+
+    
+    # ============ 恢复规则 ============
+    
+    async def _apply_recovery_time_rule(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        恢复时间规则 - 基于肌肉恢复时间推荐
+        
+        Requirements: 11.4
+        
+        规则逻辑:
+        - 获取最近训练记录
+        - 计算各肌群的恢复状态
+        - 降低未恢复肌群动作的优先级
+        """
+        if not recent_training:
+            return candidates, {"skipped": True, "reason": "无最近训练记录"}
+        
+        # 计算各肌群的恢复状态
+        now = datetime.now()
+        muscle_recovery_status = {}  # 肌肉 -> 剩余恢复小时数
+        
+        for session in recent_training:
+            session_time = session.get("timestamp") or session.get("created_at")
+            if not session_time:
+                continue
+            
+            # 解析时间
+            if isinstance(session_time, str):
+                try:
+                    session_dt = datetime.fromisoformat(session_time.replace("Z", "+00:00"))
+                except:
+                    continue
+            elif isinstance(session_time, datetime):
+                session_dt = session_time
+            else:
+                continue
+            
+            # 计算已过时间
+            hours_since = (now - session_dt).total_seconds() / 3600
+            
+            # 获取训练的肌群
+            for exercise in session.get("exercises", []):
+                target_muscles = exercise.get("target_muscles", [])
+                if isinstance(target_muscles, str):
+                    target_muscles = [target_muscles]
+                
+                for muscle in target_muscles:
+                    recovery_hours = MUSCLE_RECOVERY_HOURS.get(
+                        muscle, 
+                        MUSCLE_RECOVERY_HOURS["default"]
+                    )
+                    remaining = recovery_hours - hours_since
+                    
+                    if remaining > 0:
+                        # 记录最长的剩余恢复时间
+                        if muscle not in muscle_recovery_status:
+                            muscle_recovery_status[muscle] = remaining
+                        else:
+                            muscle_recovery_status[muscle] = max(
+                                muscle_recovery_status[muscle],
+                                remaining
+                            )
+        
+        if not muscle_recovery_status:
+            return candidates, {"skipped": True, "reason": "所有肌群已恢复"}
+        
+        # 根据恢复状态调整候选排序
+        def recovery_score(candidate):
+            target_muscle = candidate.get("target_muscle", "")
+            remaining = muscle_recovery_status.get(target_muscle, 0)
+            
+            if remaining > 0:
+                # 未恢复的肌群降低优先级
+                return remaining  # 剩余时间越长，排序越靠后
+            return -1  # 已恢复的排在前面
+        
+        sorted_candidates = sorted(candidates, key=recovery_score)
+        
+        return sorted_candidates, {
+            "unrecovered_muscles": {
+                k: f"{v:.1f}h" for k, v in muscle_recovery_status.items()
+            },
+            "recent_sessions_count": len(recent_training)
+        }
+    
+    # ============ 领域专业约束 ============
+    
+    async def _apply_body_type_constraint(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        体型约束 - 根据用户体型推荐适合的动作
+        
+        Requirements: 18.1
+        
+        规则逻辑:
+        - 外胚型（瘦长）：优先复合动作、大重量
+        - 中胚型（肌肉）：均衡推荐
+        - 内胚型（圆润）：优先高代谢动作、复合动作
+        """
+        basic_info = user_profile.get("basic_info", {})
+        body_type = basic_info.get("body_type", "").lower()
+        
+        if not body_type or body_type == "unknown":
+            return candidates, {"skipped": True, "reason": "未设置体型"}
+        
+        # 体型偏好配置
+        body_type_preferences = {
+            "ectomorph": {
+                "preferred_mechanics": ["compound"],
+                "boost_keywords": ["深蹲", "硬拉", "卧推", "划船"],
+                "description": "外胚型优先复合动作"
+            },
+            "mesomorph": {
+                "preferred_mechanics": ["compound", "isolation"],
+                "boost_keywords": [],
+                "description": "中胚型均衡推荐"
+            },
+            "endomorph": {
+                "preferred_mechanics": ["compound"],
+                "boost_keywords": ["深蹲", "硬拉", "波比跳", "登山者"],
+                "description": "内胚型优先高代谢动作"
+            }
+        }
+        
+        preferences = body_type_preferences.get(body_type, {})
+        if not preferences:
+            return candidates, {"skipped": True, "reason": f"未知体型: {body_type}"}
+        
+        preferred_mechanics = preferences.get("preferred_mechanics", [])
+        boost_keywords = preferences.get("boost_keywords", [])
+        
+        # 调整候选排序
+        def body_type_score(candidate):
+            score = 0
+            
+            # 机制匹配加分
+            mechanic = candidate.get("mechanic", "").lower()
+            if mechanic in preferred_mechanics:
+                score += 0.1
+            
+            # 关键词匹配加分
+            exercise_name = candidate.get("exercise_name_zh", "")
+            if any(kw in exercise_name for kw in boost_keywords):
+                score += 0.15
+            
+            return score
+        
+        # 按体型适合度排序
+        for candidate in candidates:
+            candidate["body_type_boost"] = body_type_score(candidate)
+        
+        sorted_candidates = sorted(
+            candidates,
+            key=lambda x: (-x.get("body_type_boost", 0), -x.get("score", 0))
+        )
+        
+        return sorted_candidates, {
+            "body_type": body_type,
+            "preferences": preferences.get("description", "")
+        }
+    
+    async def _apply_training_frequency_constraint(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        训练频率约束 - 根据用户训练频率调整推荐
+        
+        Requirements: 18.2
+        
+        规则逻辑:
+        - 低频训练（1-2天/周）：优先全身训练动作
+        - 中频训练（3-4天/周）：推荐分化训练
+        - 高频训练（5+天/周）：可以更细致的分化
+        """
+        fitness_config = user_profile.get("fitness_config", {})
+        training_days = fitness_config.get("training_days_per_week", 3)
+        
+        # 根据训练频率调整策略
+        if training_days <= 2:
+            # 低频：优先复合动作
+            strategy = "full_body"
+            preferred_mechanics = ["compound"]
+        elif training_days <= 4:
+            # 中频：均衡
+            strategy = "split"
+            preferred_mechanics = ["compound", "isolation"]
+        else:
+            # 高频：可以更多孤立动作
+            strategy = "detailed_split"
+            preferred_mechanics = ["compound", "isolation"]
+        
+        # 调整排序
+        def frequency_score(candidate):
+            mechanic = candidate.get("mechanic", "").lower()
+            if mechanic in preferred_mechanics:
+                return 0.1 if mechanic == "compound" else 0.05
+            return 0
+        
+        for candidate in candidates:
+            candidate["frequency_boost"] = frequency_score(candidate)
+        
+        return candidates, {
+            "training_days_per_week": training_days,
+            "strategy": strategy
+        }
+    
+    async def _apply_session_duration_constraint(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        训练时长约束 - 确保推荐动作适合用户的训练时长
+        
+        Requirements: 18.3
+        
+        规则逻辑:
+        - 短时训练（<45分钟）：优先高效复合动作
+        - 中等时长（45-75分钟）：均衡推荐
+        - 长时训练（>75分钟）：可以包含更多孤立动作
+        """
+        fitness_config = user_profile.get("fitness_config", {})
+        session_duration = fitness_config.get("training_duration_per_session", 60)
+        
+        # 根据时长调整策略
+        if session_duration < 45:
+            strategy = "efficient"
+            max_exercises = 5
+            preferred_mechanics = ["compound"]
+        elif session_duration <= 75:
+            strategy = "balanced"
+            max_exercises = 8
+            preferred_mechanics = ["compound", "isolation"]
+        else:
+            strategy = "comprehensive"
+            max_exercises = 12
+            preferred_mechanics = ["compound", "isolation"]
+        
+        # 调整排序（短时训练优先复合动作）
+        def duration_score(candidate):
+            mechanic = candidate.get("mechanic", "").lower()
+            if strategy == "efficient" and mechanic == "compound":
+                return 0.15
+            return 0
+        
+        for candidate in candidates:
+            candidate["duration_boost"] = duration_score(candidate)
+        
+        return candidates, {
+            "session_duration": session_duration,
+            "strategy": strategy,
+            "max_exercises": max_exercises
+        }
+    
+    async def _apply_goal_alignment_constraint(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        目标对齐约束 - 优先推荐与用户目标匹配的动作
+        
+        Requirements: 18.4
+        
+        规则逻辑:
+        - 增肌：优先复合动作，中等次数范围
+        - 减脂：优先高代谢动作
+        - 力量：优先大重量复合动作
+        - 康复：优先低风险、闭链动作
+        """
+        fitness_goals = user_profile.get("fitness_goals", {})
+        primary_goal = fitness_goals.get("primary_goal", "general_fitness").lower()
+        
+        # 目标映射
+        goal_mapping = {
+            "增肌": TrainingGoal.MUSCLE_GAIN,
+            "muscle_gain": TrainingGoal.MUSCLE_GAIN,
+            "减脂": TrainingGoal.FAT_LOSS,
+            "fat_loss": TrainingGoal.FAT_LOSS,
+            "力量": TrainingGoal.STRENGTH,
+            "strength": TrainingGoal.STRENGTH,
+            "耐力": TrainingGoal.ENDURANCE,
+            "endurance": TrainingGoal.ENDURANCE,
+            "塑形": TrainingGoal.BODY_SHAPING,
+            "body_shaping": TrainingGoal.BODY_SHAPING,
+            "康复": TrainingGoal.REHABILITATION,
+            "rehabilitation": TrainingGoal.REHABILITATION,
+        }
+        
+        goal = goal_mapping.get(primary_goal, TrainingGoal.GENERAL_FITNESS)
+        preferences = GOAL_EXERCISE_PREFERENCES.get(goal, {})
+        
+        if not preferences:
+            return candidates, {"skipped": True, "reason": f"未知目标: {primary_goal}"}
+        
+        preferred_mechanics = preferences.get("preferred_mechanics", [])
+        preferred_force = preferences.get("preferred_force", [])
+        preferred_kinetic = preferences.get("preferred_kinetic_chain", [])
+        
+        # 计算目标对齐分数
+        def goal_alignment_score(candidate):
+            score = 0
+            
+            # 机制匹配
+            mechanic = candidate.get("mechanic", "").lower()
+            if mechanic in preferred_mechanics:
+                score += 0.1
+            
+            # 力类型匹配
+            force = self._get_force_type(candidate)
+            if force.value in preferred_force:
+                score += 0.05
+            
+            # 动力链匹配（康复场景）
+            if preferred_kinetic:
+                kinetic = self._get_kinetic_chain(candidate)
+                if kinetic.value in preferred_kinetic:
+                    score += 0.15
+            
+            return score
+        
+        for candidate in candidates:
+            candidate["goal_alignment_boost"] = goal_alignment_score(candidate)
+        
+        sorted_candidates = sorted(
+            candidates,
+            key=lambda x: (-x.get("goal_alignment_boost", 0), -x.get("score", 0))
+        )
+        
+        return sorted_candidates, {
+            "primary_goal": primary_goal,
+            "goal_enum": goal.value,
+            "preferred_mechanics": preferred_mechanics
+        }
+
+    
+    async def _apply_progressive_overload_constraint(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        渐进超负荷约束 - 根据训练周数调整难度推荐
+        
+        Requirements: 18.5
+        
+        规则逻辑:
+        - 新手期（0-4周）：优先基础动作
+        - 适应期（5-12周）：可以引入进阶动作
+        - 成熟期（12+周）：可以尝试高级动作
+        """
+        training_system = user_profile.get("training_system", {})
+        consecutive_weeks = training_system.get("consecutive_training_weeks", 0)
+        
+        fitness_config = user_profile.get("fitness_config", {})
+        fitness_level = fitness_config.get("fitness_level", "beginner").lower()
+        
+        # 根据训练周数确定适合的难度
+        if consecutive_weeks < 4:
+            phase = "novice"
+            allowed_difficulties = ["beginner", "easy", "novice", "初级", "简单"]
+        elif consecutive_weeks < 12:
+            phase = "adaptation"
+            allowed_difficulties = ["beginner", "intermediate", "easy", "moderate", 
+                                   "初级", "中级", "简单", "中等"]
+        else:
+            phase = "mature"
+            allowed_difficulties = ["beginner", "intermediate", "advanced", 
+                                   "初级", "中级", "高级"]
+        
+        # 根据用户等级进一步调整
+        if fitness_level in ["advanced", "elite", "高级", "精英"]:
+            allowed_difficulties.extend(["advanced", "elite", "hard", "高级", "困难"])
+        
+        # 过滤不适合的难度
+        filtered_candidates = []
+        for candidate in candidates:
+            # 使用统一字段名：difficulty_zh / difficulty_en
+            difficulty = (candidate.get("difficulty_zh") or candidate.get("difficulty_en") or "intermediate").lower()
+            
+            # 检查难度是否在允许范围内
+            is_allowed = any(d in difficulty for d in allowed_difficulties)
+            
+            if is_allowed:
+                filtered_candidates.append(candidate)
+            else:
+                # 不完全排除，但降低优先级
+                candidate["progressive_penalty"] = -0.1
+                filtered_candidates.append(candidate)
+        
+        # 按难度适合度排序
+        sorted_candidates = sorted(
+            filtered_candidates,
+            key=lambda x: (x.get("progressive_penalty", 0), -x.get("score", 0))
+        )
+        
+        return sorted_candidates, {
+            "consecutive_weeks": consecutive_weeks,
+            "phase": phase,
+            "fitness_level": fitness_level,
+            "allowed_difficulties": allowed_difficulties[:5]
+        }
+    
+    async def _apply_nutrition_constraint(
+        self,
+        candidates: List[Dict[str, Any]],
+        user_profile: Dict[str, Any],
+        query: str,
+        session_context: Dict[str, Any],
+        recent_training: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        营养约束 - 根据营养摄入调整高强度动作推荐
+        
+        Requirements: 18.6
+        
+        规则逻辑:
+        - 低热量摄入时，降低高强度动作优先级
+        - 蛋白质不足时，提醒恢复可能受影响
+        """
+        nutrition_profile = user_profile.get("nutrition_profile", {})
+        daily_calories = nutrition_profile.get("daily_calories", 2000)
+        protein_g = nutrition_profile.get("protein_g", 100)
+        
+        basic_info = user_profile.get("basic_info", {})
+        weight = basic_info.get("weight", 70)
+        
+        # 计算营养状态
+        # 基础代谢估算（简化版）
+        bmr_estimate = weight * 24  # 简化估算
+        calorie_ratio = daily_calories / bmr_estimate if bmr_estimate > 0 else 1.0
+        
+        # 蛋白质摄入评估（推荐1.6-2.2g/kg）
+        protein_per_kg = protein_g / weight if weight > 0 else 1.5
+        
+        # 营养状态判断
+        if calorie_ratio < 0.8:
+            nutrition_status = "deficit"
+            intensity_limit = "moderate"
+        elif calorie_ratio < 1.0:
+            nutrition_status = "slight_deficit"
+            intensity_limit = "high"
+        else:
+            nutrition_status = "adequate"
+            intensity_limit = "any"
+        
+        # 根据营养状态调整
+        if nutrition_status == "deficit":
+            # 低热量时降低高强度动作优先级
+            for candidate in candidates:
+                # 使用统一字段名：difficulty_zh / difficulty_en
+                difficulty = (candidate.get("difficulty_zh") or candidate.get("difficulty_en") or "").lower()
+                if "advanced" in difficulty or "elite" in difficulty or "hard" in difficulty:
+                    candidate["nutrition_penalty"] = -0.15
+        
+        return candidates, {
+            "daily_calories": daily_calories,
+            "protein_g": protein_g,
+            "calorie_ratio": round(calorie_ratio, 2),
+            "protein_per_kg": round(protein_per_kg, 2),
+            "nutrition_status": nutrition_status,
+            "intensity_limit": intensity_limit
+        }
+    
+    # ============ 辅助方法 ============
+    
+    def _get_force_type(self, exercise: Dict[str, Any]) -> ForceType:
+        """获取动作的力类型 - 使用统一字段名"""
+        force = (exercise.get("force_zh") or exercise.get("force_en") or exercise.get("force") or "").lower()
+        
+        force_mapping = {
+            "push": ForceType.PUSH,
+            "pull": ForceType.PULL,
+            "hold": ForceType.HOLD,
+            "static": ForceType.HOLD,
+            "推": ForceType.PUSH,
+            "拉": ForceType.PULL,
+            "保持": ForceType.HOLD,
+        }
+        
+        return force_mapping.get(force, ForceType.UNKNOWN)
+    
+    def _get_kinetic_chain(self, exercise: Dict[str, Any]) -> KineticChainType:
+        """获取动作的动力链类型"""
+        kinetic = (exercise.get("kinetic_chain") or "").lower()
+        
+        kinetic_mapping = {
+            "open_chain": KineticChainType.OPEN,
+            "open": KineticChainType.OPEN,
+            "closed_chain": KineticChainType.CLOSED,
+            "closed": KineticChainType.CLOSED,
+            "mixed": KineticChainType.MIXED,
+            "开链": KineticChainType.OPEN,
+            "闭链": KineticChainType.CLOSED,
+            "混合": KineticChainType.MIXED,
+        }
+        
+        return kinetic_mapping.get(kinetic, KineticChainType.UNKNOWN)
+    
+    def _get_involved_joints(self, exercise: Dict[str, Any]) -> List[str]:
+        """获取动作涉及的关节"""
+        # 尝试多个可能的字段名
+        joints = exercise.get("involved_joints", [])
+        if not joints:
+            joints = exercise.get("joints", [])
+        if not joints:
+            joints = exercise.get("target_joints", [])
+        
+        if isinstance(joints, str):
+            joints = [joints]
+        
+        return joints or []
+    
+    def get_execution_logs(self, limit: int = 10) -> List[Layer3ExecutionLog]:
+        """获取最近的执行日志"""
+        return self.execution_logs[-limit:]
+    
+    def get_rule_statistics(self) -> Dict[str, Any]:
+        """获取规则执行统计"""
+        if not self.execution_logs:
+            return {"total_executions": 0}
+        
+        stats = {
+            "total_executions": len(self.execution_logs),
+            "rules": {}
+        }
+        
+        for log in self.execution_logs:
+            for rule_result in log.rules_applied:
+                rule_name = rule_result.rule_name
+                if rule_name not in stats["rules"]:
+                    stats["rules"][rule_name] = {
+                        "applied_count": 0,
+                        "skipped_count": 0,
+                        "total_filtered": 0,
+                        "avg_execution_time_ms": 0
+                    }
+                
+                rule_stats = stats["rules"][rule_name]
+                if rule_result.applied:
+                    rule_stats["applied_count"] += 1
+                    rule_stats["total_filtered"] += (
+                        rule_result.candidates_before - rule_result.candidates_after
+                    )
+                else:
+                    rule_stats["skipped_count"] += 1
+                
+                # 更新平均执行时间
+                total_count = rule_stats["applied_count"] + rule_stats["skipped_count"]
+                rule_stats["avg_execution_time_ms"] = (
+                    (rule_stats["avg_execution_time_ms"] * (total_count - 1) + 
+                     rule_result.execution_time_ms) / total_count
+                )
+        
+        return stats

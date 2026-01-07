@@ -1,0 +1,114 @@
+# Grafana Loki 配置文件
+# 版本: v1.0.0
+# 创建日期: 2025-12-23
+# 说明: 用于日志聚合和查询的Loki服务配置
+
+# 禁用认证（内部网络使用）
+auth_enabled: false
+
+# 服务器配置
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: info
+
+# 通用配置
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+# Schema配置
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+# 存储配置
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/boltdb-shipper-active
+    cache_location: /loki/boltdb-shipper-cache
+    cache_ttl: 24h
+    shared_store: filesystem
+  filesystem:
+    directory: /loki/chunks
+
+# 限制配置
+limits_config:
+  # 日志保留期：30天
+  retention_period: 720h  # 30天 = 30 * 24小时
+  
+  # 查询限制
+  max_query_length: 721h  # 略大于30天，允许查询完整保留期
+  max_query_lookback: 720h  # 30天
+  max_query_parallelism: 32
+  max_query_series: 500
+  
+  # 摄入限制
+  ingestion_rate_mb: 10  # 每秒10MB
+  ingestion_burst_size_mb: 20  # 突发20MB
+  max_line_size: 256000  # 单行最大256KB
+  max_streams_per_user: 10000
+  
+  # 内存限制相关
+  max_entries_limit_per_query: 5000
+  max_cache_freshness_per_query: 10m
+  
+  # 拒绝旧数据
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h  # 7天
+  
+  # 分块限制
+  max_chunks_per_query: 2000000
+  
+# 表管理器配置（用于保留期）
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 720h  # 30天
+
+# 压缩器配置
+compactor:
+  working_directory: /loki/compactor
+  shared_store: filesystem
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
+
+# 查询范围配置
+query_range:
+  align_queries_with_step: true
+  max_retries: 5
+  cache_results: true
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+        ttl: 24h
+
+# 前端配置
+frontend:
+  max_outstanding_per_tenant: 256
+  compress_responses: true
+
+# 查询调度器配置
+query_scheduler:
+  max_outstanding_requests_per_tenant: 256
+
+# 内存限制（通过Docker配置，这里记录说明）
+# Docker容器内存限制: 2GB
+# 实际可用内存约: 1.8GB（预留200MB给系统）

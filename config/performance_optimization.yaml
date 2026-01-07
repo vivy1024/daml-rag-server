@@ -1,0 +1,579 @@
+# 性能优化配置文件
+# 版本: v1.2.0
+# 日期: 2025-12-26
+# 说明: 本配置文件用于DAML-RAG工作流性能优化，包含缓存、连接池、LLM降级、并发限流、监控和提示词优化等配置
+
+# ============================================
+# 提示词优化配置 (需求1, 需求3)
+# ============================================
+prompt_optimization:
+  # 提示词字符上限（基于DeepSeek 64K上下文窗口，留出输出空间）
+  max_prompt_chars: 32000
+  
+  # 单个训练周期字节上限
+  max_single_cycle_bytes: 4000
+  
+  # 从第N个周期开始使用摘要（1表示只保留第1个周期完整）
+  summarize_cycles_after: 1
+  
+  # 是否启用训练计划摘要
+  enable_summarization: true
+  
+  # 是否记录提示词长度到日志
+  log_prompt_length: true
+
+# ============================================
+# 缓存配置 (需求1, 需求2, 需求8)
+# ============================================
+cache:
+  # L1内存缓存
+  l1_enabled: true
+  l1_max_size: 1000  # 最大条目数
+  l1_max_memory_mb: 100  # 最大内存占用(MB)
+  
+  # L2 Redis缓存
+  l2_enabled: true
+  l2_host: "localhost"
+  l2_port: 6379
+  l2_db: 0
+  l2_password: null
+  l2_max_connections: 50  # Redis连接池大小
+  l2_socket_timeout: 5  # Redis socket超时(秒)
+  l2_socket_connect_timeout: 2  # Redis连接超时(秒)
+  
+  # 默认TTL配置
+  default_ttl: 300  # 5分钟
+  
+  # 数据类型特定TTL
+  ttl_by_type:
+    user_profile: 300  # 用户档案: 5分钟
+    user_membership: 600  # 会员信息: 10分钟
+    bge_classification: 1800  # BGE分类结果: 30分钟
+    few_shot_examples: 3600  # Few-Shot示例: 1小时
+    dag_template: -1  # DAG模板: 永久(不过期)
+  
+  # 预热配置
+  warmup_enabled: true
+  warmup_batch_size: 10
+  warmup_on_startup: true  # 启动时预热
+  
+  # 统计配置
+  stats_enabled: true
+  stats_interval: 60  # 统计间隔(秒)
+  
+  # 失效策略
+  invalidation:
+    pattern_matching: true  # 支持模式匹配失效
+    cascade: true  # 级联失效(L1->L2->L3)
+
+# ============================================
+# 连接池配置 (需求7)
+# ============================================
+connection_pool:
+  # MySQL连接池
+  mysql:
+    min_size: 10
+    max_size: 50
+    max_idle_time: 60  # 秒
+    max_lifetime: 3600  # 秒
+    acquire_timeout: 2  # 秒
+    health_check_interval: 30  # 秒
+    pool_recycle: 3600  # 连接回收时间(秒)
+    pool_pre_ping: true  # 获取连接前ping测试
+    echo_pool: false  # 是否记录连接池日志
+  
+  # Neo4j连接池
+  neo4j:
+    min_size: 5
+    max_size: 20
+    max_idle_time: 120  # 秒
+    max_lifetime: 3600  # 秒
+    acquire_timeout: 2  # 秒
+    health_check_interval: 30  # 秒
+    max_connection_lifetime: 3600  # 最大连接生命周期
+    max_connection_pool_size: 20  # 连接池大小
+    connection_acquisition_timeout: 2  # 获取连接超时
+  
+  # HTTP连接池
+  http:
+    min_size: 20
+    max_size: 100
+    max_idle_time: 30  # 秒
+    max_lifetime: 1800  # 秒
+    acquire_timeout: 2  # 秒
+    health_check_interval: 30  # 秒
+    keepalive_timeout: 30  # Keep-Alive超时
+    limit_per_host: 10  # 每个主机的连接限制
+  
+  # 动态调整配置
+  dynamic_adjustment:
+    enabled: true
+    check_interval: 30  # 检查间隔(秒)
+    scale_up_threshold: 0.8  # 扩容阈值(80%使用率)
+    scale_down_threshold: 0.3  # 缩容阈值(30%使用率)
+    scale_step: 5  # 每次调整的连接数
+
+# ============================================
+# LLM降级配置 (需求3)
+# ============================================
+llm_fallback:
+  # 主要后端
+  primary_backend: "deepseek"
+  
+  # 降级后端列表(按优先级排序)
+  fallback_backends:
+    - "ollama"
+    - "template"
+  
+  # 重试配置
+  max_retries: 3
+  retry_delay: 1  # 重试延迟(秒)
+  retry_backoff: 2  # 退避倍数
+  timeout: 30  # 秒
+  
+  # 健康检查
+  health_check_interval: 60  # 秒
+  health_check_timeout: 5  # 健康检查超时(秒)
+  
+  # 流式调用配置
+  streaming:
+    enabled: true
+    chunk_size: 1024  # 流式块大小(字节)
+    buffer_size: 4096  # 缓冲区大小(字节)
+    interrupt_recovery: true  # 中断恢复
+    save_partial_results: true  # 保存部分结果
+  
+  # 模板响应配置
+  template:
+    enabled: true
+    templates_dir: "config/llm_templates"  # 模板目录
+    default_template: "generic_response"  # 默认模板
+    include_context: true  # 包含上下文信息
+  
+  # 后端配置
+  backends:
+    deepseek:
+      api_url: "https://api.deepseek.com/v1"
+      timeout: 30
+      max_tokens: 4096
+    ollama:
+      api_url: "http://localhost:11434"
+      timeout: 60
+      max_tokens: 4096
+      model: "llama2"
+
+# ============================================
+# 并发限流配置 (需求4)
+# ============================================
+concurrency:
+  # 全局并发限制
+  max_concurrent: 100
+  max_queue_size: 200
+  timeout: 30  # 秒
+  
+  # 队列配置
+  queue:
+    enabled: true
+    priority_enabled: true  # 启用优先级队列
+    fifo: true  # 先进先出
+    max_wait_time: 60  # 最大等待时间(秒)
+  
+  # 用户分级限流
+  user_limits:
+    free:
+      max_concurrent: 10
+      max_queue_size: 20
+      timeout: 30
+      priority: 1  # 优先级(1-5, 5最高)
+    paid:
+      max_concurrent: 50
+      max_queue_size: 100
+      timeout: 60
+      priority: 3
+    vip:
+      max_concurrent: 100
+      max_queue_size: 200
+      timeout: 120
+      priority: 5
+    system:
+      max_concurrent: -1  # 无限制
+      max_queue_size: -1  # 无限制
+      timeout: -1  # 无限制
+      priority: 5
+  
+  # 429错误响应配置
+  rate_limit_response:
+    status_code: 429
+    message: "Too many concurrent requests. Please try again later."
+    retry_after: 30  # Retry-After头(秒)
+    include_stats: true  # 包含统计信息
+  
+  # 自动降级配置
+  auto_degradation:
+    enabled: true
+    cpu_threshold: 0.8  # CPU阈值
+    memory_threshold: 0.85  # 内存阈值
+    degraded_limit: 50  # 降级后的并发限制
+
+# ============================================
+# 监控配置 (需求6)
+# ============================================
+monitoring:
+  # 启用监控
+  enabled: true
+  
+  # Prometheus配置
+  prometheus:
+    enabled: true
+    port: 9090
+    path: "/metrics"
+    export_interval: 10  # 秒
+    
+    # 指标配置
+    metrics:
+      # 工作流指标
+      workflow_enabled: true
+      workflow_histogram_buckets: [0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0]
+      
+      # 缓存指标
+      cache_enabled: true
+      cache_hit_rate_enabled: true
+      
+      # 连接池指标
+      connection_pool_enabled: true
+      
+      # LLM指标
+      llm_enabled: true
+      llm_histogram_buckets: [0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0]
+  
+  # 性能告警配置
+  alerts:
+    enabled: true
+    
+    # 性能瓶颈告警
+    performance_bottleneck:
+      enabled: true
+      threshold_ms: 1000  # 1秒
+      consecutive_count: 3  # 连续3次触发告警
+    
+    # 错误率告警
+    error_rate:
+      enabled: true
+      threshold: 0.05  # 5%
+      window_seconds: 300  # 5分钟窗口
+    
+    # 资源使用告警
+    resource_usage:
+      enabled: true
+      cpu_threshold: 0.7  # 70%
+      memory_threshold: 0.8  # 80%
+      disk_threshold: 0.9  # 90%
+    
+    # 并发超限告警
+    concurrency_limit:
+      enabled: true
+      threshold_ratio: 0.9  # 90%使用率
+      duration_seconds: 60  # 持续1分钟
+  
+  # 日志配置
+  logging:
+    enabled: true
+    level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    format: "json"  # json, text
+    
+    # 性能日志
+    performance_log:
+      enabled: true
+      log_all_steps: true
+      log_slow_queries: true
+      slow_query_threshold_ms: 1000
+    
+    # 错误日志
+    error_log:
+      enabled: true
+      include_stacktrace: true
+      include_context: true
+  
+  # 分布式追踪
+  tracing:
+    enabled: false  # 可选功能
+    provider: "jaeger"  # jaeger, zipkin
+    endpoint: "http://localhost:14268/api/traces"
+    sample_rate: 0.1  # 10%采样率
+  
+  # 性能报告
+  reporting:
+    enabled: true
+    interval: 3600  # 1小时
+    include_summary: true
+    include_bottlenecks: true
+    include_recommendations: true
+
+# ============================================
+# BGE复杂度分类配置 (需求5)
+# ============================================
+bge_classification:
+  # 查询文本长度限制
+  max_query_length: 1000  # 字符
+  truncate_strategy: "end"  # end, middle, smart
+  
+  # 分类结果缓存
+  cache_enabled: true
+  cache_ttl: 1800  # 30分钟
+  cache_key_prefix: "bge_classification"
+  
+  # 降级策略
+  fallback_enabled: true
+  fallback_method: "rule_engine"  # rule_engine, simple_heuristic
+  
+  # 规则引擎配置
+  rule_engine:
+    enabled: true
+    rules:
+      - pattern: "训练计划|计划设计|周期化"
+        complexity: "complex"
+      - pattern: "动作|练习|怎么做"
+        complexity: "simple"
+      - pattern: "营养|饮食|食物"
+        complexity: "medium"
+    default_complexity: "medium"
+  
+  # 性能配置
+  performance:
+    target_time_ms: 500
+    timeout_ms: 1000
+    batch_size: 1  # 批处理大小
+  
+  # 模型配置
+  model:
+    name: "bge-m3"
+    device: "cpu"  # cpu, cuda
+    max_length: 512
+    normalize_embeddings: true
+  
+  # 不确定性处理
+  uncertainty:
+    threshold_low: 0.5
+    threshold_high: 0.7
+    default_choice: "teacher"  # teacher, student
+
+# 用户档案加载配置
+user_profile:
+  # 缓存配置
+  cache_enabled: true
+  cache_ttl: 3600  # 1小时
+  cache_level: "l2_redis"  # 使用Redis缓存
+  
+  # 超时配置
+  timeout_ms: 500
+  
+  # 降级策略
+  fallback_enabled: true
+  fallback_value: {}  # 空档案
+
+# 会员权限检查配置
+membership:
+  # 缓存配置
+  cache_enabled: true
+  cache_ttl: 600  # 10分钟
+  cache_level: "l1_memory"  # 使用内存缓存
+  
+  # 超时配置
+  timeout_ms: 300
+  
+  # 降级策略
+  fallback_enabled: true
+  fallback_value: "free"  # 默认免费用户
+
+# ============================================
+# 用户档案加载配置 (需求1) - 增强版
+# ============================================
+user_profile_enhanced:
+  # 缓存配置
+  cache_enabled: true
+  cache_ttl: 300  # 5分钟
+  cache_levels: ["l1_memory", "l2_redis"]  # 多层缓存
+  
+  # 超时配置
+  timeout_ms: 500
+  db_query_timeout_ms: 300
+  
+  # 降级策略
+  fallback_enabled: true
+  fallback_value: {}  # 空档案
+  fallback_on_timeout: true
+  
+  # 预加载配置
+  preload_enabled: true
+  preload_on_login: true
+  preload_fields: ["basic_info", "training_preferences", "health_status"]
+  
+  # 性能优化
+  optimization:
+    use_connection_pool: true
+    batch_loading: false
+    lazy_loading: false
+    field_selection: true  # 只查询需要的字段
+    
+  # 数据库索引提示
+  db_hints:
+    use_index: true
+    index_name: "idx_user_id"
+
+# ============================================
+# 会员权限检查配置 (需求2) - 增强版
+# ============================================
+membership_enhanced:
+  # 缓存配置
+  cache_enabled: true
+  cache_ttl: 600  # 10分钟
+  cache_levels: ["l1_memory", "l2_redis"]  # 多层缓存
+  
+  # 超时配置
+  timeout_ms: 300
+  api_timeout_ms: 1000  # 后端API超时
+  
+  # 降级策略
+  fallback_enabled: true
+  fallback_value: "free"  # 默认免费用户
+  fallback_on_timeout: true
+  fallback_on_error: true
+  
+  # API配置
+  api:
+    endpoint: "http://localhost:8000/api/membership/check"
+    retry_enabled: true
+    retry_count: 2
+    retry_delay: 100  # 毫秒
+  
+  # 权限级别
+  levels:
+    free:
+      max_requests_per_day: 100
+      features: ["basic_query", "simple_plan"]
+    paid:
+      max_requests_per_day: 1000
+      features: ["basic_query", "simple_plan", "advanced_plan", "nutrition"]
+    vip:
+      max_requests_per_day: -1  # 无限制
+      features: ["all"]
+
+# ============================================
+# 工作流超时配置
+# ============================================
+workflow:
+  # 全局超时
+  global_timeout: 30  # 秒
+  
+  # 步骤超时
+  step_timeouts:
+    step_1_user_profile: 0.5  # 500ms
+    step_2_session_init: 0.2  # 200ms
+    step_3_membership: 0.3  # 300ms
+    step_4_bge_classification: 0.5  # 500ms
+    step_5_model_selection: 0.1  # 100ms
+    step_6_few_shot: 1.0  # 1s
+    step_7_dag_orchestration: 5.0  # 5s
+    step_8_retrieval: 3.0  # 3s
+    step_9_tool_summary: 1.0  # 1s
+    step_10_llm_analysis: 20.0  # 20s
+    step_11_record: 0.5  # 500ms
+  
+  # 超时处理
+  timeout_handling:
+    cancel_on_timeout: true
+    save_partial_results: true
+    log_timeout_events: true
+    
+  # 并行执行配置
+  parallel_execution:
+    step_1_2_parallel: true  # 步骤1-2并行
+    step_3_4_parallel: true  # 步骤3-4并行
+    max_parallel_workers: 4
+
+# ============================================
+# 性能目标配置
+# ============================================
+performance_targets:
+  # 工作流性能目标
+  workflow_total_time: 30  # 秒
+  ttfb: 5  # 秒(首字节时间)
+  
+  # 步骤性能目标
+  step_targets:
+    user_profile_load: 500  # ms
+    membership_check: 300  # ms
+    bge_classification: 500  # ms
+    
+  # 系统性能目标
+  cache_hit_rate: 0.8  # 80%
+  qps: 200  # 每秒查询数
+  error_rate: 0.01  # 1%
+  
+  # 资源使用目标
+  cpu_usage: 0.7  # 70%
+  memory_usage: 0.8  # 80%
+  disk_usage: 0.9  # 90%
+
+# ============================================
+# 环境特定配置
+# ============================================
+environments:
+  # 开发环境
+  development:
+    cache:
+      l1_enabled: true
+      l2_enabled: false  # 开发环境不使用Redis
+    monitoring:
+      enabled: true
+      prometheus:
+        enabled: false  # 开发环境不启用Prometheus
+    concurrency:
+      max_concurrent: 10  # 开发环境限制并发
+  
+  # 测试环境
+  testing:
+    cache:
+      l1_enabled: true
+      l2_enabled: true
+    monitoring:
+      enabled: true
+      prometheus:
+        enabled: true
+    concurrency:
+      max_concurrent: 50
+  
+  # 生产环境
+  production:
+    cache:
+      l1_enabled: true
+      l2_enabled: true
+    monitoring:
+      enabled: true
+      prometheus:
+        enabled: true
+    concurrency:
+      max_concurrent: 100
+
+# ============================================
+# 实验性功能配置
+# ============================================
+experimental:
+  # 自适应超时
+  adaptive_timeout:
+    enabled: false
+    learning_rate: 0.1
+    min_timeout: 100  # ms
+    max_timeout: 5000  # ms
+  
+  # 智能预取
+  intelligent_prefetch:
+    enabled: false
+    prediction_model: "lstm"
+    prefetch_threshold: 0.7
+  
+  # 动态负载均衡
+  dynamic_load_balancing:
+    enabled: false
+    algorithm: "least_connections"
+    health_check_interval: 10  # 秒

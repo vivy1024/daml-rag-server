@@ -1,0 +1,29 @@
+# Prometheus 配置文件
+# 版本: v1.0.0
+# 创建日期: 2025-12-19
+
+global:
+  scrape_interval: 30s      # 默认抓取间隔
+  evaluation_interval: 30s  # 告警规则评估间隔
+  external_labels:
+    cluster: 'fitness-app'
+    environment: 'development'
+
+# 告警规则文件
+rule_files:
+  - '/etc/prometheus/alerts/*.yml'
+
+# 抓取配置
+scrape_configs:
+  # DAML-RAG 服务监控
+  - job_name: 'daml-rag'
+    static_configs:
+      - targets: ['fitness_daml_rag:8001']
+    metrics_path: '/api/health/metrics/prometheus'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

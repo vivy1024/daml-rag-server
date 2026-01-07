@@ -1,0 +1,117 @@
+{{ define "__alert_severity_prefix" -}}
+    {{ if eq .Labels.severity "critical" -}}
+        🔴 严重
+    {{- else if eq .Labels.severity "warning" -}}
+        🟡 警告
+    {{- else -}}
+        🔵 信息
+    {{- end }}
+{{- end }}
+
+{{ define "__alert_category_emoji" -}}
+    {{ if eq .Labels.category "performance" -}}
+        ⚡
+    {{- else if eq .Labels.category "resource" -}}
+        💾
+    {{- else if eq .Labels.category "concurrency" -}}
+        🔀
+    {{- else if eq .Labels.category "availability" -}}
+        🚨
+    {{- else if eq .Labels.category "reliability" -}}
+        🔧
+    {{- else -}}
+        📊
+    {{- end }}
+{{- end }}
+
+{{ define "alert.title" -}}
+    {{ template "__alert_severity_prefix" . }} {{ template "__alert_category_emoji" . }} {{ .Labels.alertname }}
+{{- end }}
+
+{{ define "alert.text" -}}
+{{ range .Alerts }}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{{ template "alert.title" . }}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 摘要: {{ .Annotations.summary }}
+📄 详情: {{ .Annotations.description }}
+
+🏷️  标签:
+{{- range .Labels.SortedPairs }}
+  • {{ .Name }}: {{ .Value }}
+{{- end }}
+
+⏰ 触发时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+{{ if .EndsAt }}⏱️  恢复时间: {{ .EndsAt.Format "2006-01-02 15:04:05" }}{{ end }}
+
+🔗 Prometheus: {{ .GeneratorURL }}
+
+{{ end }}
+{{- end }}
+
+{{ define "slack.title" -}}
+    {{ template "alert.title" . }}
+{{- end }}
+
+{{ define "slack.text" -}}
+{{ range .Alerts }}
+*{{ .Annotations.summary }}*
+{{ .Annotations.description }}
+
+*标签:*
+{{- range .Labels.SortedPairs }}
+• {{ .Name }}: `{{ .Value }}`
+{{- end }}
+
+*时间:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+{{ if .EndsAt }}*恢复:* {{ .EndsAt.Format "2006-01-02 15:04:05" }}{{ end }}
+
+<{{ .GeneratorURL }}|查看详情>
+{{ end }}
+{{- end }}
+
+{{ define "email.subject" -}}
+    [{{ .Status | toUpper }}] {{ template "alert.title" . }}
+{{- end }}
+
+{{ define "email.html" -}}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .alert { border: 2px solid #ddd; border-radius: 5px; padding: 15px; margin: 10px 0; }
+        .critical { border-color: #dc3545; background-color: #f8d7da; }
+        .warning { border-color: #ffc107; background-color: #fff3cd; }
+        .info { border-color: #17a2b8; background-color: #d1ecf1; }
+        .header { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+        .label { display: inline-block; padding: 2px 8px; margin: 2px; border-radius: 3px; background-color: #e9ecef; font-size: 12px; }
+        .time { color: #6c757d; font-size: 14px; }
+        a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h2>DAML-RAG 系统告警</h2>
+    {{ range .Alerts }}
+    <div class="alert {{ .Labels.severity }}">
+        <div class="header">{{ template "alert.title" . }}</div>
+        <p><strong>摘要:</strong> {{ .Annotations.summary }}</p>
+        <p><strong>详情:</strong> {{ .Annotations.description }}</p>
+        <div>
+            <strong>标签:</strong>
+            {{- range .Labels.SortedPairs }}
+            <span class="label">{{ .Name }}: {{ .Value }}</span>
+            {{- end }}
+        </div>
+        <p class="time">
+            <strong>触发时间:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+            {{ if .EndsAt }}<br><strong>恢复时间:</strong> {{ .EndsAt.Format "2006-01-02 15:04:05" }}{{ end }}
+        </p>
+        <p><a href="{{ .GeneratorURL }}">查看Prometheus详情</a></p>
+    </div>
+    {{ end }}
+</body>
+</html>
+{{- end }}

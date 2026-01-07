@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment (重要！)
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Data (如果不需要的话)
+data/knowledge_graph_mvp.db
+data/*.db
+
+# Experiments
+experiments/
+tests/
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Scripts (开发用)
+scripts/test*.py
+scripts/check*.py
+scripts/debug*.py
+
+# Backup files
+*.bak
+*.tmp
+*.old
+
+# OS
+.DS_Store
+Thumbs.db
+

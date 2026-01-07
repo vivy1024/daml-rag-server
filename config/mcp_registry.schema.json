@@ -1,0 +1,149 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Registry Schema",
+  "description": "MCP服务器注册表的JSON Schema定义",
+  "type": "object",
+  "required": ["version", "servers"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "注册表版本号",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "注册表说明"
+    },
+    "servers": {
+      "type": "object",
+      "description": "MCP服务器定义",
+      "additionalProperties": {
+        "$ref": "#/definitions/MCPServer"
+      }
+    },
+    "orchestration_config": {
+      "$ref": "#/definitions/OrchestrationConfig"
+    }
+  },
+  "definitions": {
+    "MCPServer": {
+      "type": "object",
+      "required": ["name", "version", "type", "command", "tools"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "服务器显示名称"
+        },
+        "version": {
+          "type": "string",
+          "description": "服务器版本号"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["stdio", "http", "websocket"],
+          "description": "通信协议类型"
+        },
+        "command": {
+          "type": "string",
+          "description": "启动命令（stdio模式）"
+        },
+        "args": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "命令行参数"
+        },
+        "env": {
+          "type": "object",
+          "description": "环境变量",
+          "additionalProperties": {"type": "string"}
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "依赖的其他MCP服务器"
+        },
+        "tools": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/MCPTool"}
+        },
+        "health_check": {
+          "$ref": "#/definitions/HealthCheck"
+        }
+      }
+    },
+    "MCPTool": {
+      "type": "object",
+      "required": ["name", "description"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "工具名称"
+        },
+        "description": {
+          "type": "string",
+          "description": "工具描述"
+        },
+        "requires": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "依赖的其他MCP工具（格式：server.tool）"
+        }
+      }
+    },
+    "HealthCheck": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "default": 5000
+        }
+      }
+    },
+    "OrchestrationConfig": {
+      "type": "object",
+      "properties": {
+        "default_timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "default": 10000
+        },
+        "max_parallel": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 5
+        },
+        "cache_ttl_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 300
+        },
+        "retry_config": {
+          "type": "object",
+          "properties": {
+            "max_retries": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 3
+            },
+            "retry_delay_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1000
+            },
+            "backoff_multiplier": {
+              "type": "number",
+              "minimum": 1,
+              "default": 2
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
