@@ -59,15 +59,15 @@ RUN python -c "from sentence_transformers import SentenceTransformer; \
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1 \
     LOG_LEVEL=INFO \
-    PORT=8001 \
+    PORT=3000 \
     HOST=0.0.0.0
 
 # 暴露HTTP API端口
 EXPOSE 8001
 
-# 健康检查（支持多个路径）
-HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8001}/health || curl -f http://localhost:${PORT:-8001}/api/health || exit 1
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
 
 # 复制启动脚本
 COPY entrypoint.sh /app/entrypoint.sh

@@ -75,15 +75,9 @@ if __name__ == "__main__":
     # 设置日志过滤器
     setup_logging()
     
-    # 从环境变量读取端口（Zeabur等平台会自动设置PORT）
-    host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 8001))
-    
-    print(f"🌐 监听地址: {host}:{port}")
-    
     uvicorn.run(
         app,
-        host=host,
-        port=port,
+        host="0.0.0.0",
+        port=8001,
         log_level="info"
     )
