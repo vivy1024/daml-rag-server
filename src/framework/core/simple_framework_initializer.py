@@ -59,12 +59,29 @@ class SimpleFrameworkInitializer:
         初始化框架初始化器
         
         Args:
-            config: 配置字典
+            config: 配置字典（如果为空，从环境变量读取）
         """
-        self.config = config or {}
+        # 从环境变量构建默认配置
+        default_config = {
+            "metadata_db_path": os.getenv("METADATA_DB_PATH", "/tmp/metadata.db"),
+            "qdrant_url": f"http://{os.getenv('QDRANT_HOST', 'qdrant')}:{os.getenv('QDRANT_PORT', '6333')}",
+            "qdrant_host": os.getenv("QDRANT_HOST", "qdrant"),
+            "qdrant_port": int(os.getenv("QDRANT_PORT", "6333")),
+            "qdrant_collection": os.getenv("QDRANT_COLLECTION", "fitness_exercises_v2"),
+            "neo4j_uri": os.getenv("NEO4J_URI", "bolt://neo4j:7687"),
+            "neo4j_user": os.getenv("NEO4J_USER", "neo4j"),
+            "neo4j_password": os.getenv("NEO4J_PASSWORD", "build_body_2024"),
+            "mcp_config_path": os.getenv("MCP_CONFIG_PATH", "/app/config/mcp_registry.json"),
+            "embedding_model": os.getenv("EMBEDDING_MODEL", "thenlper/gte-large-zh"),
+        }
+        
+        # 合并用户配置（用户配置优先）
+        self.config = {**default_config, **(config or {})}
         self.components = {}
         
         logger.info("✅ 简化框架初始化器已创建")
+        logger.info(f"  - Qdrant URL: {self.config['qdrant_url']}")
+        logger.info(f"  - Neo4j URI: {self.config['neo4j_uri']}")
     
     async def initialize(self) -> InitResult:
         """
@@ -88,14 +105,17 @@ class SimpleFrameworkInitializer:
                 from ..storage.user_memory import UserMemory
                 
                 self.components["metadata_db"] = MetadataDB(
-                    db_path=self.config.get("metadata_db_path", "/tmp/metadata.db")
+                    db_path=self.config.get("metadata_db_path")
                 )
                 logger.info("  ✅ MetadataDB初始化成功")
                 
                 # 初始化Qdrant客户端（优化配置）
                 from src.framework.clients.qdrant_client import create_qdrant_client
+                qdrant_url = self.config.get("qdrant_url")
+                logger.info(f"  🔗 连接Qdrant: {qdrant_url}")
+                
                 qdrant_client = create_qdrant_client(
-                    url=self.config.get("qdrant_url", "http://qdrant:6333"),
+                    url=qdrant_url,
                     timeout=30.0,  # 增加超时时间到30秒
                     prefer_grpc=True  # 启用gRPC连接
                 )
@@ -115,23 +135,29 @@ class SimpleFrameworkInitializer:
             try:
                 from ..retrieval.graph.kg_full import KnowledgeGraphFull
                 
-                # 使用正确的Qdrant集合名称：fitness_exercises_v2
-                qdrant_collection = self.config.get(
-                    "qdrant_collection", 
-                    os.getenv("QDRANT_COLLECTION", "fitness_exercises_v2")
-                )
+                # 从配置中获取参数
+                neo4j_uri = self.config.get("neo4j_uri")
+                neo4j_user = self.config.get("neo4j_user")
+                neo4j_password = self.config.get("neo4j_password")
+                qdrant_host = self.config.get("qdrant_host")
+                qdrant_port = self.config.get("qdrant_port")
+                qdrant_collection = self.config.get("qdrant_collection")
+                embedding_model = self.config.get("embedding_model")
+                
+                logger.info(f"  🔗 Neo4j URI: {neo4j_uri}")
+                logger.info(f"  🔗 Qdrant Host: {qdrant_host}:{qdrant_port}")
+                logger.info(f"  📦 Collection: {qdrant_collection}")
                 
                 self.components["kg_full"] = KnowledgeGraphFull(
-                    neo4j_uri=self.config.get("neo4j_uri", "bolt://neo4j:7687"),
-                    neo4j_user=self.config.get("neo4j_user", "neo4j"),
-                    neo4j_password=self.config.get("neo4j_password", "build_body_2024"),
-                    qdrant_host=self.config.get("qdrant_host", "qdrant"),
-                    qdrant_port=self.config.get("qdrant_port", 6333),
-                    qdrant_collection=qdrant_collection,  # 使用正确的集合名称
-                    # ✅ 修复：使用GTE-Large-zh模型（与Qdrant中存储的向量一致）
-                    embedding_model=self.config.get("embedding_model", "thenlper/gte-large-zh")
+                    neo4j_uri=neo4j_uri,
+                    neo4j_user=neo4j_user,
+                    neo4j_password=neo4j_password,
+                    qdrant_host=qdrant_host,
+                    qdrant_port=qdrant_port,
+                    qdrant_collection=qdrant_collection,
+                    embedding_model=embedding_model
                 )
-                logger.info(f"  ✅ KnowledgeGraphFull初始化成功 (collection={qdrant_collection})")
+                logger.info(f"  ✅ KnowledgeGraphFull初始化成功")
                 
             except Exception as e:
                 logger.error(f"  ❌ GraphRAG初始化失败: {e}")
