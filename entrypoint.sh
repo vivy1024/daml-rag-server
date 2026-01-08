@@ -1,118 +1,145 @@
 #!/bin/bash
-# DAML-RAG容器启动脚本
-# 确保MCP服务正确构建并初始化
+# DAML-RAG Container Startup Script
+# Ensures MCP services are properly built and initialized
 
-set -e  # 遇到错误立即退出
+set -e  # Exit on error
 
-echo "🚀 DAML-RAG容器启动中..."
+echo "DAML-RAG Container Starting..."
 echo "================================================"
 
-# 颜色定义
+# Color definitions
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# 日志函数
+# Log functions
 log_info() {
-    echo -e "${GREEN}✅ $1${NC}"
+    echo -e "${GREEN}[OK] $1${NC}"
 }
 
 log_warn() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+    echo -e "${YELLOW}[WARN] $1${NC}"
 }
 
 log_error() {
-    echo -e "${RED}❌ $1${NC}"
+    echo -e "${RED}[ERROR] $1${NC}"
 }
 
-# 步骤1: 验证Python MCP工具
+# Step 0: Environment Detection and Configuration
 echo ""
-echo "📋 步骤1: 验证Python MCP工具..."
+echo "Step 0: Detecting environment..."
+cd /app
+
+# 检测是否在Zeabur生产环境
+if [ "$ENVIRONMENT" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
+    log_info "Detected Zeabur production environment"
+    
+    # 如果存在.env.production，使用它
+    if [ -f "/app/.env.production" ]; then
+        log_info "Loading .env.production configuration..."
+        # 导出.env.production中的变量（不覆盖已存在的环境变量）
+        set -a
+        source /app/.env.production
+        set +a
+        log_info "Production configuration loaded"
+    else
+        log_warn ".env.production not found, using Zeabur injected variables"
+    fi
+    
+    # 打印关键配置（调试用）
+    log_info "REDIS_HOST: ${REDIS_HOST:-not set}"
+    log_info "MYSQL_HOST: ${MYSQL_HOST:-not set}"
+    log_info "NEO4J_URI: ${NEO4J_URI:-not set}"
+else
+    log_info "Detected local development environment"
+    
+    # 本地环境使用.env
+    if [ -f "/app/.env" ]; then
+        log_info "Loading .env configuration..."
+        set -a
+        source /app/.env
+        set +a
+    fi
+fi
+
+# Step 1: Verify Python MCP Tools
+echo ""
+echo "Step 1: Verifying Python MCP Tools..."
 MCP_TOOLS_DIR="/app/src/applications/fitness/mcp_tools"
 
 if [ ! -d "$MCP_TOOLS_DIR" ]; then
-    log_error "MCP工具目录不存在: $MCP_TOOLS_DIR"
+    log_error "MCP tools directory not found: $MCP_TOOLS_DIR"
     exit 1
 fi
 
-log_info "MCP工具目录存在: $MCP_TOOLS_DIR"
+log_info "MCP tools directory exists: $MCP_TOOLS_DIR"
 
-# 验证关键Python工具目录
-TOOL_DIRS=(
-    "exercise"
-    "nutrition"
-    "safety"
-    "training"
-)
+# Verify key Python tool directories
+TOOL_DIRS=("exercise" "nutrition" "safety" "training")
 
 for dir in "${TOOL_DIRS[@]}"; do
     if [ -d "$MCP_TOOLS_DIR/$dir" ]; then
-        log_info "  ✓ $dir 工具目录存在"
+        log_info "  $dir tools directory exists"
     else
-        log_warn "  ⚠ $dir 工具目录不存在"
+        log_warn "  $dir tools directory not found"
     fi
 done
 
-# 验证stdio MCP服务（用户档案）
+# Verify stdio MCP service (user profile)
 USER_PROFILE_MCP="/app/mcp-servers/user-profile-stdio/build/index.js"
 if [ -f "$USER_PROFILE_MCP" ]; then
-    log_info "  ✓ user-profile-stdio MCP服务存在"
+    log_info "  user-profile-stdio MCP service exists"
 else
-    log_warn "  ⚠ user-profile-stdio MCP服务不存在"
+    log_warn "  user-profile-stdio MCP service not found"
 fi
 
-# 步骤2: 验证MCP配置文件
+# Step 2: Verify MCP config file
 echo ""
-echo "📋 步骤2: 验证MCP配置文件..."
+echo "Step 2: Verifying MCP config file..."
 MCP_CONFIG="/app/config/mcp_registry.json"
 
 if [ -f "$MCP_CONFIG" ]; then
-    log_info "MCP配置文件存在: $MCP_CONFIG"
+    log_info "MCP config file exists: $MCP_CONFIG"
     
-    # 验证JSON格式
+    # Verify JSON format
     if python3 -c "import json; json.load(open('$MCP_CONFIG'))" 2>/dev/null; then
-        log_info "MCP配置文件格式正确"
+        log_info "MCP config file format is valid"
     else
-        log_error "MCP配置文件格式错误"
+        log_error "MCP config file format is invalid"
         exit 1
     fi
 else
-    log_error "MCP配置文件不存在: $MCP_CONFIG"
+    log_error "MCP config file not found: $MCP_CONFIG"
     exit 1
 fi
 
-# 步骤3: 验证数据库连接配置
+# Step 3: Verify database connection config
 echo ""
-echo "📋 步骤3: 验证数据库连接配置..."
+echo "Step 3: Verifying database connection config..."
 
-# 检查环境变量
-REQUIRED_VARS=(
-    "NEO4J_URI"
-    "QDRANT_HOST"
-    "REDIS_HOST"
-    "MYSQL_HOST"
-)
+# Check environment variables
+REQUIRED_VARS=("NEO4J_URI" "QDRANT_HOST" "REDIS_HOST" "MYSQL_HOST")
 
 for var in "${REQUIRED_VARS[@]}"; do
     if [ -z "${!var}" ]; then
-        log_warn "  ⚠ 环境变量 $var 未设置"
+        log_warn "  Environment variable $var is not set"
     else
-        log_info "  ✓ $var = ${!var}"
+        log_info "  $var = ${!var}"
     fi
 done
 
-# 步骤4: 启动DAML-RAG服务
+# Step 4: Start DAML-RAG service
 echo ""
-echo "📋 步骤4: 启动DAML-RAG主服务..."
+echo "Step 4: Starting DAML-RAG main service..."
 echo "================================================"
 cd /app
 
-log_info "所有准备工作完成，启动DAML-RAG服务器..."
-log_info "MCP工具模式: 15个Python内置工具 + 1个stdio MCP服务（用户档案）"
-log_info "  - Python工具: exercise(2) + nutrition(4) + safety(3) + training(6)"
+log_info "All preparation complete, starting DAML-RAG server..."
+log_info "MCP tools mode: 18 Python built-in tools + 1 stdio MCP service (user profile)"
+log_info "  - Python tools: exercise(2) + nutrition(4) + safety(3) + training(9)"
 log_info "  - stdio MCP: user-profile-stdio (Node.js)"
 echo ""
 
-# 执行Python启动脚本
+# Execute Python startup script
 exec python3 start_server.py
