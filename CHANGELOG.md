@@ -1,8 +1,60 @@
 # DAML-RAG框架更新日志
 
-**版本**: v8.90.0
-**更新日期**: 2026-01-07
-**状态**: 🔧 向量模型更新为GTE-Large-zh
+**版本**: v8.91.0
+**更新日期**: 2026-01-10
+**状态**: 🚀 存储层重构 - Phase 1完成
+
+---
+
+### v8.91.0 (2026-01-10) - 存储层重构 Phase 1：创建新模块 🚀
+
+**变更类型**: ♻️ 重构
+
+**实施内容**:
+1. **创建统一缓存系统** (`unified_cache.py` - 10.9KB)
+   - 统一的缓存接口：get, set, delete, invalidate
+   - Redis后端存储
+   - TTL管理和缓存统计
+   - 错误处理和降级策略
+
+2. **创建用户档案缓存** (`user_profile_cache.py` - 5.38KB)
+   - 基于UnifiedCache实现
+   - TTL=5分钟
+   - 缓存未命中时从数据库获取
+   - 档案更新时缓存失效
+
+3. **创建会员缓存** (`membership_cache.py` - 5.37KB)
+   - 基于UnifiedCache实现
+   - TTL=10分钟
+   - 缓存未命中时从后端获取
+   - 会员变更时缓存失效
+
+4. **创建预加载管理器** (`warmup.py` - 12.58KB)
+   - 合并progressive_warmup和smart_preloader功能
+   - 后台异步预加载
+   - 可配置的预加载策略
+   - 预加载统计和监控
+
+**代码质量**:
+- 总代码量：34.23KB（符合目标）
+- 所有模块大小均在目标范围内
+- 清晰的接口设计和错误处理
+
+**下一步**:
+- Phase 2: 并行运行（添加feature flag，性能对比测试）
+- Phase 3: 切换迁移（更新import语句，启用新缓存）
+- Phase 4: 清理旧代码（删除旧模块，更新文档）
+
+**相关需求**:
+- Requirements 1.1, 1.2, 1.6 (统一缓存)
+- Requirements 2.1-2.5 (用户档案缓存)
+- Requirements 3.1-3.5 (会员缓存)
+- Requirements 5.1-5.5 (预加载管理)
+
+**相关文档**:
+- [存储层清理需求](../.kiro/specs/storage-layer-cleanup/requirements.md)
+- [存储层清理设计](../.kiro/specs/storage-layer-cleanup/design.md)
+- [存储层清理任务](../.kiro/specs/storage-layer-cleanup/tasks.md)
 
 ---
 
