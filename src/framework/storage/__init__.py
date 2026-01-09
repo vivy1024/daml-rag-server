@@ -3,15 +3,16 @@
 Storage Layer - 存储层
 
 模块：
-- user_memory.py: 用户级向量库管理器
 - vector_store_abstract.py: 向量存储抽象层
 - metadata_database.py: 元数据数据库
-- intelligent_cache_manager.py: 智能缓存管理器
-- progressive_warmup.py: 渐进式预热系统
-- smart_preloader.py: 智能预热器（步骤1预热步骤3）
+- unified_cache.py: 统一缓存系统
+- user_profile_cache.py: 用户档案缓存
+- membership_cache.py: 会员缓存
+- warmup.py: 预加载管理器
+- circuit_breaker.py: 熔断器
+- connection_pool_manager.py: 连接池管理器
 """
 
-from .user_memory import UserMemory
 from .vector_store_abstract import (
     IVectorStore,
     QdrantVectorStore,
@@ -20,44 +21,27 @@ from .vector_store_abstract import (
     Distance
 )
 from .metadata_database import MetadataDB
-from .intelligent_cache_manager import (
-    IntelligentCacheManager,
-    CacheConfig,
-    CacheLevel,
-    CacheEntry,
-    CacheStatistics
+
+# 缓存系统
+from .unified_cache import (
+    UnifiedCache,
+    CacheConfig as UnifiedCacheConfig,
+    CacheStatistics as UnifiedCacheStatistics
 )
-from .intelligent_user_profile_cache import (
-    IntelligentUserCache,
-    UserProfileEntry,
-    PreloadPrediction,
-    CacheConfig as UserCacheConfig,
-    UserProfileStatus
+from .user_profile_cache import (
+    UserProfileCache
 )
-from .intelligent_membership_cache import (
-    IntelligentMembershipCache,
-    MembershipCacheEntry
+from .membership_cache import (
+    MembershipCache
 )
-from .progressive_warmup import (
-    ProgressiveWarmup,
+from .warmup import (
+    WarmupManager,
     WarmupConfig,
-    WarmupPhase,
-    WarmupResult,
-    WarmupStatistics,
-    get_progressive_warmup,
-    set_progressive_warmup,
-    create_and_start_warmup
+    get_warmup_manager,
+    set_warmup_manager
 )
-from .smart_preloader import (
-    SmartPreloader,
-    SmartPreloaderConfig,
-    SmartPreloaderStatistics,
-    PreloadTask,
-    PreloadStatus,
-    get_smart_preloader,
-    set_smart_preloader,
-    create_smart_preloader
-)
+
+# 熔断器
 from .circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,
@@ -69,53 +53,24 @@ from .circuit_breaker import (
     user_profile_circuit_breaker,
     membership_circuit_breaker
 )
-from .heat_map import (
-    HeatMap,
-    HeatMapConfig,
-    HeatEntry,
-    QueryEntry,
-    get_heat_map,
-    set_heat_map
-)
 
 __all__ = [
-    "UserMemory",
     "IVectorStore",
     "QdrantVectorStore",
     "FAISSVectorStore",
     "PineconeVectorStore",
     "Distance",
     "MetadataDB",
-    "IntelligentCacheManager",
-    "CacheConfig",
-    "CacheLevel",
-    "CacheEntry",
-    "CacheStatistics",
-    "IntelligentUserCache",
-    "UserProfileEntry",
-    "PreloadPrediction",
-    "UserCacheConfig",
-    "UserProfileStatus",
-    "IntelligentMembershipCache",
-    "MembershipCacheEntry",
-    # 渐进式预热系统
-    "ProgressiveWarmup",
+    # 缓存系统
+    "UnifiedCache",
+    "UnifiedCacheConfig",
+    "UnifiedCacheStatistics",
+    "UserProfileCache",
+    "MembershipCache",
+    "WarmupManager",
     "WarmupConfig",
-    "WarmupPhase",
-    "WarmupResult",
-    "WarmupStatistics",
-    "get_progressive_warmup",
-    "set_progressive_warmup",
-    "create_and_start_warmup",
-    # 智能预热器（步骤1预热步骤3）
-    "SmartPreloader",
-    "SmartPreloaderConfig",
-    "SmartPreloaderStatistics",
-    "PreloadTask",
-    "PreloadStatus",
-    "get_smart_preloader",
-    "set_smart_preloader",
-    "create_smart_preloader",
+    "get_warmup_manager",
+    "set_warmup_manager",
     # 熔断器组件
     "CircuitBreaker",
     "CircuitBreakerConfig",
@@ -125,14 +80,8 @@ __all__ = [
     "CircuitOpenException",
     "CircuitBreakerError",
     "user_profile_circuit_breaker",
-    "membership_circuit_breaker",
-    # 热度图系统
-    "HeatMap",
-    "HeatMapConfig",
-    "HeatEntry",
-    "QueryEntry",
-    "get_heat_map",
-    "set_heat_map"
+    "membership_circuit_breaker"
 ]
+
 
 

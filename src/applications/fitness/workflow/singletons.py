@@ -86,10 +86,10 @@ def get_user_cache(backend_client=None, redis_client=None):
             cache_config = CacheConfig()
             unified_cache = UnifiedCache(redis_client=redis_client, config=cache_config)
             
-            # 创建用户档案缓存
+            # 创建用户档案缓存（注意：新缓存使用db_client而不是backend_client）
             _user_cache_instance = UserProfileCache(
                 unified_cache=unified_cache,
-                backend_client=backend_client
+                db_client=backend_client  # 传递为db_client参数
             )
             logger.info("✅ UserProfileCache（新缓存）初始化完成")
         else:

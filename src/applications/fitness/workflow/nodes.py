@@ -171,32 +171,37 @@ async def _trigger_step3_preload(
     if not user_id:
         return
     
-    # 尝试获取全局智能预热器（如果未传入）
+    # 根据feature flag选择新旧预加载器
+    import os
+    use_new_cache = os.getenv('USE_NEW_CACHE', 'false').lower() in ('true', '1', 'yes')
+    
+    # 尝试获取预热器（如果未传入）
     if smart_preloader is None:
         try:
-            from ....framework.storage.smart_preloader import get_smart_preloader
-            smart_preloader = get_smart_preloader()
+            # 使用预热系统
+            from ....framework.storage.warmup import get_warmup_manager
+            warmup_manager = get_warmup_manager()
+            if warmup_manager:
+                # 转换user_id为字符串
+                user_id_str = str(user_id)
+                
+                # 异步预热会员数据（非阻塞）
+                try:
+                    await warmup_manager.preload_memberships([user_id_str])
+                    logger.debug(
+                        f"🚀 [{request_id}] 步骤1→步骤3预热已启动: user_id={user_id_str}"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"⚠️ [{request_id}] 步骤3预热启动失败（不影响主流程）: {e}"
+                    )
         except ImportError:
             pass
-    
-    if smart_preloader:
-        try:
-            # 转换user_id为字符串
-            user_id_str = str(user_id)
-            
-            # 异步预热步骤3数据（非阻塞）
-            preload_started = await smart_preloader.preload_for_step3(user_id_str)
-            
-            if preload_started:
-                logger.debug(
-                    f"🚀 [{request_id}] 步骤1→步骤3预热已启动: user_id={user_id_str}"
-                )
         except Exception as e:
             # 预热失败不影响主工作流
             logger.warning(
                 f"⚠️ [{request_id}] 步骤3预热启动失败（不影响主流程）: {e}"
             )
-
 
 # ============ 步骤2：会话记录存储 ============
 
@@ -353,21 +358,19 @@ async def _record_preload_cache_hit(
     Requirements:
         - 3.3: WHEN step 3 executes, THE Membership_Cache SHALL find data already in cache
     """
-    # 尝试获取全局智能预热器（如果未传入）
+    # 根据feature flag选择新旧预加载器
+    import os
+    use_new_cache = os.getenv('USE_NEW_CACHE', 'false').lower() in ('true', '1', 'yes')
+    
+    # 尝试获取预热器（如果未传入）
     if smart_preloader is None:
         try:
-            from ....framework.storage.smart_preloader import get_smart_preloader
-            smart_preloader = get_smart_preloader()
+            # 新预热系统暂时没有record_cache_hit方法，跳过追踪
+            logger.debug(
+                f"📊 [{request_id}] 步骤3预热效果追踪（暂不支持）: user_id={user_id}"
+            )
         except ImportError:
             pass
-    
-    if smart_preloader:
-        try:
-            # 记录缓存命中
-            smart_preloader.record_cache_hit(user_id)
-            logger.debug(
-                f"📊 [{request_id}] 步骤3预热效果追踪: user_id={user_id}"
-            )
         except Exception as e:
             # 追踪失败不影响主工作流
             logger.debug(f"⚠️ [{request_id}] 预热效果追踪失败: {e}")

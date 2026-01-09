@@ -1,8 +1,59 @@
 # DAML-RAG框架更新日志
 
-**版本**: v8.96.0
+**版本**: v9.0.0
 **更新日期**: 2026-01-10
-**状态**: 🎉 存储层重构 - Phase 3完成：迁移成功验证通过
+**状态**: 🎉 存储层重构完成 - Phase 4：旧代码清理完成
+
+---
+
+### v9.0.0 (2026-01-10) - Phase 4 旧代码清理完成 ✅
+
+**变更类型**: 🗑️ 代码清理
+
+**删除的模块**:
+
+1. **旧缓存系统（4个文件）**
+   - `intelligent_cache_system.py` (42KB)
+   - `intelligent_cache_manager.py` (21KB)
+   - `intelligent_user_profile_cache.py` (30KB)
+   - `intelligent_membership_cache.py` (20KB)
+
+2. **过度设计的模块（4个文件）**
+   - `progressive_warmup.py` (18KB) - 已合并到warmup.py
+   - `smart_preloader.py` (16KB) - 已合并到warmup.py
+   - `heat_map.py` (20KB) - 很少使用
+   - `user_memory.py` (19KB) - 未被实际使用
+
+3. **相关测试文件（5个文件）**
+   - `test_cache_get_stats.py`
+   - `test_membership_cache_performance.py`
+   - `test_intelligent_cache_manager.py`
+   - `test_intelligent_cache_system.py`
+   - `test_user_profile_loading.py`
+
+**代码更新**:
+- 更新 `framework/storage/__init__.py` - 移除旧模块导出
+- 更新 `framework/__init__.py` - 移除user_memory导出
+- 更新 `framework/core/simple_framework_initializer.py` - 移除user_memory初始化
+- 更新 `api/routes/user.py` - 移除旧缓存引用
+- 更新 `api/main.py` - 移除旧预热系统引用
+- 更新 `applications/fitness/workflow/nodes.py` - 移除smart_preloader引用
+
+**保留的模块**:
+- `metadata_database.py` (30KB) - 在mcp_orchestrator中被实际使用
+- `connection_pool_manager.py` (20KB) - 连接池管理
+- `circuit_breaker.py` (18KB) - 熔断器
+- `vector_store_abstract.py` (13KB) - 向量存储抽象
+
+**验证结果**:
+- ✅ 服务启动成功
+- ✅ 无import错误
+- ✅ 无运行时错误
+- ✅ API接口正常
+
+**下一步**:
+- 统计代码减少量
+- 验证是否达到目标（减少52%）
 
 ---
 
