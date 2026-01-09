@@ -1,8 +1,41 @@
 # DAML-RAG框架更新日志
 
-**版本**: v8.91.0
+**版本**: v8.92.0
 **更新日期**: 2026-01-10
-**状态**: 🚀 存储层重构 - Phase 1完成
+**状态**: 🚀 存储层重构 - Phase 1完成 + Docker修复
+
+---
+
+### v8.92.0 (2026-01-10) - Docker环境修复 🔧
+
+**变更类型**: 🐛 修复
+
+**问题描述**:
+- Docker容器启动失败：`exec /app/entrypoint.sh: no such file or directory`
+- 根本原因：Windows CRLF行尾导致Linux容器无法执行脚本
+- HuggingFace模型加载时网络不可达
+
+**修复内容**:
+1. **修复行尾问题**
+   - 在Dockerfile中添加`sed -i 's/\r$//'`自动转换CRLF为LF
+   - 处理entrypoint.sh和.env文件
+   - 确保脚本在Linux容器中可执行
+
+2. **添加离线模式**
+   - 设置环境变量：`TRANSFORMERS_OFFLINE=1`和`HF_HUB_OFFLINE=1`
+   - 避免HuggingFace网络检查
+   - 使用本地缓存的模型文件
+
+**验证结果**:
+- ✅ Docker镜像构建成功
+- ✅ 容器启动成功
+- ✅ 新缓存模块正常初始化
+- ✅ API服务运行在 http://0.0.0.0:8001
+- ✅ 健康检查通过
+
+**相关文件**:
+- `daml-rag-server/Dockerfile`
+- `daml-rag-server/entrypoint.sh`
 
 ---
 
