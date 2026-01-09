@@ -50,17 +50,19 @@ COPY . .
 RUN mkdir -p /app/data /app/logs
 
 # 预下载GTE-Large-zh模型（使用国内镜像加速）
-ENV HF_ENDPOINT=https://hf-mirror.com
-# 下载最新选型的向量模型（阿里达摩院，中文优化，综合分最高）
-RUN python -c "from sentence_transformers import SentenceTransformer; \
-    model = SentenceTransformer('thenlper/gte-large-zh'); \
-    print('✅ GTE-Large-zh model downloaded successfully')"
+# 注释掉以避免HuggingFace限流问题，模型已在本地缓存
+# ENV HF_ENDPOINT=https://hf-mirror.com
+# RUN python -c "from sentence_transformers import SentenceTransformer; \
+#     model = SentenceTransformer('thenlper/gte-large-zh'); \
+#     print('✅ GTE-Large-zh model downloaded successfully')"
 
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1 \
     LOG_LEVEL=INFO \
     PORT=3000 \
-    HOST=0.0.0.0
+    HOST=0.0.0.0 \
+    TRANSFORMERS_OFFLINE=1 \
+    HF_HUB_OFFLINE=1
 
 # 暴露HTTP API端口
 EXPOSE 8001
@@ -69,9 +71,12 @@ EXPOSE 8001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8001/health || exit 1
 
-# 复制启动脚本
+# 复制启动脚本并修复行尾
 COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+# 修复.env文件的行尾（如果存在）
+RUN if [ -f /app/.env ]; then sed -i 's/\r$//' /app/.env; fi
 
 # 使用entrypoint脚本启动（确保MCP服务构建）
 ENTRYPOINT ["/app/entrypoint.sh"]

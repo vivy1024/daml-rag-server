@@ -38,7 +38,7 @@ if [ "$ENVIRONMENT" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
     # 如果存在.env.production，使用它
     if [ -f "/app/.env.production" ]; then
         log_info "Loading .env.production configuration..."
-        # 导出.env.production中的变量（不覆盖已存在的环境变量）
+        # 导出.env.production中的变量（不覆盖已存在的环境变量�?
         set -a
         source /app/.env.production
         set +a
@@ -47,7 +47,7 @@ if [ "$ENVIRONMENT" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
         log_warn ".env.production not found, using Zeabur injected variables"
     fi
     
-    # 打印关键配置（调试用）
+    # 打印关键配置（调试用�?
     log_info "REDIS_HOST: ${REDIS_HOST:-not set}"
     log_info "MYSQL_HOST: ${MYSQL_HOST:-not set}"
     log_info "NEO4J_URI: ${NEO4J_URI:-not set}"
