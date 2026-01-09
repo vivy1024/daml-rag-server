@@ -1,8 +1,51 @@
 # DAML-RAG框架更新日志
 
-**版本**: v8.93.0
+**版本**: v8.94.0
 **更新日期**: 2026-01-10
-**状态**: 🚀 存储层重构 - Phase 2开始：Feature Flag支持
+**状态**: 🚀 存储层重构 - Phase 2完成：新旧缓存并行运行
+
+---
+
+### v8.94.0 (2026-01-10) - Phase 2完成：新旧缓存并行运行 ✅
+
+**变更类型**: ✨ 新功能
+
+**实施内容**:
+1. **验证Feature Flag功能**
+   - 创建集成测试脚本 `test_cache_integration.py`
+   - 验证新旧缓存模块可以正常导入
+   - 验证singletons和API路由的feature flag逻辑
+   - 所有测试通过 ✅
+
+2. **创建Feature Flag使用指南**
+   - 文档位置：`docs/04-开发指南/Feature-Flag使用指南.md`
+   - 说明如何配置和切换新旧缓存
+   - 说明影响范围和代码实现
+   - 提供验证方法和迁移计划
+
+3. **完成任务3.2和3.3**
+   - ✅ 任务3.2：更新API路由使用新缓存
+   - ✅ 任务3.3：更新workflow使用新缓存
+   - ✅ 任务3：Phase 2并行运行
+
+**技术验证**:
+- ✅ 默认使用旧缓存（`USE_NEW_CACHE=false`）
+- ✅ 新缓存模块可以正常导入
+- ✅ 旧缓存模块可以正常导入
+- ✅ Singletons的feature flag逻辑正常
+- ✅ API路由的feature flag逻辑正常
+
+**下一步**:
+- Phase 2：在测试环境验证新缓存（任务3.4）
+- Phase 2：性能对比测试（任务3.5）
+- Phase 3：切换迁移
+- Phase 4：清理旧代码
+
+**相关任务**: `.kiro/specs/storage-layer-cleanup/tasks.md` - 任务3, 3.2, 3.3
+
+**相关文件**:
+- `daml-rag-server/test_cache_integration.py`
+- `daml-rag-server/docs/04-开发指南/Feature-Flag使用指南.md`
 
 ---
 
