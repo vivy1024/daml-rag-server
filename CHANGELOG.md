@@ -1,8 +1,50 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.1.0
+**版本**: v9.2.0
 **更新日期**: 2026-01-10
-**状态**: 🎉 存储层重构完成 - 项目验收通过
+**状态**: 🔍 监控层简化 - concurrency_limiter评估完成
+
+---
+
+### v9.2.0 (2026-01-10) - 监控层简化：concurrency_limiter评估 ✅
+
+**变更类型**: 📊 架构分析 + 📝 文档更新
+
+**评估结果**:
+- ✅ **决策**: 保留 `concurrency_limiter.py` (13KB)
+- ✅ **原因**: 被核心API路由直接使用，提供生产环境必需的并发控制
+
+**使用情况分析**:
+1. **核心API路由** (`src/api/routes/chat.py`)
+   - `/api/chat` - 非流式聊天端点
+   - `/api/chat/stream` - 流式聊天端点
+   - 用于限制并发请求数量，防止服务器过载
+
+2. **性能组件集成** (`src/applications/fitness/workflow/singletons.py`)
+   - 作为单例组件被初始化和管理
+   - 与其他性能组件协同工作
+
+3. **测试覆盖**
+   - 单元测试: `tests/unit/test_concurrency_limiter.py`
+   - 集成测试: `tests/integration/test_concurrency_limiter_integration.py`
+   - 性能测试: `tests/performance/test_monitoring_system_acceptance.py`
+
+**文档更新**:
+- 新增 `docs/04-开发指南/concurrency_limiter使用情况分析.md`
+- 更新 `.kiro/specs/monitoring-simplification/requirements.md`
+- 更新 `.kiro/specs/monitoring-simplification/design.md`
+- 更新 `.kiro/specs/monitoring-simplification/tasks.md`
+
+**架构调整**:
+- 目标文件数：13个 → 5个（减少62%）
+- 目标代码量：244KB → 72KB（减少70%）
+- 保留模块：streaming_metrics, metrics_collector, concurrency_limiter, structured_logger, prometheus_integration
+
+**相关需求**:
+- Requirements 3.1: ✅ 已分析所有使用位置
+- Requirements 3.2: ✅ 确认被关键组件使用
+- Requirements 3.3: ✅ 决定保留
+- Requirements 3.4: ✅ 已记录原因
 
 ---
 
