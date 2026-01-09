@@ -12,6 +12,7 @@ POST /v1/user/warmup - 用户登录后预热用户档案和会员数据
 
 import logging
 import asyncio
+import os
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -19,6 +20,17 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _use_new_cache() -> bool:
+    """
+    检查是否使用新缓存系统
+    
+    Returns:
+        bool: True=使用新缓存，False=使用旧缓存
+    """
+    use_new = os.getenv('USE_NEW_CACHE', 'false').lower() in ('true', '1', 'yes')
+    return use_new
 
 
 class WarmupRequest(BaseModel):
@@ -95,22 +107,37 @@ async def warmup_user(request: WarmupRequest) -> WarmupResponse:
             preload_status["user_profile"] = f"error: {str(e)}"
             logger.error(f"❌ 用户档案预热失败: user_id={user_id}, error={e}")
         
-        # 2. 预热会员数据（通过SmartPreloader）
+        # 2. 预热会员数据（根据flag选择新旧预加载器）
         try:
-            from ...framework.storage.smart_preloader import get_smart_preloader
-            
-            smart_preloader = get_smart_preloader()
-            if smart_preloader:
-                # 触发会员数据预热
-                preload_started = await smart_preloader.preload_for_step3(user_id)
-                if preload_started:
+            if _use_new_cache():
+                # 使用新预加载器（WarmupManager）
+                from ...framework.storage.warmup import get_warmup_manager
+                
+                warmup_manager = get_warmup_manager()
+                if warmup_manager:
+                    # 触发会员数据预热
+                    await warmup_manager.preload_memberships([user_id])
                     preload_status["membership"] = "started"
-                    logger.info(f"✅ 会员数据预热已启动: user_id={user_id}")
+                    logger.info(f"✅ 会员数据预热已启动（新预加载器）: user_id={user_id}")
                 else:
-                    preload_status["membership"] = "skipped"
+                    preload_status["membership"] = "preloader_not_available"
+                    logger.warning(f"⚠️ 新预加载器未初始化")
             else:
-                preload_status["membership"] = "preloader_not_available"
-                logger.warning(f"⚠️ 智能预热器未初始化")
+                # 使用旧预加载器（SmartPreloader）
+                from ...framework.storage.smart_preloader import get_smart_preloader
+                
+                smart_preloader = get_smart_preloader()
+                if smart_preloader:
+                    # 触发会员数据预热
+                    preload_started = await smart_preloader.preload_for_step3(user_id)
+                    if preload_started:
+                        preload_status["membership"] = "started"
+                        logger.info(f"✅ 会员数据预热已启动（旧预加载器）: user_id={user_id}")
+                    else:
+                        preload_status["membership"] = "skipped"
+                else:
+                    preload_status["membership"] = "preloader_not_available"
+                    logger.warning(f"⚠️ 旧预加载器未初始化")
         except Exception as e:
             preload_status["membership"] = f"error: {str(e)}"
             logger.error(f"❌ 会员数据预热失败: user_id={user_id}, error={e}")
@@ -170,11 +197,20 @@ async def get_warmup_status(user_id: str) -> Dict[str, Any]:
             status["user_profile_cached"] = not entry.is_expired()
             status["user_profile_access_count"] = entry.access_count
         
-        # 检查会员预热状态
-        from ...framework.storage.smart_preloader import get_smart_preloader
-        smart_preloader = get_smart_preloader()
-        if smart_preloader:
-            status["membership_preloaded"] = smart_preloader.is_user_preloaded(user_id)
+        # 检查会员预热状态（根据flag选择新旧预加载器）
+        if _use_new_cache():
+            # 使用新预加载器（WarmupManager）
+            from ...framework.storage.warmup import get_warmup_manager
+            warmup_manager = get_warmup_manager()
+            if warmup_manager:
+                # 新预加载器暂时没有is_user_preloaded方法，标记为unknown
+                status["membership_preloaded"] = "unknown"
+        else:
+            # 使用旧预加载器（SmartPreloader）
+            from ...framework.storage.smart_preloader import get_smart_preloader
+            smart_preloader = get_smart_preloader()
+            if smart_preloader:
+                status["membership_preloaded"] = smart_preloader.is_user_preloaded(user_id)
         
         return status
         

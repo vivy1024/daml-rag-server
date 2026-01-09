@@ -1,8 +1,49 @@
 # DAML-RAG框架更新日志
 
-**版本**: v8.92.0
+**版本**: v8.93.0
 **更新日期**: 2026-01-10
-**状态**: 🚀 存储层重构 - Phase 1完成 + Docker修复
+**状态**: 🚀 存储层重构 - Phase 2开始：Feature Flag支持
+
+---
+
+### v8.93.0 (2026-01-10) - 添加Feature Flag支持 🎛️
+
+**变更类型**: ✨ 新功能
+
+**实施内容**:
+1. **添加USE_NEW_CACHE环境变量**
+   - 在 `.env` 和 `.env.production` 中添加配置项
+   - 默认值：`false`（使用旧缓存系统）
+   - 支持值：`true`, `1`, `yes`（使用新缓存系统）
+
+2. **修改singletons.py支持新旧缓存切换**
+   - 添加 `_use_new_cache()` 函数读取环境变量
+   - `get_user_cache()` 根据flag选择 `IntelligentUserCache`（旧）或 `UserProfileCache`（新）
+   - `get_membership_cache()` 根据flag选择 `IntelligentMembershipCache`（旧）或 `MembershipCache`（新）
+
+3. **修改user.py支持新旧预加载器切换**
+   - 添加 `_use_new_cache()` 函数
+   - `/v1/user/warmup` 接口根据flag选择 `SmartPreloader`（旧）或 `WarmupManager`（新）
+   - `/v1/user/warmup/status` 接口支持新旧预加载器状态查询
+
+**技术细节**:
+- 旧缓存系统：`IntelligentUserCache`, `IntelligentMembershipCache`, `SmartPreloader`
+- 新缓存系统：`UserProfileCache`, `MembershipCache`, `WarmupManager`
+- 统一缓存基础：`UnifiedCache`
+
+**下一步**:
+- Phase 2：在测试环境验证新缓存
+- Phase 2：性能对比测试
+- Phase 3：切换迁移
+- Phase 4：清理旧代码
+
+**相关任务**: `.kiro/specs/storage-layer-cleanup/tasks.md` - 任务3.1
+
+**相关文件**:
+- `daml-rag-server/.env`
+- `daml-rag-server/.env.production`
+- `daml-rag-server/src/applications/fitness/workflow/singletons.py`
+- `daml-rag-server/src/api/routes/user.py`
 
 ---
 
