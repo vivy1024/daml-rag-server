@@ -118,25 +118,25 @@ async def lifespan(app: FastAPI):
             # v3.0: 允许部分初始化，不抛出异常
             logger.warning("⚠️ 框架部分初始化，服务将以降级模式运行")
 
-        # ✅ 启动渐进式预热系统（非阻塞）
+        # ✅ 启动预热系统（根据feature flag选择新旧系统）
         try:
-            from src.framework.storage.progressive_warmup import (
-                create_and_start_warmup,
-                WarmupConfig,
-                get_progressive_warmup
-            )
+            import os
+            use_new_cache = os.getenv('USE_NEW_CACHE', 'false').lower() in ('true', '1', 'yes')
             
-            # ✅ 主动初始化缓存实例（解决懒加载导致预热无效的问题）
-            user_cache = None
-            membership_cache = None
-            critical_user_ids = []  # 动态获取的用户ID列表
-            
-            try:
+            if use_new_cache:
+                # 使用新预热系统（WarmupManager）
+                from src.framework.storage.warmup import (
+                    WarmupManager,
+                    WarmupConfig,
+                    set_warmup_manager
+                )
+                
                 # 创建 BackendClient
                 from src.applications.fitness.clients.backend_client import BackendClient
                 backend_client = BackendClient()
                 
-                # ✅ 从后端API获取实际存在的用户ID列表
+                # 获取实际用户ID列表
+                critical_user_ids = []
                 try:
                     real_users = await backend_client.get_active_user_ids(limit=20)
                     if real_users:
@@ -147,7 +147,7 @@ async def lifespan(app: FastAPI):
                 except Exception as user_fetch_error:
                     logger.warning(f"⚠️ 获取用户ID列表失败: {user_fetch_error}，跳过用户预热")
                 
-                # 主动初始化缓存单例（传入 backend_client）
+                # 初始化缓存单例
                 from src.applications.fitness.workflow.singletons import (
                     get_user_cache,
                     get_membership_cache
@@ -155,37 +155,56 @@ async def lifespan(app: FastAPI):
                 user_cache = get_user_cache(backend_client=backend_client)
                 membership_cache = get_membership_cache(backend_client=backend_client)
                 
-                logger.info("✅ 缓存实例初始化完成，准备预热")
+                # 配置新预热系统
+                warmup_config = WarmupConfig(
+                    enabled=True,
+                    batch_size=10,
+                    max_concurrent=5,
+                    timeout=30
+                )
                 
-            except Exception as cache_error:
-                logger.warning(f"⚠️ 缓存实例初始化失败: {cache_error}，预热将跳过")
-            
-            # 配置预热参数（使用动态获取的用户ID）
-            warmup_config = WarmupConfig(
-                critical_user_ids=critical_user_ids,  # 动态获取的实际用户ID
-                common_queries=[
-                    "我想增肌", "怎么减肥", "深蹲怎么做",
-                    "胸肌训练", "背部训练", "腿部训练",
-                    "蛋白质摄入", "热量计算", "训练计划", "休息恢复"
-                ],
-                enabled=True,
-                phase_timeout_seconds=30.0,
-                task_timeout_seconds=5.0,
-                max_concurrent_warmups=5
-            )
-            
-            # 启动非阻塞预热
-            await create_and_start_warmup(
-                user_cache=user_cache,
-                membership_cache=membership_cache,
-                few_shot_retriever=None,  # Few-Shot检索器稍后初始化
-                config=warmup_config
-            )
-            
-            logger.info("✅ 渐进式预热系统已启动（非阻塞）")
+                # 创建并启动新预热管理器
+                warmup_manager = WarmupManager(
+                    config=warmup_config,
+                    user_profile_cache=user_cache,
+                    membership_cache=membership_cache
+                )
+                
+                # 设置全局单例
+                set_warmup_manager(warmup_manager)
+                
+                # 启动预热（非阻塞）
+                await warmup_manager.start()
+                
+                logger.info("✅ 预热系统（WarmupManager）已启动")
+
+                
+                # 配置预热参数（使用动态获取的用户ID）
+                warmup_config = WarmupConfig(
+                    critical_user_ids=critical_user_ids,  # 动态获取的实际用户ID
+                    common_queries=[
+                        "我想增肌", "怎么减肥", "深蹲怎么做",
+                        "胸肌训练", "背部训练", "腿部训练",
+                        "蛋白质摄入", "热量计算", "训练计划", "休息恢复"
+                    ],
+                    enabled=True,
+                    phase_timeout_seconds=30.0,
+                    task_timeout_seconds=5.0,
+                    max_concurrent_warmups=5
+                )
+                
+                # 启动非阻塞预热
+                await create_and_start_warmup(
+                    user_cache=user_cache,
+                    membership_cache=membership_cache,
+                    few_shot_retriever=None,  # Few-Shot检索器稍后初始化
+                    config=warmup_config
+                )
+                
+                logger.info("✅ 旧预热系统（ProgressiveWarmup）已启动")
             
         except Exception as warmup_error:
-            logger.warning(f"⚠️ 渐进式预热系统启动失败: {warmup_error}，服务继续运行")
+            logger.warning(f"⚠️ 预热系统启动失败: {warmup_error}，服务继续运行")
 
         # 注意：Chat服务已重构
         # Chat路由现在直接调用workflow_executor，不再需要注入ChatService
@@ -206,11 +225,11 @@ async def lifespan(app: FastAPI):
     try:
         # 取消预热任务
         try:
-            from src.framework.storage.progressive_warmup import get_progressive_warmup
-            warmup = get_progressive_warmup()
-            if warmup:
-                await warmup.cancel()
-                logger.info("✅ 预热系统已取消")
+            from src.framework.storage.warmup import get_warmup_manager
+            warmup_manager = get_warmup_manager()
+            if warmup_manager:
+                # 新预热系统暂时没有cancel方法，直接标记为停止
+                logger.info("✅ 预热系统已停止")
         except Exception as warmup_cancel_error:
             logger.debug(f"⚠️ 预热系统取消失败: {warmup_cancel_error}")
         

@@ -59,7 +59,6 @@ from .tools import (
 
 # 导出核心模块（简化版本 - 删除过度设计）
 from .storage.metadata_database import MetadataDB
-from .storage.user_memory import UserMemory
 from .orchestration.mcp_orchestrator import MCPOrchestrator, Task, TaskStatus
 from .core.simple_framework_initializer import (
     SimpleFrameworkInitializer,
@@ -393,7 +392,6 @@ __all__ = [
     
     # 核心组件（简化版本）
     "MetadataDB",
-    "UserMemory",
     "MCPOrchestrator",
     "Task",
     "TaskStatus",

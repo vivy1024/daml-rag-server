@@ -102,29 +102,11 @@ class SimpleFrameworkInitializer:
             logger.info("\n📦 Step 1/5: 初始化存储层")
             try:
                 from ..storage.metadata_database import MetadataDB
-                from ..storage.user_memory import UserMemory
                 
                 self.components["metadata_db"] = MetadataDB(
                     db_path=self.config.get("metadata_db_path")
                 )
                 logger.info("  ✅ MetadataDB初始化成功")
-                
-                # 初始化Qdrant客户端（优化配置）
-                from src.framework.clients.qdrant_client import create_qdrant_client
-                qdrant_url = self.config.get("qdrant_url")
-                logger.info(f"  🔗 连接Qdrant: {qdrant_url}")
-                
-                qdrant_client = create_qdrant_client(
-                    url=qdrant_url,
-                    timeout=30.0,  # 增加超时时间到30秒
-                    prefer_grpc=True  # 启用gRPC连接
-                )
-                
-                self.components["user_memory"] = UserMemory(
-                    qdrant_client=qdrant_client,
-                    vector_size=1024  # 修复：与BGE-M3保持一致
-                )
-                logger.info("  ✅ UserMemory初始化成功")
                 
             except Exception as e:
                 logger.error(f"  ❌ 存储层初始化失败: {e}")
