@@ -1,8 +1,56 @@
 # DAML-RAG框架更新日志
 
-**版本**: v8.94.0
+**版本**: v8.95.0
 **更新日期**: 2026-01-10
-**状态**: 🚀 存储层重构 - Phase 2完成：新旧缓存并行运行
+**状态**: 🚀 存储层重构 - Phase 2完成：并行运行验证通过
+
+---
+
+### v8.95.0 (2026-01-10) - Phase 2 Checkpoint验证通过 ✅
+
+**变更类型**: ✅ 验证完成
+
+**验证内容**:
+1. **创建Phase 2 Checkpoint验证脚本**
+   - 脚本位置：`scripts/checkpoint_phase2_verification.py`
+   - 验证Feature Flag功能
+   - 验证模块导入
+   - 验证缓存配置
+   - 验证向后兼容性
+   - 验证API兼容性
+
+2. **验证结果**
+   - 总测试数：5
+   - 通过数：5
+   - 失败数：0
+   - 通过率：100% ✅
+
+3. **创建验证报告**
+   - 文档位置：`docs/04-开发指南/Phase2-并行运行验证报告.md`
+   - 记录所有测试结果
+   - 提供验证脚本使用方法
+   - 说明下一步计划
+
+**技术验证**:
+- ✅ Feature Flag功能正常
+- ✅ 新旧缓存模块可以正常导入
+- ✅ 缓存配置合理（TTL=300秒，LRU淘汰策略）
+- ✅ 向后兼容性（默认使用旧缓存）
+- ✅ API接口兼容性（get_profile, invalidate_profile等）
+
+**下一步**:
+- 在测试环境启用新缓存（USE_NEW_CACHE=true）
+- 进行性能对比测试
+- 监控缓存命中率和响应时间
+- 如果一切正常，进入Phase 3切换迁移
+
+**相关任务**: `.kiro/specs/storage-layer-cleanup/tasks.md` - 任务4（Checkpoint）
+
+**相关文件**:
+- `daml-rag-server/scripts/checkpoint_phase2_verification.py`
+- `daml-rag-server/scripts/test_cache_integration.py`
+- `daml-rag-server/scripts/test_new_cache_enabled.py`
+- `daml-rag-server/docs/04-开发指南/Phase2-并行运行验证报告.md`
 
 ---
 
