@@ -27,6 +27,19 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+# ============ Feature Flag配置 ============
+
+def _use_new_cache() -> bool:
+    """
+    检查是否使用新缓存系统
+    
+    Returns:
+        bool: True=使用新缓存，False=使用旧缓存
+    """
+    use_new = os.getenv('USE_NEW_CACHE', 'false').lower() in ('true', '1', 'yes')
+    return use_new
+
+
 # ============ 全局组件实例（单例模式） ============
 
 _user_cache_instance = None
@@ -51,26 +64,47 @@ def get_user_cache(backend_client=None, redis_client=None):
     """
     获取用户缓存单例
     
+    根据 USE_NEW_CACHE 环境变量选择新旧缓存系统：
+    - USE_NEW_CACHE=false（默认）：使用旧的 IntelligentUserCache
+    - USE_NEW_CACHE=true：使用新的 UserProfileCache
+    
     Args:
         backend_client: 后端客户端（首次调用时需要）
         redis_client: Redis客户端（可选）
         
     Returns:
-        IntelligentUserCache 实例
+        用户缓存实例（IntelligentUserCache 或 UserProfileCache）
     """
     global _user_cache_instance
     if _user_cache_instance is None:
-        from ....framework.storage.intelligent_user_profile_cache import (
-            IntelligentUserCache,
-            CacheConfig
-        )
-        cache_config = CacheConfig()
-        _user_cache_instance = IntelligentUserCache(
-            backend_client=backend_client,
-            redis_client=redis_client,
-            config=cache_config
-        )
-        logger.info("✅ IntelligentUserCache初始化完成")
+        if _use_new_cache():
+            # 使用新缓存系统
+            from ....framework.storage.user_profile_cache import UserProfileCache
+            from ....framework.storage.unified_cache import UnifiedCache, CacheConfig
+            
+            # 创建统一缓存
+            cache_config = CacheConfig()
+            unified_cache = UnifiedCache(redis_client=redis_client, config=cache_config)
+            
+            # 创建用户档案缓存
+            _user_cache_instance = UserProfileCache(
+                unified_cache=unified_cache,
+                backend_client=backend_client
+            )
+            logger.info("✅ UserProfileCache（新缓存）初始化完成")
+        else:
+            # 使用旧缓存系统（默认）
+            from ....framework.storage.intelligent_user_profile_cache import (
+                IntelligentUserCache,
+                CacheConfig
+            )
+            cache_config = CacheConfig()
+            _user_cache_instance = IntelligentUserCache(
+                backend_client=backend_client,
+                redis_client=redis_client,
+                config=cache_config
+            )
+            logger.info("✅ IntelligentUserCache（旧缓存）初始化完成")
     return _user_cache_instance
 
 
@@ -80,26 +114,47 @@ def get_membership_cache(backend_client=None, redis_client=None):
     """
     获取会员权限缓存单例
     
+    根据 USE_NEW_CACHE 环境变量选择新旧缓存系统：
+    - USE_NEW_CACHE=false（默认）：使用旧的 IntelligentMembershipCache
+    - USE_NEW_CACHE=true：使用新的 MembershipCache
+    
     Args:
         backend_client: 后端客户端（首次调用时需要）
         redis_client: Redis客户端（可选）
         
     Returns:
-        IntelligentMembershipCache 实例
+        会员缓存实例（IntelligentMembershipCache 或 MembershipCache）
     """
     global _membership_cache_instance
     if _membership_cache_instance is None:
-        from ....framework.storage.intelligent_membership_cache import (
-            IntelligentMembershipCache
-        )
-        _membership_cache_instance = IntelligentMembershipCache(
-            backend_client=backend_client,
-            redis_client=redis_client,
-            max_memory_entries=200,
-            redis_ttl_seconds=600,  # 10分钟TTL
-            api_timeout_ms=2500  # 2.5秒超时
-        )
-        logger.info("✅ IntelligentMembershipCache初始化完成")
+        if _use_new_cache():
+            # 使用新缓存系统
+            from ....framework.storage.membership_cache import MembershipCache
+            from ....framework.storage.unified_cache import UnifiedCache, CacheConfig
+            
+            # 创建统一缓存
+            cache_config = CacheConfig()
+            unified_cache = UnifiedCache(redis_client=redis_client, config=cache_config)
+            
+            # 创建会员缓存
+            _membership_cache_instance = MembershipCache(
+                unified_cache=unified_cache,
+                backend_client=backend_client
+            )
+            logger.info("✅ MembershipCache（新缓存）初始化完成")
+        else:
+            # 使用旧缓存系统（默认）
+            from ....framework.storage.intelligent_membership_cache import (
+                IntelligentMembershipCache
+            )
+            _membership_cache_instance = IntelligentMembershipCache(
+                backend_client=backend_client,
+                redis_client=redis_client,
+                max_memory_entries=200,
+                redis_ttl_seconds=600,  # 10分钟TTL
+                api_timeout_ms=2500  # 2.5秒超时
+            )
+            logger.info("✅ IntelligentMembershipCache（旧缓存）初始化完成")
     return _membership_cache_instance
 
 
