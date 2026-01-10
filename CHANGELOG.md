@@ -1,8 +1,52 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.10.0
+**版本**: v9.12.0
 **更新日期**: 2026-01-11
-**状态**: ✅ P2领域适配器抽象
+**状态**: ✅ P0双策略架构核心组件
+
+---
+
+### v9.12.0 (2026-01-11) - P0双策略架构核心组件 ✅
+
+**变更类型**: ✨ 核心功能（P0级别）
+
+**需求背景**:
+- 实现DAML-RAG开源规范中的任务9：双策略架构（DAG+Agent）
+- Requirements: 8.1-8.6
+
+**实现内容**:
+
+1. **任务9.3: 实现策略选择器** ✅
+   - 创建 `src/framework/orchestration/strategy_selector.py`
+   - 实现 `ComplexityClassifier` 复杂度分类器
+     - 高/中复杂度关键词识别
+     - 简单查询检测
+     - 多步骤/比较/时间/个性化指示词分析
+   - 实现 `StrategySelector` 策略选择器
+     - 根据查询复杂度自动选择DAG或Agent模式
+     - 支持DAG模板匹配
+     - 支持强制策略指定
+     - 统计信息收集和重置
+   - 验证脚本 `scripts/verify_strategy_selector.py` 23/23测试通过
+
+2. **任务9.4: 实现会员权限控制接口** ✅
+   - 创建 `src/framework/auth/membership_controller.py`
+   - 定义会员等级：FREE/BASIC/PREMIUM
+   - 定义功能特性枚举：8个功能
+   - 实现 `MembershipController` 控制器
+     - `can_use_strategy()` - 策略权限检查
+     - `can_use_feature()` - 功能权限检查
+     - `check_daily_limit()` - 每日使用限制
+     - `increment_usage()` - 使用次数增加
+   - 支持Redis持久化和内存缓存降级
+   - 验证脚本 `scripts/verify_membership_controller.py` 30/30测试通过
+
+**文件变更**:
+- 新增: `src/framework/orchestration/strategy_selector.py`
+- 新增: `src/framework/auth/__init__.py`
+- 新增: `src/framework/auth/membership_controller.py`
+- 新增: `scripts/verify_strategy_selector.py`
+- 新增: `scripts/verify_membership_controller.py`
 
 ---
 
