@@ -2,10 +2,10 @@
 """
 DAML-RAG框架适配器
 
-提供框架层通用适配器的实现。
+提供框架层通用适配器的实现和领域适配器抽象接口。
 
-版本：v2.0.1
-日期：2025-12-02
+版本：v3.0.0
+日期：2026-01-11
 """
 
 from typing import Dict, Any, Optional
@@ -16,6 +16,22 @@ from .base_adapter import (
     BaseAdapter,
     BaseQueryAdapter,
     BaseWorkflowAdapter
+)
+
+from .domain_adapter import (
+    # 数据类
+    Layer3Rule,
+    DAGTemplateDefinition,
+    ToolDefinition,
+    DomainConfig,
+    RuleSeverity,
+    RuleCategory,
+    # 抽象基类
+    DomainAdapter,
+    # 注册表
+    DomainAdapterRegistry,
+    get_domain_registry,
+    register_domain_adapter,
 )
 
 from ..interfaces.base_adapter import (
@@ -52,7 +68,7 @@ class DomainContext:
 
 
 # ================================================================================
-# AdapterRegistry - 适配器注册表
+# AdapterRegistry - 适配器注册表（旧版，保持兼容）
 # ================================================================================
 
 class AdapterRegistry:
@@ -60,6 +76,8 @@ class AdapterRegistry:
     适配器注册表 - 管理所有领域适配器
 
     提供适配器的注册、获取、初始化等功能
+    
+    注意：新代码应使用 DomainAdapterRegistry
     """
 
     _instance = None
@@ -108,6 +126,17 @@ adapter_registry = AdapterRegistry()
 
 
 __all__ = [
+    # 领域适配器（新版）
+    'DomainAdapter',
+    'Layer3Rule',
+    'DAGTemplateDefinition',
+    'ToolDefinition',
+    'DomainConfig',
+    'RuleSeverity',
+    'RuleCategory',
+    'DomainAdapterRegistry',
+    'get_domain_registry',
+    'register_domain_adapter',
     # 基础适配器类
     'BaseAdapter',
     'BaseQueryAdapter',
@@ -116,7 +145,7 @@ __all__ = [
     'AdapterContext',
     'AdapterResult',
     'DomainContext',
-    # 注册表
+    # 注册表（旧版，保持兼容）
     'AdapterRegistry',
     'adapter_registry',
 ]
