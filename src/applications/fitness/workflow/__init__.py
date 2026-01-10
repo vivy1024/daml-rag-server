@@ -138,7 +138,8 @@ async def execute_eleven_step_workflow_stream(
     domain: str = "fitness",
     user_profile=None,
     session_id=None,
-    topic_id=None  # 话题ID，用于多轮对话
+    topic_id=None,  # 话题ID，用于多轮对话
+    strategy: str = "dag"  # 执行策略：dag或agent
 ):
     """
     执行11步工作流程（流式版本，向后兼容）
@@ -152,6 +153,7 @@ async def execute_eleven_step_workflow_stream(
         user_profile: 用户档案（可选）
         session_id: 会话ID（可选）
         topic_id: 话题ID（可选，用于多轮对话）
+        strategy: 执行策略（dag或agent，默认dag）
         
     Yields:
         Dict[str, Any]: SSE事件
@@ -162,7 +164,8 @@ async def execute_eleven_step_workflow_stream(
         domain=domain,
         user_profile=user_profile,
         session_id=session_id,
-        topic_id=topic_id
+        topic_id=topic_id,
+        strategy=strategy
     ):
         yield event
 

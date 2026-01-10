@@ -136,6 +136,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         user_profile: Optional[Dict[str, Any]] = None,
         session_id: Optional[str] = None,
         topic_id: Optional[str] = None,
+        strategy: str = "dag",
         **kwargs
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
@@ -151,6 +152,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             user_profile: 用户档案
             session_id: 会话ID
             topic_id: 话题ID（用于多轮对话）
+            strategy: 执行策略（dag或agent，默认dag）
             **kwargs: 其他参数
             
         Yields:
@@ -161,9 +163,30 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         start_time = time.time()
         request_id = str(uuid.uuid4())[:8]
         
-        logger.info(f"🚀 [{request_id}] 开始执行11步工作流程（流式）")
+        logger.info(f"🚀 [{request_id}] 开始执行工作流程（流式）")
         logger.info(f"📝 查询: {query_text[:50]}...")
         logger.info(f"👤 用户: {user_id}")
+        logger.info(f"🎯 策略: {strategy}")
+        
+        # ========== 策略分流：Agent模式使用独立执行器 ==========
+        if strategy == "agent":
+            logger.info(f"🤖 [{request_id}] 使用Agent模式执行")
+            from .agent_stream_executor import get_agent_stream_executor
+            
+            agent_executor = get_agent_stream_executor()
+            async for event in agent_executor.execute_stream(
+                query_text=query_text,
+                user_id=user_id,
+                user_profile=user_profile,
+                session_id=session_id,
+                topic_id=topic_id,
+                **kwargs
+            ):
+                yield event
+            return  # Agent模式执行完毕，直接返回
+        
+        # ========== DAG模式：继续原有的11步工作流程 ==========
+        logger.info(f"📊 [{request_id}] 使用DAG模式执行")
         
         # ========== 上下文工程：构建对话上下文 ==========
         context_result: Optional[ContextResult] = None
@@ -868,6 +891,7 @@ async def execute_workflow_stream(
     user_profile: Optional[Dict[str, Any]] = None,
     session_id: Optional[str] = None,
     topic_id: Optional[str] = None,
+    strategy: str = "dag",
     **kwargs
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """
@@ -880,6 +904,7 @@ async def execute_workflow_stream(
         user_profile: 用户档案
         session_id: 会话ID
         topic_id: 话题ID（用于多轮对话）
+        strategy: 执行策略（dag或agent，默认dag）
         **kwargs: 其他参数
         
     Yields:
@@ -893,6 +918,7 @@ async def execute_workflow_stream(
         user_profile=user_profile,
         session_id=session_id,
         topic_id=topic_id,
+        strategy=strategy,
         **kwargs
     ):
         yield event

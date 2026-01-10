@@ -389,10 +389,12 @@ async def chat_stream(request: Dict[str, Any]):
         session_id = request.get("session_id") or str(uuid.uuid4())
         topic_id = request.get("topic_id")  # 话题ID，用于多轮对话
         domain = request.get("domain", "fitness")
+        strategy = request.get("strategy", "dag")  # 执行策略：dag或agent
 
         logger.info(
             f"📨 Chat stream request: user={user_id}, "
             f"topic={topic_id or 'None'}, "
+            f"strategy={strategy}, "
             f"query='{query_text[:50]}...'"
         )
         
@@ -465,7 +467,8 @@ async def chat_stream(request: Dict[str, Any]):
                     domain=domain,
                     user_profile=None,
                     session_id=session_id,
-                    topic_id=topic_id  # 传递话题ID用于多轮对话
+                    topic_id=topic_id,  # 传递话题ID用于多轮对话
+                    strategy=strategy  # 传递执行策略
                 ):
                     # 记录首字节时间（TTFB）
                     if not first_byte_sent:

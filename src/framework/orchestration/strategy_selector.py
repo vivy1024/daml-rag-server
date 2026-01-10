@@ -1,30 +1,37 @@
 # -*- coding: utf-8 -*-
 """
-策略选择器 - 双策略架构核心组件
+策略选择器 - 双策略架构核心组件（简化版）
 
-根据查询复杂度自动选择DAG或Agent模式。
+基于会员权限和技能匹配选择DAG或Agent模式。
+移除了复杂度分类器（用户反馈没有意义），改为简单的会员权限控制。
 
 核心功能：
-1. 查询复杂度评估
-2. DAG模板匹配
+1. 技能匹配（通过SkillManager）
+2. 会员权限检查
 3. 策略自动选择
 4. 支持手动指定策略
 
-Requirements: 8.5
+设计原则：
+- 简单优先：移除复杂度分类器，直接基于会员权限选择
+- 技能驱动：通过SkillManager匹配技能，而非复杂度评估
+- 权限控制：FREE/WARMHEART只能用DAG，ENERGY可用Agent
 
-版本: v1.0.0
+Requirements: 8.5, 8.6
+
+版本: v3.0.0
 日期: 2026-01-11
 作者: 薛小川
 """
 
 import logging
-import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional, TYPE_CHECKING
 from enum import Enum
 
 if TYPE_CHECKING:
     from src.framework.adapters.domain_adapter import DAGTemplateDefinition
+    from src.framework.auth.membership_controller import MembershipController, MembershipLevel
+    from src.framework.skills.skill_manager import SkillManager
 
 logger = logging.getLogger(__name__)
 
@@ -36,14 +43,7 @@ logger = logging.getLogger(__name__)
 class ExecutionStrategy(Enum):
     """执行策略枚举"""
     DAG = "dag"      # DAG模式：预定义模板，程序控制
-    AGENT = "agent"  # Agent模式：LLM自主决策
-
-
-class QueryComplexity(Enum):
-    """查询复杂度"""
-    SIMPLE = "simple"        # 简单查询，使用DAG
-    MODERATE = "moderate"    # 中等复杂度，使用DAG
-    COMPLEX = "complex"      # 复杂查询，使用Agent
+    AGENT = "agent"  # Agent模式：LLM自主决策（基于Skills）
 
 
 # =============================================================================
@@ -57,220 +57,55 @@ class StrategyDecision:
     
     Attributes:
         strategy: 选择的执行策略
-        complexity: 查询复杂度
         reasoning: 决策推理过程
-        template_id: DAG模式时的模板ID
+        skill_id: 匹配的技能ID（DAG模式时使用）
+        template_id: DAG模式时的模板ID（兼容旧代码）
         confidence: 决策置信度 (0-1)
         metadata: 额外元数据
+        membership_restricted: 是否因会员权限限制而降级
+        original_strategy: 原本应该使用的策略（如果被降级）
     """
     strategy: ExecutionStrategy
-    complexity: QueryComplexity
     reasoning: str
-    template_id: Optional[str] = None
+    skill_id: Optional[str] = None
+    template_id: Optional[str] = None  # 兼容旧代码，等于skill_id
     confidence: float = 1.0
     metadata: Dict[str, Any] = field(default_factory=dict)
+    membership_restricted: bool = False
+    original_strategy: Optional[ExecutionStrategy] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
-        return {
+        result = {
             "strategy": self.strategy.value,
-            "complexity": self.complexity.value,
             "reasoning": self.reasoning,
+            "skill_id": self.skill_id,
             "template_id": self.template_id,
             "confidence": self.confidence,
-            "metadata": self.metadata
+            "metadata": self.metadata,
+            "membership_restricted": self.membership_restricted,
         }
-
-
-@dataclass
-class ComplexityIndicators:
-    """
-    复杂度指标
-    
-    用于评估查询复杂度的各项指标
-    """
-    query_length: int = 0
-    question_count: int = 0
-    condition_count: int = 0
-    entity_count: int = 0
-    has_comparison: bool = False
-    has_temporal: bool = False
-    has_multi_step: bool = False
-    has_personalization: bool = False
-    
-    def calculate_score(self) -> float:
-        """
-        计算复杂度分数 (0-1)
-        
-        Returns:
-            复杂度分数
-        """
-        score = 0.0
-        
-        # 查询长度贡献（增强权重）
-        if self.query_length > 80:
-            score += 0.25
-        elif self.query_length > 50:
-            score += 0.15
-        elif self.query_length > 30:
-            score += 0.08
-        
-        # 问题数量贡献
-        score += min(self.question_count * 0.12, 0.25)
-        
-        # 条件数量贡献
-        score += min(self.condition_count * 0.1, 0.25)
-        
-        # 实体数量贡献
-        score += min(self.entity_count * 0.08, 0.2)
-        
-        # 布尔指标贡献（增强权重）
-        if self.has_comparison:
-            score += 0.15
-        if self.has_temporal:
-            score += 0.12
-        if self.has_multi_step:
-            score += 0.25  # 多步骤是复杂查询的强信号
-        if self.has_personalization:
-            score += 0.08
-        
-        return min(score, 1.0)
+        if self.original_strategy:
+            result["original_strategy"] = self.original_strategy.value
+        return result
 
 
 # =============================================================================
-# 复杂度分类器
+# 简单查询检测器（保留，用于快速过滤）
 # =============================================================================
 
-class ComplexityClassifier:
+class SimpleQueryDetector:
     """
-    查询复杂度分类器
+    简单查询检测器
     
-    基于规则和关键词的复杂度评估
+    用于快速识别问候、确认等简单查询，直接使用DAG模式。
     """
-    
-    # 高复杂度关键词（权重高）
-    HIGH_COMPLEX_KEYWORDS = [
-        "综合", "全面", "详细", "完整", "系统",
-        "分析", "评估", "权衡", "规划", "方案",
-        "长期", "周期", "阶段", "进阶", "专业",
-        "康复", "矫正", "调整", "优化", "改进"
-    ]
-    
-    # 中等复杂度关键词
-    MEDIUM_COMPLEX_KEYWORDS = [
-        "对比", "比较", "区别", "差异",
-        "为什么", "怎么样", "如何", "什么原因",
-        "结合", "考虑", "根据", "基于", "针对",
-        "多个", "几种", "各种", "所有", "全部"
-    ]
     
     # 简单查询关键词（精确匹配）
     SIMPLE_KEYWORDS = [
         "你好", "谢谢", "再见", "好的", "明白",
         "嗯", "哦", "是的", "不是", "可以"
     ]
-    
-    # 简单查询模式（开头匹配）
-    SIMPLE_PATTERNS = [
-        "是什么", "有哪些", "推荐", "建议",
-        "多少", "几个", "哪个"
-    ]
-    
-    # 多步骤指示词
-    MULTI_STEP_INDICATORS = [
-        "首先", "然后", "接着", "最后", "第一", "第二",
-        "先", "再", "之后", "同时", "另外", "此外",
-        "包括", "以及", "还有", "并且"
-    ]
-    
-    # 比较指示词
-    COMPARISON_INDICATORS = [
-        "比", "更", "最", "还是", "或者", "哪个更",
-        "对比", "区别", "差异", "优缺点", "利弊"
-    ]
-    
-    # 时间指示词
-    TEMPORAL_INDICATORS = [
-        "每天", "每周", "每月", "长期", "短期",
-        "周期", "阶段", "持续", "多久", "什么时候"
-    ]
-    
-    # 个性化指示词
-    PERSONALIZATION_INDICATORS = [
-        "我", "我的", "适合我", "针对我", "根据我",
-        "我想", "我要", "我需要", "帮我", "给我"
-    ]
-    
-    def __init__(self):
-        """初始化分类器"""
-        self._compile_patterns()
-    
-    def _compile_patterns(self) -> None:
-        """编译正则表达式模式"""
-        self._question_pattern = re.compile(r'[？?]')
-        self._condition_pattern = re.compile(r'如果|假如|要是|当|若|除非')
-        self._entity_pattern = re.compile(r'[\u4e00-\u9fa5]{2,4}(?:肌|动作|训练|计划|饮食|营养)')
-    
-    async def classify(self, query: str) -> float:
-        """
-        分类查询复杂度
-        
-        Args:
-            query: 用户查询
-        
-        Returns:
-            复杂度分数 (0-1)
-        """
-        indicators = self._extract_indicators(query)
-        return indicators.calculate_score()
-    
-    def _extract_indicators(self, query: str) -> ComplexityIndicators:
-        """
-        提取复杂度指标
-        
-        Args:
-            query: 用户查询
-        
-        Returns:
-            ComplexityIndicators: 复杂度指标
-        """
-        indicators = ComplexityIndicators()
-        
-        # 查询长度
-        indicators.query_length = len(query)
-        
-        # 问题数量
-        indicators.question_count = len(self._question_pattern.findall(query))
-        
-        # 条件数量
-        indicators.condition_count = len(self._condition_pattern.findall(query))
-        
-        # 实体数量
-        indicators.entity_count = len(self._entity_pattern.findall(query))
-        
-        # 检查高复杂度关键词
-        high_complex_count = sum(1 for kw in self.HIGH_COMPLEX_KEYWORDS if kw in query)
-        if high_complex_count >= 2:
-            indicators.has_multi_step = True
-        
-        # 检查中等复杂度关键词
-        medium_complex_count = sum(1 for kw in self.MEDIUM_COMPLEX_KEYWORDS if kw in query)
-        
-        # 检查比较指示词
-        indicators.has_comparison = any(ind in query for ind in self.COMPARISON_INDICATORS)
-        
-        # 检查时间指示词
-        indicators.has_temporal = any(ind in query for ind in self.TEMPORAL_INDICATORS)
-        
-        # 检查多步骤指示词
-        multi_step_count = sum(1 for ind in self.MULTI_STEP_INDICATORS if ind in query)
-        if multi_step_count >= 2:
-            indicators.has_multi_step = True
-        
-        # 检查个性化指示词
-        indicators.has_personalization = any(ind in query for ind in self.PERSONALIZATION_INDICATORS)
-        
-        return indicators
     
     def is_simple_query(self, query: str) -> bool:
         """
@@ -297,82 +132,85 @@ class ComplexityClassifier:
 
 
 # =============================================================================
-# 策略选择器
+# 策略选择器（简化版）
 # =============================================================================
 
 class StrategySelector:
     """
-    策略选择器
+    策略选择器（简化版）
     
-    根据查询复杂度自动选择DAG或Agent模式。
+    基于会员权限和技能匹配选择DAG或Agent模式。
+    移除了复杂度分类器（用户反馈没有意义），改为简单的会员权限控制。
     
     核心特性：
-    1. 查询复杂度评估
-    2. DAG模板匹配
-    3. 策略自动选择
+    1. 技能匹配：通过SkillManager匹配技能
+    2. 会员权限：FREE/WARMHEART只能用DAG，ENERGY可用Agent
+    3. 简单优先：默认使用DAG模式
     4. 支持手动指定策略
     
     使用示例:
     ```python
     from src.framework.orchestration.strategy_selector import StrategySelector
+    from src.framework.skills import SkillManager
     
     # 创建选择器
+    skill_manager = SkillManager()
     selector = StrategySelector(
-        dag_templates=my_templates,
+        skill_manager=skill_manager,
         default_strategy=ExecutionStrategy.DAG
     )
     
     # 选择策略
     decision = await selector.select_strategy(
         query="帮我制定一个增肌训练计划",
-        user_profile={"goal": "增肌"}
+        user_profile={"goal": "增肌"},
+        membership_level="warmheart"
     )
     
     print(f"策略: {decision.strategy.value}")
-    print(f"模板: {decision.template_id}")
+    print(f"技能: {decision.skill_id}")
     ```
     
-    Requirements: 8.5
+    Requirements: 8.5, 8.6
     """
-    
-    # 复杂度阈值
-    COMPLEXITY_THRESHOLD_HIGH = 0.5   # 高复杂度阈值（降低以更容易触发Agent）
-    COMPLEXITY_THRESHOLD_MEDIUM = 0.3  # 中等复杂度阈值
     
     def __init__(
         self,
+        skill_manager: Optional['SkillManager'] = None,
         dag_templates: Optional[Dict[str, 'DAGTemplateDefinition']] = None,
-        complexity_classifier: Optional[ComplexityClassifier] = None,
         default_strategy: ExecutionStrategy = ExecutionStrategy.DAG,
-        enable_auto_selection: bool = True
+        membership_controller: Optional['MembershipController'] = None
     ):
         """
         初始化策略选择器
         
         Args:
-            dag_templates: DAG模板字典
-            complexity_classifier: 复杂度分类器
+            skill_manager: 技能管理器（推荐使用）
+            dag_templates: DAG模板字典（兼容旧代码）
             default_strategy: 默认策略
-            enable_auto_selection: 是否启用自动选择
+            membership_controller: 会员权限控制器（可选）
         
-        Requirements: 8.5
+        Requirements: 8.5, 8.6
         """
+        self.skill_manager = skill_manager
         self.dag_templates = dag_templates or {}
-        self.complexity_classifier = complexity_classifier or ComplexityClassifier()
         self.default_strategy = default_strategy
-        self.enable_auto_selection = enable_auto_selection
+        self.membership_controller = membership_controller
+        self.simple_query_detector = SimpleQueryDetector()
         
         # 统计信息
         self._selection_count = 0
         self._dag_count = 0
         self._agent_count = 0
-        self._template_match_count = 0
+        self._skill_match_count = 0
+        self._membership_restricted_count = 0
         
         logger.info(
-            f"✅ StrategySelector初始化完成: "
-            f"{len(self.dag_templates)}个模板, "
+            f"✅ StrategySelector初始化完成（简化版）: "
+            f"技能管理器={'已集成' if skill_manager else '未集成'}, "
+            f"DAG模板={len(self.dag_templates)}个, "
             f"默认策略: {default_strategy.value}, "
-            f"自动选择: {'启用' if enable_auto_selection else '禁用'}"
+            f"会员控制: {'已集成' if membership_controller else '未集成'}"
         )
     
     async def select_strategy(
@@ -380,37 +218,48 @@ class StrategySelector:
         query: str,
         user_profile: Dict[str, Any],
         force_strategy: Optional[ExecutionStrategy] = None,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        membership_level: Optional[str] = None
     ) -> StrategyDecision:
         """
-        选择执行策略
+        选择执行策略（简化版）
         
-        决策逻辑：
-        1. 如果强制指定策略，使用指定策略
+        决策逻辑（简化）：
+        1. 如果强制指定策略，检查会员权限后使用
         2. 检查是否是简单查询（问候等）
-        3. 尝试匹配DAG模板
+        3. 尝试匹配技能（通过SkillManager）
         4. 如果匹配成功，使用DAG模式
-        5. 如果匹配失败，评估复杂度
-        6. 复杂查询使用Agent模式
+        5. 如果匹配失败且用户是ENERGY会员，可选择Agent模式
+        6. 默认使用DAG模式
         
         Args:
             query: 用户查询
             user_profile: 用户档案
             force_strategy: 强制使用的策略
             context: 额外上下文
+            membership_level: 会员等级（free/warmheart/energy）
         
         Returns:
             StrategyDecision: 策略决策结果
         
-        Requirements: 8.5
+        Requirements: 8.5, 8.6
         """
         self._selection_count += 1
         
         logger.info(f"🎯 策略选择 #{self._selection_count}")
         logger.info(f"   查询: {query[:50]}...")
+        if membership_level:
+            logger.info(f"   会员等级: {membership_level}")
         
-        # 1. 强制策略
+        # 1. 强制策略（需要检查会员权限）
         if force_strategy:
+            # 检查会员权限
+            decision = self._check_membership_permission(
+                force_strategy, membership_level
+            )
+            if decision:
+                return decision
+            
             logger.info(f"   📌 强制策略: {force_strategy.value}")
             if force_strategy == ExecutionStrategy.DAG:
                 self._dag_count += 1
@@ -419,81 +268,177 @@ class StrategySelector:
             
             return StrategyDecision(
                 strategy=force_strategy,
-                complexity=QueryComplexity.MODERATE,
                 reasoning=f"用户强制指定策略: {force_strategy.value}",
                 confidence=1.0,
                 metadata={"forced": True}
             )
         
         # 2. 检查简单查询
-        if self.complexity_classifier.is_simple_query(query):
+        if self.simple_query_detector.is_simple_query(query):
             logger.info(f"   📝 简单查询，使用DAG模式")
             self._dag_count += 1
             return StrategyDecision(
                 strategy=ExecutionStrategy.DAG,
-                complexity=QueryComplexity.SIMPLE,
                 reasoning="简单查询（问候/确认等），使用DAG模式",
+                skill_id="greeting",
+                template_id="greeting",
                 confidence=0.95,
                 metadata={"simple_query": True}
             )
         
-        # 3. 尝试匹配DAG模板
-        matched_template = self._match_template(query, user_profile)
-        if matched_template:
-            logger.info(f"   📋 匹配到模板: {matched_template.get('template_id', 'unknown')}")
+        # 3. 尝试匹配技能（通过SkillManager）
+        matched_skill_id = None
+        if self.skill_manager:
+            matched_skill_id = self.skill_manager.match_skill_by_query(query)
+        
+        if matched_skill_id:
+            logger.info(f"   📋 匹配到技能: {matched_skill_id}")
             self._dag_count += 1
-            self._template_match_count += 1
+            self._skill_match_count += 1
+            
+            # 获取技能元数据
+            skill_metadata = self.skill_manager.get_skill_metadata(matched_skill_id)
+            skill_name = skill_metadata.name if skill_metadata else matched_skill_id
+            
             return StrategyDecision(
                 strategy=ExecutionStrategy.DAG,
-                complexity=QueryComplexity.SIMPLE,
-                reasoning=f"匹配到DAG模板: {matched_template.get('name', 'unknown')}",
-                template_id=matched_template.get('template_id'),
-                confidence=matched_template.get('match_score', 0.8),
-                metadata={"matched_template": matched_template}
+                reasoning=f"匹配到技能: {skill_name}",
+                skill_id=matched_skill_id,
+                template_id=matched_skill_id,  # 兼容旧代码
+                confidence=0.85,
+                metadata={"matched_skill": matched_skill_id}
             )
         
-        # 4. 如果禁用自动选择，使用默认策略
-        if not self.enable_auto_selection:
-            logger.info(f"   📌 自动选择禁用，使用默认策略: {self.default_strategy.value}")
-            if self.default_strategy == ExecutionStrategy.DAG:
+        # 4. 尝试匹配DAG模板（兼容旧代码）
+        if not self.skill_manager and self.dag_templates:
+            matched_template = self._match_template(query, user_profile)
+            if matched_template:
+                logger.info(f"   📋 匹配到模板: {matched_template.get('template_id', 'unknown')}")
                 self._dag_count += 1
-            else:
-                self._agent_count += 1
-            return StrategyDecision(
-                strategy=self.default_strategy,
-                complexity=QueryComplexity.MODERATE,
-                reasoning="自动选择禁用，使用默认策略",
-                confidence=0.7
-            )
+                return StrategyDecision(
+                    strategy=ExecutionStrategy.DAG,
+                    reasoning=f"匹配到DAG模板: {matched_template.get('name', 'unknown')}",
+                    template_id=matched_template.get('template_id'),
+                    skill_id=matched_template.get('template_id'),
+                    confidence=matched_template.get('match_score', 0.8),
+                    metadata={"matched_template": matched_template}
+                )
         
-        # 5. 评估复杂度
-        complexity_score = await self.complexity_classifier.classify(query)
-        complexity = self._score_to_complexity(complexity_score)
-        
-        logger.info(f"   📊 复杂度评分: {complexity_score:.2f} -> {complexity.value}")
-        
-        # 6. 根据复杂度选择策略
-        if complexity == QueryComplexity.COMPLEX:
-            logger.info(f"   🤖 复杂查询，使用Agent模式")
+        # 5. 检查是否可以使用Agent模式（仅ENERGY会员）
+        if self._can_use_agent(membership_level):
+            # ENERGY会员可以选择Agent模式处理未匹配的复杂查询
+            logger.info(f"   🤖 未匹配技能，ENERGY会员可使用Agent模式")
             self._agent_count += 1
             return StrategyDecision(
                 strategy=ExecutionStrategy.AGENT,
-                complexity=complexity,
-                reasoning=f"查询复杂度高({complexity_score:.2f})，使用Agent模式",
-                confidence=complexity_score,
-                metadata={"complexity_score": complexity_score}
+                reasoning="未匹配到技能，使用Agent模式（ENERGY会员）",
+                confidence=0.7,
+                metadata={"fallback_to_agent": True}
             )
         
-        # 7. 默认使用DAG模式
+        # 6. 默认使用DAG模式（通用对话技能）
         logger.info(f"   📋 使用DAG模式（默认）")
         self._dag_count += 1
         return StrategyDecision(
             strategy=ExecutionStrategy.DAG,
-            complexity=complexity,
-            reasoning=f"查询复杂度适中({complexity_score:.2f})，使用DAG模式",
-            confidence=1.0 - complexity_score,
-            metadata={"complexity_score": complexity_score}
+            reasoning="使用默认DAG模式",
+            skill_id="general_consultation",
+            template_id="general_consultation",
+            confidence=0.6,
+            metadata={"default_fallback": True}
         )
+
+    def _can_use_agent(self, membership_level: Optional[str]) -> bool:
+        """
+        检查是否可以使用Agent模式
+        
+        只有ENERGY会员可以使用Agent模式
+        
+        Args:
+            membership_level: 会员等级
+        
+        Returns:
+            bool: 是否可以使用Agent模式
+        """
+        # 如果没有会员控制器，检查Feature Flag
+        if not self.membership_controller:
+            return False
+        
+        # 如果会员控制已禁用，所有用户都可以使用Agent
+        if not self.membership_controller.is_membership_control_enabled():
+            return True
+        
+        # 只有ENERGY会员可以使用Agent
+        return membership_level and membership_level.lower() == "energy"
+    
+    def _check_membership_permission(
+        self,
+        requested_strategy: ExecutionStrategy,
+        membership_level: Optional[str]
+    ) -> Optional[StrategyDecision]:
+        """
+        检查会员权限是否允许使用指定策略
+        
+        Args:
+            requested_strategy: 请求的策略
+            membership_level: 会员等级（free/warmheart/energy）
+        
+        Returns:
+            如果权限不足，返回降级决策；否则返回None
+        
+        Requirements: 8.6
+        """
+        # 如果没有会员控制器，不做限制
+        if not self.membership_controller:
+            return None
+        
+        # 如果会员控制已禁用，不做限制
+        if not self.membership_controller.is_membership_control_enabled():
+            return None
+        
+        # DAG模式所有用户都可以使用
+        if requested_strategy == ExecutionStrategy.DAG:
+            return None
+        
+        # Agent模式需要检查权限
+        if requested_strategy == ExecutionStrategy.AGENT:
+            # 获取会员等级
+            from ..auth.membership_controller import (
+                get_membership_level_from_string,
+                ExecutionStrategy as MembershipStrategy
+            )
+            
+            level = get_membership_level_from_string(membership_level or "free")
+            
+            # 检查是否可以使用Agent策略
+            result = self.membership_controller.can_use_strategy(
+                level, 
+                MembershipStrategy.AGENT
+            )
+            
+            if not result.allowed:
+                # 权限不足，降级到DAG模式
+                self._membership_restricted_count += 1
+                self._dag_count += 1
+                
+                logger.info(
+                    f"   ⚠️ 会员权限限制: {result.reason}, "
+                    f"降级到DAG模式"
+                )
+                
+                return StrategyDecision(
+                    strategy=ExecutionStrategy.DAG,
+                    reasoning=f"会员权限限制: {result.reason}",
+                    confidence=0.8,
+                    membership_restricted=True,
+                    original_strategy=ExecutionStrategy.AGENT,
+                    metadata={
+                        "membership_level": membership_level or "free",
+                        "upgrade_hint": result.upgrade_hint
+                    }
+                )
+        
+        return None
     
     def _match_template(
         self,
@@ -501,7 +446,7 @@ class StrategySelector:
         user_profile: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
-        匹配DAG模板
+        匹配DAG模板（兼容旧代码）
         
         Args:
             query: 用户查询
@@ -557,27 +502,20 @@ class StrategySelector:
             return best_match
         
         return None
-    
-    def _score_to_complexity(self, score: float) -> QueryComplexity:
-        """
-        将分数转换为复杂度等级
-        
-        Args:
-            score: 复杂度分数 (0-1)
-        
-        Returns:
-            QueryComplexity: 复杂度等级
-        """
-        if score >= self.COMPLEXITY_THRESHOLD_HIGH:
-            return QueryComplexity.COMPLEX
-        elif score >= self.COMPLEXITY_THRESHOLD_MEDIUM:
-            return QueryComplexity.MODERATE
-        else:
-            return QueryComplexity.SIMPLE
 
     # =========================================================================
-    # 模板管理方法
+    # 技能/模板管理方法
     # =========================================================================
+    
+    def set_skill_manager(self, skill_manager: 'SkillManager') -> None:
+        """
+        设置技能管理器
+        
+        Args:
+            skill_manager: 技能管理器实例
+        """
+        self.skill_manager = skill_manager
+        logger.info(f"📋 技能管理器已设置: {skill_manager.get_skill_count()}个技能")
     
     def register_template(
         self,
@@ -585,7 +523,7 @@ class StrategySelector:
         template: 'DAGTemplateDefinition'
     ) -> None:
         """
-        注册DAG模板
+        注册DAG模板（兼容旧代码）
         
         Args:
             template_id: 模板ID
@@ -630,7 +568,7 @@ class StrategySelector:
             模板ID列表
         """
         return list(self.dag_templates.keys())
-    
+
     # =========================================================================
     # 统计信息方法
     # =========================================================================
@@ -645,19 +583,26 @@ class StrategySelector:
         total = self._selection_count
         dag_ratio = self._dag_count / total if total > 0 else 0
         agent_ratio = self._agent_count / total if total > 0 else 0
-        template_match_ratio = self._template_match_count / total if total > 0 else 0
+        skill_match_ratio = self._skill_match_count / total if total > 0 else 0
+        membership_restricted_ratio = self._membership_restricted_count / total if total > 0 else 0
         
         return {
             "total_selections": total,
             "dag_count": self._dag_count,
             "agent_count": self._agent_count,
-            "template_match_count": self._template_match_count,
+            "skill_match_count": self._skill_match_count,
+            "membership_restricted_count": self._membership_restricted_count,
             "dag_ratio": round(dag_ratio, 4),
             "agent_ratio": round(agent_ratio, 4),
-            "template_match_ratio": round(template_match_ratio, 4),
+            "skill_match_ratio": round(skill_match_ratio, 4),
+            "membership_restricted_ratio": round(membership_restricted_ratio, 4),
+            "skills_registered": self.skill_manager.get_skill_count() if self.skill_manager else 0,
             "templates_registered": len(self.dag_templates),
             "default_strategy": self.default_strategy.value,
-            "auto_selection_enabled": self.enable_auto_selection
+            "membership_controller_enabled": (
+                self.membership_controller is not None and 
+                self.membership_controller.is_membership_control_enabled()
+            )
         }
     
     def reset_statistics(self) -> None:
@@ -665,7 +610,8 @@ class StrategySelector:
         self._selection_count = 0
         self._dag_count = 0
         self._agent_count = 0
-        self._template_match_count = 0
+        self._skill_match_count = 0
+        self._membership_restricted_count = 0
         logger.info("📊 统计信息已重置")
     
     # =========================================================================
@@ -682,36 +628,27 @@ class StrategySelector:
         self.default_strategy = strategy
         logger.info(f"📌 默认策略设置为: {strategy.value}")
     
-    def set_auto_selection(self, enabled: bool) -> None:
-        """
-        设置是否启用自动选择
-        
-        Args:
-            enabled: 是否启用
-        """
-        self.enable_auto_selection = enabled
-        logger.info(f"🔧 自动选择: {'启用' if enabled else '禁用'}")
-    
-    def set_complexity_thresholds(
+    def set_membership_controller(
         self,
-        high: Optional[float] = None,
-        medium: Optional[float] = None
+        controller: Optional['MembershipController']
     ) -> None:
         """
-        设置复杂度阈值
+        设置会员权限控制器
         
         Args:
-            high: 高复杂度阈值 (0-1)
-            medium: 中等复杂度阈值 (0-1)
+            controller: 会员权限控制器实例
+        
+        Requirements: 8.6
         """
-        if high is not None:
-            self.COMPLEXITY_THRESHOLD_HIGH = high
-        if medium is not None:
-            self.COMPLEXITY_THRESHOLD_MEDIUM = medium
-        logger.info(
-            f"📊 复杂度阈值: 高={self.COMPLEXITY_THRESHOLD_HIGH}, "
-            f"中={self.COMPLEXITY_THRESHOLD_MEDIUM}"
-        )
+        self.membership_controller = controller
+        if controller:
+            enabled = controller.is_membership_control_enabled()
+            logger.info(
+                f"🔐 会员控制器已设置: "
+                f"{'启用' if enabled else '禁用（所有用户享有energy权限）'}"
+            )
+        else:
+            logger.info("🔐 会员控制器已移除")
 
 
 # =============================================================================
@@ -719,23 +656,28 @@ class StrategySelector:
 # =============================================================================
 
 def create_strategy_selector(
+    skill_manager: Optional['SkillManager'] = None,
     dag_templates: Optional[Dict[str, 'DAGTemplateDefinition']] = None,
     default_strategy: ExecutionStrategy = ExecutionStrategy.DAG,
-    enable_auto_selection: bool = True
+    membership_controller: Optional['MembershipController'] = None
 ) -> StrategySelector:
     """
     创建策略选择器实例
     
     Args:
-        dag_templates: DAG模板字典
+        skill_manager: 技能管理器（推荐使用）
+        dag_templates: DAG模板字典（兼容旧代码）
         default_strategy: 默认策略
-        enable_auto_selection: 是否启用自动选择
+        membership_controller: 会员权限控制器（可选）
     
     Returns:
         StrategySelector: 策略选择器实例
+    
+    Requirements: 8.5, 8.6
     """
     return StrategySelector(
+        skill_manager=skill_manager,
         dag_templates=dag_templates,
         default_strategy=default_strategy,
-        enable_auto_selection=enable_auto_selection
+        membership_controller=membership_controller
     )

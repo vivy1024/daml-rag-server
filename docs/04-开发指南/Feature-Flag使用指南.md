@@ -1,16 +1,26 @@
 # Feature Flag使用指南
 
 **状态**: ✅ 已完成
-**版本**: v1.0.0
+**版本**: v1.2.0
 **创建日期**: 2026-01-10
+**更新日期**: 2026-01-11
 
 ---
 
 ## 概述
 
-本文档说明如何使用 `USE_NEW_CACHE` feature flag 在新旧缓存系统之间切换。
+本文档说明如何使用 Feature Flag 在不同功能模式之间切换。
 
-## Feature Flag配置
+## 当前支持的Feature Flag
+
+| Flag名称 | 默认值 | 说明 |
+|----------|--------|------|
+| `USE_NEW_CACHE` | `false` | 缓存系统切换 |
+| `USE_MEMBERSHIP_CONTROL` | `false` | 会员权限控制 |
+
+---
+
+## 1. USE_NEW_CACHE - 缓存系统切换
 
 ### 环境变量
 
@@ -229,3 +239,122 @@ docker logs fitness_daml_rag | grep "缓存.*初始化完成"
 **维护者**: 薛小川
 **版本**: v1.0.0
 **创建日期**: 2026-01-10
+
+
+---
+
+## 2. USE_MEMBERSHIP_CONTROL - 会员权限控制
+
+### 环境变量
+
+```bash
+USE_MEMBERSHIP_CONTROL=false  # 禁用会员控制（默认，所有用户享有energy权限）
+USE_MEMBERSHIP_CONTROL=true   # 启用会员控制，按实际等级限制
+```
+
+### 支持的值
+
+| 值 | 说明 | 效果 |
+|---|---|---|
+| `false` (默认) | 禁用会员控制 | 所有用户享有energy（能量会员）权限 |
+| `true` | 启用会员控制 | 按用户实际会员等级限制 |
+| `1` | 启用会员控制 | 同上 |
+| `yes` | 启用会员控制 | 同上 |
+
+### 会员等级（与PHP后端一致）
+
+| 等级 | 值 | 说明 | DAG策略 | Agent策略 | 每日限制 |
+|------|---|------|---------|----------|---------|
+| 免费用户 | `free` | 未付费用户 | ✅ | ❌ | 5次/天 |
+| 暖心会员 | `warmheart` | 基础付费 | ✅ | ❌ | 30次/天 |
+| 能量会员 | `energy` | 高级付费 | ✅ | ✅ | 无限制 |
+
+### 影响范围
+
+**禁用时** (`USE_MEMBERSHIP_CONTROL=false`):
+- 所有用户享有energy（能量会员）权限
+- 可使用DAG和Agent两种策略
+- 无每日使用限制
+- 适用于：个人开发、测试环境
+
+**启用时** (`USE_MEMBERSHIP_CONTROL=true`):
+- 根据用户实际会员等级限制功能
+- 免费用户只能使用DAG策略
+- 有每日使用限制
+- 适用于：生产环境
+
+### 代码实现
+
+```python
+# src/framework/auth/membership_controller.py
+
+def _is_membership_control_enabled() -> bool:
+    """检查是否启用会员权限控制"""
+    enabled = os.getenv('USE_MEMBERSHIP_CONTROL', 'false').lower() in ('true', '1', 'yes')
+    return enabled
+
+class MembershipController:
+    def __init__(self, redis_client=None):
+        self._membership_control_enabled = _is_membership_control_enabled()
+    
+    def get_config(self, level: MembershipLevel) -> MembershipConfig:
+        # 如果会员控制被禁用，返回energy配置
+        if not self._membership_control_enabled:
+            return MEMBERSHIP_CONFIGS[MembershipLevel.ENERGY]
+        return MEMBERSHIP_CONFIGS.get(level, MEMBERSHIP_CONFIGS[MembershipLevel.FREE])
+```
+
+### 使用示例
+
+```python
+from src.framework.auth import (
+    MembershipController,
+    MembershipLevel,
+    ExecutionStrategy,
+    get_user_membership_from_backend
+)
+
+# 创建控制器
+controller = MembershipController()
+
+# 检查是否启用会员控制
+if controller.is_membership_control_enabled():
+    # 从PHP后端获取用户会员等级
+    level = await get_user_membership_from_backend(backend_client, user_id)
+else:
+    # 禁用时，所有用户都是energy
+    level = MembershipLevel.ENERGY
+
+# 检查策略权限
+result = controller.can_use_strategy(level, ExecutionStrategy.AGENT)
+if result.allowed:
+    # 使用Agent策略
+    pass
+else:
+    # 使用DAG策略
+    print(result.upgrade_hint)  # "升级到能量会员可解锁Agent模式"
+```
+
+### 验证方法
+
+```bash
+# 检查环境变量
+docker exec fitness_daml_rag env | grep USE_MEMBERSHIP_CONTROL
+
+# 运行验证脚本
+docker exec fitness_daml_rag python scripts/verify_membership_controller.py
+```
+
+### 切换建议
+
+| 环境 | 建议设置 | 原因 |
+|------|---------|------|
+| 本地开发 | `false` | 方便测试所有功能 |
+| 测试环境 | `false` | 方便测试所有功能 |
+| 生产环境 | `true` | 按实际会员等级限制 |
+
+---
+
+**维护者**: 薛小川
+**版本**: v1.2.0
+**更新日期**: 2026-01-11
