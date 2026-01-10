@@ -1,8 +1,140 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.12.0
+**版本**: v9.15.0
 **更新日期**: 2026-01-11
-**状态**: ✅ P0双策略架构核心组件
+**状态**: ✅ Agent模式执行逻辑实现
+
+---
+
+### v9.15.0 (2026-01-11) - Agent模式执行逻辑实现 ✅
+
+**变更类型**: ✨ 核心功能（Agent模式）
+
+**需求背景**:
+- 实现Agent模式的实际执行逻辑（之前只是记录策略）
+- 开发测试阶段的用量控制（固定次数，打赏后管理员可添加）
+- 会员系统禁用时，所有用户可自由切换DAG/Agent模式
+
+**实现内容**:
+
+1. **Agent模式流式执行器** ✅
+   - 新增 `agent_stream_executor.py`
+   - 基于Skills架构的Agent模式执行
+   - 支持技能加载、工具调用、流式响应
+   - 与DAG模式独立的执行路径
+
+2. **策略分流逻辑** ✅
+   - `stream_executor.py` 根据 `strategy` 参数分流
+   - `strategy='agent'` 使用 `AgentStreamExecutor`
+   - `strategy='dag'` 使用原有11步工作流程
+
+3. **PHP后端用量统计** ✅
+   - 新增 `user_usage_stats` 表（每日用量统计）
+   - 新增 `user_bonus_credits` 表（打赏额外次数）
+   - 新增 `UsageTrackingService` 服务
+   - 新增 `UserCreditsController` 管理员API
+
+4. **前端开发测试模式** ✅
+   - `StrategySwitch.vue` 检查 `system_enabled` 字段
+   - 会员系统禁用时，所有用户可切换模式
+
+**文件变更**:
+- 新增: `daml-rag-server/src/applications/fitness/workflow/agent_stream_executor.py`
+- 修改: `daml-rag-server/src/applications/fitness/workflow/stream_executor.py`
+- 新增: `yuzhen-backend/database/migrations/2026_01_11_000001_create_user_usage_stats_table.php`
+- 新增: `yuzhen-backend/app/Modules/Membership/Services/UsageTrackingService.php`
+- 新增: `yuzhen-backend/app/Modules/Admin/Controllers/UserCreditsController.php`
+- 修改: `yuzhen_fitness/src/components/chat/StrategySwitch.vue`
+
+**默认限制**:
+- DAG模式：每日10次
+- Agent模式：每日3次
+- 打赏后管理员可添加额外次数
+
+---
+
+### v9.14.0 (2026-01-11) - 前端策略切换集成 ✅
+
+**变更类型**: ✨ 核心功能（前端集成）
+
+**需求背景**:
+- 能量会员可以手动切换DAG和Agent模式
+- 前端需要传递strategy参数到DAML-RAG
+- 当前为开发测试阶段，免费开放所有功能
+
+**实现内容**:
+
+1. **前端策略切换组件** ✅
+   - 新增 `StrategySwitch.vue` 组件
+   - 能量会员可见切换开关
+   - 非能量会员显示锁定状态
+   - 集成到聊天页面顶部导航栏
+
+2. **前端API参数传递** ✅
+   - `useChatStream.ts` 添加 `strategy` 参数
+   - `chat.ts` store 添加 `strategy` 参数
+   - `chat.vue` 页面添加 `currentStrategy` 状态
+
+3. **DAML-RAG API接收** ✅
+   - `chat.py` 流式API接收 `strategy` 参数
+   - `stream_executor.py` 添加 `strategy` 参数
+   - 日志记录执行策略
+
+4. **企业级会员自动化控制设计** ✅
+   - 新增设计文档 `docs/04-开发指南/会员自动化控制设计方案.md`
+   - 包含会员等级体系、定价策略、自动化控制流程
+
+**文件变更**:
+- 新增: `yuzhen_fitness/src/components/chat/StrategySwitch.vue`
+- 修改: `yuzhen_fitness/src/composables/useChatStream.ts`
+- 修改: `yuzhen_fitness/src/stores/chat.ts`
+- 修改: `yuzhen_fitness/src/views/ai/chat.vue`
+- 修改: `daml-rag-server/src/api/routes/chat.py`
+- 修改: `daml-rag-server/src/applications/fitness/workflow/__init__.py`
+- 修改: `daml-rag-server/src/applications/fitness/workflow/stream_executor.py`
+- 新增: `docs/04-开发指南/会员自动化控制设计方案.md`
+
+---
+
+### v9.13.0 (2026-01-11) - 三端会员系统打通 ✅
+
+**变更类型**: ✨ 核心功能（三端集成）
+
+**需求背景**:
+- 三端会员系统打通：PHP后端、前端、DAML-RAG使用统一的会员等级命名
+- 会员等级：free/warmheart/energy（与PHP后端一致）
+- Requirements: 8.6
+
+**实现内容**:
+
+1. **会员控制器重构** ✅
+   - 等级命名与PHP后端一致：FREE/WARMHEART/ENERGY（值为free/warmheart/energy）
+   - 添加 `USE_MEMBERSHIP_CONTROL` Feature Flag（默认false）
+   - 添加 `get_user_membership_from_backend()` 函数从PHP后端获取会员等级
+   - 验证脚本 30/30 测试通过
+
+2. **策略选择器集成会员权限** ✅
+   - `StrategySelector` 添加 `membership_controller` 参数
+   - `select_strategy()` 添加 `membership_level` 参数
+   - 添加 `_check_membership_permission()` 方法
+   - Agent模式需要energy会员权限
+   - 权限不足时自动降级到DAG模式
+   - 添加 `membership_restricted` 和 `original_strategy` 字段
+   - 统计信息添加 `membership_restricted_count` 和 `membership_restricted_ratio`
+   - 验证脚本 16/16 测试通过
+
+**文件变更**:
+- 修改: `src/framework/auth/membership_controller.py` - 等级命名与PHP后端一致
+- 修改: `src/framework/orchestration/strategy_selector.py` - 集成会员权限检查
+- 新增: `scripts/verify_membership_strategy_integration.py` - 集成验证脚本
+- 更新: `docs/04-开发指南/Feature-Flag使用指南.md`
+
+**三端会员系统现状**:
+| 端 | 状态 | 等级命名 |
+|---|---|---|
+| PHP后端 | ✅ 已完成 | free/warmheart/energy |
+| 前端 | ✅ 已完成 | free/warmheart/energy |
+| DAML-RAG | ✅ 已完成 | FREE/WARMHEART/ENERGY (值一致) |
 
 ---
 
