@@ -188,29 +188,63 @@ src/api/
 
 ### 1. 健康检查
 
-**代码查看**: [`src/api/health.py`](../../src/api/health.py)
+**代码查看**: [`src/api/routes/health.py`](../../src/api/routes/health.py)
 
-**端点**: `GET /health`
+**端点**: `GET /health` 或 `GET /api/health`
 
-**响应**:
+**监控系统简化（v2.0.0 - 2026-01-10）**：
+- ✅ 监控层已从13个文件（244KB）简化到5个核心模块（72KB）
+- ✅ 删除了8个未使用或功能重叠的模块
+- ✅ 保留了所有监控API端点的完整功能
+- ✅ 前端监控页面和Dashboard页面100%正常工作
+
+**保留的核心模块**：
+1. **StreamingMetrics** (21KB) - 流式会话性能监控
+2. **MetricsCollector** (18KB) - 系统和应用指标收集
+3. **ConcurrencyLimiter** (13KB) - API并发控制和过载保护
+4. **StructuredLogger** (8KB) - 统一的结构化日志记录
+5. **PrometheusIntegration** (11KB) - Prometheus格式指标导出
+
+**监控API端点**：
+
+| 端点 | 功能 | 使用模块 | 前端使用 |
+|------|------|---------|---------|
+| `GET /api/health` | 综合健康检查 | MetricsCollector | ✅ ai-monitor.vue |
+| `GET /api/health/components` | 组件详细状态 | MetricsCollector | ❌ 管理功能 |
+| `GET /api/health/metrics` | 系统性能指标 | MetricsCollector | ✅ ai-monitor.vue |
+| `GET /api/health/metrics/prometheus` | Prometheus格式指标 | PrometheusIntegration | ✅ Dashboard（间接） |
+| `GET /api/health/metrics/streaming` | 流式输出监控 | StreamingMetrics | ✅ ai-monitor.vue |
+| `GET /api/health/metrics/streaming/recent` | 最近流式会话 | StreamingMetrics | ❌ 管理功能 |
+
+**响应示例** (`GET /api/health`):
 
 ```json
 {
     "status": "healthy",
-    "timestamp": "2025-10-28T10:30:00Z",
-    "services": {
+    "timestamp": "2026-01-10T10:30:00Z",
+    "components": {
         "neo4j": true,
         "qdrant": true,
         "redis": true,
-        "ollama": true
+        "mysql": true
     },
-    "stats": {
-        "total_interactions": 1000,
-        "cache_hit_rate": 0.75,
-        "avg_latency_ms": 45.2
+    "system_metrics": {
+        "cpu_percent": 45.2,
+        "memory_percent": 62.5,
+        "disk_percent": 38.1
     }
 }
 ```
+
+**Prometheus集成**：
+- PHP后端通过 `/admin/metrics/prometheus/raw` 调用 `/api/health/metrics/prometheus`
+- 前端Dashboard页面通过PHP后端获取Prometheus数据
+- Prometheus服务独立部署到后端服务器
+- 支持时序数据查询和图表渲染
+
+**详细文档**：
+- 监控系统架构：`docs/02-核心架构/05-监控层/01-监控系统架构.md`
+- 监控简化测试报告：`docs/07-测试报告/监控层简化测试报告.md`
 
 ---
 

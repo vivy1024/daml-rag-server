@@ -16,17 +16,6 @@ import sys
 class TestFinalValidationSuite:
     """最终验证测试套件"""
     
-    def test_run_dag_visualizer_tests(self):
-        """运行DAG可视化测试"""
-        result = subprocess.run(
-            [sys.executable, "-m", "pytest", "tests/test_dag_visualizer.py", "-v"],
-            capture_output=True,
-            text=True
-        )
-        print(result.stdout)
-        assert result.returncode == 0, "DAG可视化测试失败"
-        print("✅ DAG可视化测试通过")
-    
     def test_run_performance_monitor_tests(self):
         """运行性能监控测试"""
         result = subprocess.run(
@@ -72,7 +61,6 @@ def run_comprehensive_validation():
     print("="*80)
     
     test_modules = [
-        ("DAG可视化", "tests/test_dag_visualizer.py"),
         ("性能监控", "tests/test_performance_monitor.py"),
         ("缓存系统", "tests/test_intelligent_cache_system.py"),
         ("三层检索", "tests/test_three_layer_integration.py"),

@@ -177,31 +177,8 @@ async def lifespan(app: FastAPI):
                 await warmup_manager.start()
                 
                 logger.info("✅ 预热系统（WarmupManager）已启动")
-
                 
-                # 配置预热参数（使用动态获取的用户ID）
-                warmup_config = WarmupConfig(
-                    critical_user_ids=critical_user_ids,  # 动态获取的实际用户ID
-                    common_queries=[
-                        "我想增肌", "怎么减肥", "深蹲怎么做",
-                        "胸肌训练", "背部训练", "腿部训练",
-                        "蛋白质摄入", "热量计算", "训练计划", "休息恢复"
-                    ],
-                    enabled=True,
-                    phase_timeout_seconds=30.0,
-                    task_timeout_seconds=5.0,
-                    max_concurrent_warmups=5
-                )
-                
-                # 启动非阻塞预热
-                await create_and_start_warmup(
-                    user_cache=user_cache,
-                    membership_cache=membership_cache,
-                    few_shot_retriever=None,  # Few-Shot检索器稍后初始化
-                    config=warmup_config
-                )
-                
-                logger.info("✅ 旧预热系统（ProgressiveWarmup）已启动")
+                logger.info("✅ 预热系统（WarmupManager）已启动")
             
         except Exception as warmup_error:
             logger.warning(f"⚠️ 预热系统启动失败: {warmup_error}，服务继续运行")
@@ -343,8 +320,7 @@ async def log_requests(request: Request, call_next):
 
         # ✅ 记录Prometheus指标
         try:
-            from src.framework.monitoring.prometheus_integration import record_http_request
-            from src.framework.monitoring.api_metrics import request_duration
+            from src.framework.monitoring.prometheus_integration import record_http_request, request_duration
             
             # 记录HTTP请求状态码
             record_http_request(response.status_code)
@@ -375,7 +351,7 @@ async def log_requests(request: Request, call_next):
         
         # ✅ 记录错误指标
         try:
-            from src.framework.monitoring.api_metrics import record_error
+            from src.framework.monitoring.prometheus_integration import record_error
             record_error("exception", "api")
         except:
             pass
@@ -427,7 +403,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     
     # ✅ 记录错误到Prometheus
     try:
-        from src.framework.monitoring.api_metrics import record_error
+        from src.framework.monitoring.prometheus_integration import record_error
         error_type = type(exc).__name__
         record_error(error_type, "api")
     except:

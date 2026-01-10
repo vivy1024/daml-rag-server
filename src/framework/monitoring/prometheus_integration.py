@@ -11,52 +11,225 @@ Prometheus指标集成模块 - Prometheus Metrics Integration
 3. 自动记录缓存操作指标
 4. 自动记录LLM调用指标
 
-版本: v1.0.0
-日期: 2025-12-24
+版本: v2.0.0
+日期: 2026-01-10
+更新: 整合api_metrics模块的指标定义
 """
 
 import logging
 import time
 import asyncio
+import psutil
 from functools import wraps
 from typing import Callable, Optional, Any
 from contextlib import contextmanager, asynccontextmanager
-
-# 导入Prometheus指标
-from .api_metrics import (
-    request_duration,
-    errors_total,
-    cache_hits,
-    cache_misses,
-    retrieval_duration,
-    llm_call_duration,
-    llm_call_success,
-    llm_call_failure,
-    llm_fallback,
-    llm_tokens,
-    record_error,
-    record_cache_hit,
-    record_cache_miss,
-    record_llm_call,
-    record_llm_tokens,
-    record_llm_fallback,
-    update_system_metrics
-)
-
-from .workflow_metrics import (
-    workflow_total_duration,
-    workflow_step_duration,
-    workflow_success,
-    workflow_failure,
-    workflow_concurrent,
-    workflow_bottleneck,
-    record_workflow_complete,
-    update_connection_pool_metrics,
-    record_http_request,
-    WORKFLOW_STEPS
-)
+from prometheus_client import Counter, Histogram, Gauge
 
 logger = logging.getLogger(__name__)
+
+
+# ========== Prometheus指标定义 ==========
+
+# 请求耗时直方图（支持P50, P95, P99计算）
+request_duration = Histogram(
+    'request_duration_seconds',
+    'Request duration in seconds',
+    ['endpoint', 'method'],
+    buckets=[0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0]
+)
+
+# 错误计数器
+errors_total = Counter(
+    'errors_total',
+    'Total number of errors',
+    ['error_type', 'component']
+)
+
+# 缓存命中计数器
+cache_hits = Counter(
+    'cache_hits_total',
+    'Total cache hits',
+    ['cache_type', 'level']
+)
+
+# 缓存未命中计数器
+cache_misses = Counter(
+    'cache_misses_total',
+    'Total cache misses',
+    ['cache_type', 'level']
+)
+
+# 检索耗时直方图
+retrieval_duration = Histogram(
+    'retrieval_duration_seconds',
+    'Retrieval duration in seconds',
+    ['layer', 'query_type'],
+    buckets=[0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+)
+
+# LLM调用耗时直方图
+llm_call_duration = Histogram(
+    'llm_call_duration_seconds',
+    'LLM call duration in seconds',
+    ['model', 'call_type', 'backend'],
+    buckets=[0.5, 1.0, 2.5, 5.0, 10.0, 20.0, 30.0, 60.0]
+)
+
+# LLM调用成功计数器
+llm_call_success = Counter(
+    'llm_call_success_total',
+    'Total successful LLM calls',
+    ['backend']
+)
+
+# LLM调用失败计数器
+llm_call_failure = Counter(
+    'llm_call_failure_total',
+    'Total failed LLM calls',
+    ['backend']
+)
+
+# LLM降级计数器
+llm_fallback = Counter(
+    'llm_fallback_total',
+    'Total LLM fallback events',
+    ['from', 'to']
+)
+
+# LLM令牌计数器
+llm_tokens = Counter(
+    'llm_tokens_total',
+    'Total LLM tokens used',
+    ['type']  # prompt/completion
+)
+
+# 工作流步骤耗时
+workflow_step_duration = Histogram(
+    'workflow_step_duration_seconds',
+    'Workflow step duration in seconds',
+    ['step'],
+    buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0]
+)
+
+# 工作流瓶颈计数器
+workflow_bottleneck = Counter(
+    'workflow_bottleneck_total',
+    'Workflow bottleneck events',
+    ['step', 'type']  # type: slow/error
+)
+
+# 工作流总耗时
+workflow_total_duration = Histogram(
+    'workflow_total_duration_seconds',
+    'Total workflow duration in seconds',
+    buckets=[1.0, 5.0, 10.0, 30.0, 60.0, 120.0]
+)
+
+# 工作流并发数
+workflow_concurrent = Gauge(
+    'workflow_concurrent',
+    'Number of concurrent workflows'
+)
+
+# 工作流成功计数器
+workflow_success = Counter(
+    'workflow_success_total',
+    'Total successful workflows'
+)
+
+# 工作流失败计数器
+workflow_failure = Counter(
+    'workflow_failure_total',
+    'Total failed workflows'
+)
+
+# 连接池指标
+connection_pool_active = Gauge(
+    'connection_pool_active',
+    'Active connections in pool',
+    ['pool']
+)
+
+connection_pool_idle = Gauge(
+    'connection_pool_idle',
+    'Idle connections in pool',
+    ['pool']
+)
+
+connection_pool_max = Gauge(
+    'connection_pool_max',
+    'Maximum connections in pool',
+    ['pool']
+)
+
+# 系统指标
+cpu_usage = Gauge(
+    'cpu_usage_percent',
+    'CPU usage percentage'
+)
+
+memory_usage = Gauge(
+    'memory_usage_bytes',
+    'Memory usage in bytes'
+)
+
+
+# ========== 辅助记录函数 ==========
+
+def record_error(error_type: str, component: str):
+    """记录错误"""
+    errors_total.labels(error_type=error_type, component=component).inc()
+
+
+def record_cache_hit(cache_type: str, level: str = "L1"):
+    """记录缓存命中"""
+    cache_hits.labels(cache_type=cache_type, level=level).inc()
+
+
+def record_cache_miss(cache_type: str, level: str = "L1"):
+    """记录缓存未命中"""
+    cache_misses.labels(cache_type=cache_type, level=level).inc()
+
+
+def record_llm_call(backend: str, duration: float, success: bool, model: str = "default", call_type: str = "chat"):
+    """记录LLM调用"""
+    llm_call_duration.labels(model=model, call_type=call_type, backend=backend).observe(duration)
+    if success:
+        llm_call_success.labels(backend=backend).inc()
+    else:
+        llm_call_failure.labels(backend=backend).inc()
+
+
+def record_llm_tokens(prompt_tokens: int, completion_tokens: int):
+    """记录LLM令牌使用"""
+    llm_tokens.labels(type="prompt").inc(prompt_tokens)
+    llm_tokens.labels(type="completion").inc(completion_tokens)
+
+
+def record_llm_fallback(from_backend: str, to_backend: str):
+    """记录LLM降级"""
+    llm_fallback.labels(**{"from": from_backend, "to": to_backend}).inc()
+
+
+def record_http_request(status_code: int):
+    """记录HTTP请求（用于兼容性）"""
+    pass  # 已由request_duration处理
+
+
+def update_connection_pool_metrics(pool: str, active: int, idle: int, max_size: int):
+    """更新连接池指标"""
+    connection_pool_active.labels(pool=pool).set(active)
+    connection_pool_idle.labels(pool=pool).set(idle)
+    connection_pool_max.labels(pool=pool).set(max_size)
+
+
+def update_system_metrics():
+    """更新系统指标"""
+    try:
+        cpu_usage.set(psutil.cpu_percent())
+        memory_usage.set(psutil.virtual_memory().used)
+    except Exception as e:
+        logger.warning(f"⚠️ 更新系统指标失败: {e}")
 
 
 # ========== 装饰器 ==========

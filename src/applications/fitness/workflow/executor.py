@@ -75,11 +75,9 @@ class WorkflowExecutor:
     
     @property
     def performance_monitor(self):
-        """获取性能监控器"""
-        if self._performance_monitor is None and self.enable_performance:
-            from ....framework.monitoring.performance_monitor import get_performance_monitor
-            self._performance_monitor = get_performance_monitor()
-        return self._performance_monitor
+        """获取性能监控器（已废弃，返回None）"""
+        # 注意：performance_monitor已删除
+        return None
     
     def _get_backend_client(self):
         """获取后端客户端"""

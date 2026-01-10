@@ -75,113 +75,29 @@ def generate_streaming_metrics(count: int = 10):
 
 def generate_workflow_metrics(count: int = 5):
     """
-    生成工作流测试指标
+    生成工作流测试指标（已废弃 - daml_workflow_monitor已删除）
     
     Args:
         count: 生成的测试工作流数量
     """
-    print(f"\n🎯 开始生成{count}个工作流测试指标...")
+    print(f"\n⚠️  工作流指标生成已禁用（daml_workflow_monitor已删除）")
+    print(f"   如需工作流监控，请使用metrics_collector和prometheus_integration")
+    return
     
-    try:
-        from src.framework.monitoring.daml_workflow_monitor import (
-            DAMLWorkflowMonitor,
-            WorkflowStep,
-            RetrievalLayer
-        )
-        
-        monitor = DAMLWorkflowMonitor()
-        
-        for i in range(count):
-            # 开始会话
-            session_id = monitor.start_session(
-                user_id=f"test_user_{i}",
-                query=f"测试查询{i}：给我一个增肌训练计划",
-                metadata={"test": True}
-            )
-            
-            print(f"\n  工作流{i+1} (session_id={session_id[:8]}...):")
-            
-            # 模拟11步工作流程
-            steps = [
-                (WorkflowStep.USER_PROFILE_LOADING, 50, 100),
-                (WorkflowStep.SESSION_STORAGE, 30, 50),
-                (WorkflowStep.MEMBERSHIP_CHECK, 20, 30),
-                (WorkflowStep.BGE_COMPLEXITY_CLASSIFICATION, 100, 200),
-                (WorkflowStep.MODEL_SELECTION, 50, 100),
-                (WorkflowStep.FEW_SHOT_RETRIEVAL, 200, 500),
-                (WorkflowStep.DAG_ORCHESTRATION, 500, 1000),
-                (WorkflowStep.THREE_LAYER_RETRIEVAL, 1000, 2000),
-                (WorkflowStep.TOOL_RESULT_AGGREGATION, 100, 200),
-                (WorkflowStep.LLM_GENERATION, 5000, 10000),
-                (WorkflowStep.INTERACTION_RECORDING, 50, 100)
-            ]
-            
-            for step, min_ms, max_ms in steps:
-                # 开始步骤
-                monitor.start_step(session_id, step)
-                
-                # 模拟步骤执行时间
-                duration_ms = random.uniform(min_ms, max_ms)
-                time.sleep(duration_ms / 1000)
-                
-                # 完成步骤（95%成功率）
-                success = random.random() < 0.95
-                monitor.finish_step(
-                    session_id,
-                    step,
-                    success=success,
-                    input_size=random.randint(100, 1000),
-                    output_size=random.randint(500, 5000),
-                    cache_hit=random.random() < 0.3
-                )
-                
-                status = "✅" if success else "❌"
-                print(f"    步骤{step.value}: {duration_ms:.0f}ms {status}")
-            
-            # 模拟三层检索
-            layers = [
-                (RetrievalLayer.LAYER1_VECTOR, 100, 50),
-                (RetrievalLayer.LAYER2_GRAPH, 50, 20),
-                (RetrievalLayer.LAYER3_RULES, 20, 10)
-            ]
-            
-            for layer, candidates_in, candidates_out in layers:
-                monitor.start_retrieval_layer(session_id, layer)
-                time.sleep(random.uniform(0.1, 0.5))
-                monitor.finish_retrieval_layer(
-                    session_id,
-                    layer,
-                    success=True,
-                    candidates_in=candidates_in,
-                    candidates_out=candidates_out,
-                    confidence_score=random.uniform(0.7, 0.95)
-                )
-            
-            # 完成会话
-            monitor.finish_session(
-                session_id,
-                success=True,
-                cost_estimate=random.uniform(0.001, 0.01),
-                model_used="qwen3:8b",
-                quality_score=random.uniform(0.8, 0.95)
-            )
-            
-            print(f"  ✅ 工作流{i+1}完成")
-        
-        # 打印性能摘要
-        print(f"\n📊 性能摘要:")
-        summary = monitor.get_performance_summary(time_window_minutes=60)
-        print(f"  总会话数: {summary['total_sessions']}")
-        print(f"  成功率: {summary['success_rate']:.1%}")
-        print(f"  平均耗时: {summary['avg_duration_ms']:.0f}ms")
-        print(f"  总成本: ${summary['total_cost']:.4f}")
-        
-        print(f"\n✅ 工作流指标生成完成！")
-        
-    except Exception as e:
-        print(f"❌ 工作流指标生成失败: {e}")
-        import traceback
-        traceback.print_exc()
+    # 以下代码已废弃
+    # print(f"\n🎯 开始生成{count}个工作流测试指标...")
+    # 
+    # try:
+    #     from src.framework.monitoring.daml_workflow_monitor import (
+    #         DAMLWorkflowMonitor,
+    #         WorkflowStep,
+    #         RetrievalLayer
+    #     )
+    #     ...
+    # except Exception as e:
+    #     print(f"❌ 工作流指标生成失败: {e}")
+    #     import traceback
+    #     traceback.print_exc()
 
 
 def verify_metrics():

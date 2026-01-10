@@ -244,6 +244,7 @@ class ContextEngineering:
         user_message: str,
         assistant_response: str,
         topic_id: Optional[str] = None,
+        session_id: Optional[str] = None,
         tools_used: Optional[List[str]] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -255,17 +256,23 @@ class ContextEngineering:
             user_message: 用户消息
             assistant_response: 助手响应
             topic_id: 话题ID
+            session_id: 会话ID（用于PHP后端持久化）
             tools_used: 使用的工具列表
             metadata: 元数据
             
         Requirements: 8.3
         """
+        # 将session_id添加到metadata中
+        full_metadata = metadata.copy() if metadata else {}
+        if session_id:
+            full_metadata['session_id'] = session_id
+        
         # 添加用户消息
         await self.memory.add_user_message(
             user_id=user_id,
             content=user_message,
             topic_id=topic_id,
-            metadata=metadata,
+            metadata=full_metadata,
         )
         
         # 添加助手消息
@@ -274,7 +281,7 @@ class ContextEngineering:
             content=assistant_response,
             topic_id=topic_id,
             tools_used=tools_used,
-            metadata=metadata,
+            metadata=full_metadata,
         )
         
         logger.debug(

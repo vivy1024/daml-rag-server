@@ -45,7 +45,6 @@ def _use_new_cache() -> bool:
 _user_cache_instance = None
 _membership_cache_instance = None
 _workflow_monitor_instance = None
-_dag_visualizer_instance = None
 
 # 性能优化组件全局实例
 _cache_manager_instance = None
@@ -159,49 +158,11 @@ def get_membership_cache(backend_client=None, redis_client=None):
 
 
 # ============ 工作流监控器 ============
+# daml_workflow_monitor.py已删除，未使用
 
-def get_workflow_monitor():
-    """
-    获取工作流程监控器单例
-    
-    Returns:
-        DAMLWorkflowMonitor 实例
-    """
-    global _workflow_monitor_instance
-    if _workflow_monitor_instance is None:
-        from ....framework.monitoring.daml_workflow_monitor import DAMLWorkflowMonitor
-        _workflow_monitor_instance = DAMLWorkflowMonitor(
-            max_sessions=1000,
-            aggregation_window_minutes=60
-        )
-        logger.info("✅ DAMLWorkflowMonitor初始化完成")
-    return _workflow_monitor_instance
-
-
-# ============ DAG可视化器 ============
-
-def get_dag_visualizer(debug_mode: bool = False):
-    """
-    获取DAG可视化器单例
-    
-    Args:
-        debug_mode: 是否启用调试模式
-        
-    Returns:
-        DAGVisualizer 实例
-    """
-    global _dag_visualizer_instance
-    if _dag_visualizer_instance is None:
-        from ....framework.monitoring.dag_visualizer import (
-            DAGVisualizer,
-            LogLevel
-        )
-        _dag_visualizer_instance = DAGVisualizer(
-            debug_mode=debug_mode,
-            log_level=LogLevel.NORMAL
-        )
-        logger.info("✅ DAGVisualizer初始化完成")
-    return _dag_visualizer_instance
+# def get_workflow_monitor():
+#     """获取工作流程监控器单例（已废弃）"""
+#     pass
 
 
 # ============ 性能优化组件初始化 ============
@@ -296,11 +257,7 @@ def initialize_performance_components():
         _concurrency_limiter_instance = ConcurrencyLimiter()
         logger.info("✅ ConcurrencyLimiter初始化完成")
     
-    # 5. 初始化性能监控器
-    if _performance_monitor_instance is None:
-        from ....framework.monitoring.performance_monitor import get_performance_monitor
-        _performance_monitor_instance = get_performance_monitor()
-        logger.info("✅ PerformanceMonitor初始化完成")
+    # 注意：performance_monitor已删除，不再初始化
     
     logger.info("🎉 所有性能优化组件初始化完成")
 
@@ -387,7 +344,7 @@ def reset_all_singletons():
     重置所有单例实例（仅用于测试）
     """
     global _user_cache_instance, _membership_cache_instance
-    global _workflow_monitor_instance, _dag_visualizer_instance
+    global _workflow_monitor_instance
     global _cache_manager_instance, _connection_pool_manager_instance
     global _llm_degradation_manager_instance, _concurrency_limiter_instance
     global _performance_monitor_instance, _mcp_orchestrator_instance
@@ -396,7 +353,6 @@ def reset_all_singletons():
     _user_cache_instance = None
     _membership_cache_instance = None
     _workflow_monitor_instance = None
-    _dag_visualizer_instance = None
     _cache_manager_instance = None
     _connection_pool_manager_instance = None
     _llm_degradation_manager_instance = None
@@ -585,7 +541,6 @@ __all__ = [
     "get_workflow_caches",
     # 监控相关
     "get_workflow_monitor",
-    "get_dag_visualizer",
     "get_performance_monitor",
     # 连接池和降级
     "get_connection_pool_manager",

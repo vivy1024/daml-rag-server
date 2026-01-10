@@ -33,7 +33,6 @@ from .models import (
     DAGExecutionResult,
 )
 from ..dag_template_system import DAGTemplate, DAGTemplateManager
-from src.framework.monitoring.dag_visualizer import DAGVisualizer, LogLevel
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +53,7 @@ class EnhancedDAGOrchestrator:
         mcp_orchestrator=None,
         cache_manager=None,
         template_manager: DAGTemplateManager = None,
-        visualizer: DAGVisualizer = None
+        visualizer=None  # DAGVisualizer已删除，保留参数以兼容
     ):
         """
         初始化DAG编排器
@@ -63,7 +62,7 @@ class EnhancedDAGOrchestrator:
             mcp_orchestrator: MCP工具管理器
             cache_manager: 缓存管理器
             template_manager: DAG模板管理器
-            visualizer: DAG可视化器
+            visualizer: DAG可视化器（已废弃）
         """
         self.mcp_orchestrator = mcp_orchestrator
         self.cache_manager = cache_manager
