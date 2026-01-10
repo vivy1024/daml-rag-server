@@ -125,6 +125,16 @@ from .config import (
     reload_runtime_config,
 )
 
+# ============ 领域适配器 ============
+from .fitness_adapter import (
+    FitnessAdapter,
+    get_fitness_adapter,
+    initialize_fitness_adapter,
+    FITNESS_LAYER3_RULES,
+    FITNESS_DAG_TEMPLATES,
+    FITNESS_TOOLS,
+)
+
 # ============ 占位符（保持向后兼容） ============
 # 这些组件已被移除或重构，保留占位符以避免导入错误
 FitnessApp = None
@@ -216,6 +226,14 @@ __all__ = [
     "get_runtime_config",
     "get_runtime_config_manager",
     "reload_runtime_config",
+    
+    # ========== 领域适配器 ==========
+    "FitnessAdapter",
+    "get_fitness_adapter",
+    "initialize_fitness_adapter",
+    "FITNESS_LAYER3_RULES",
+    "FITNESS_DAG_TEMPLATES",
+    "FITNESS_TOOLS",
     
     # ========== 占位符（向后兼容） ==========
     "FitnessApp",

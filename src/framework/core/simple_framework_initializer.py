@@ -6,21 +6,22 @@
 1. 存储层（MetadataDB, UserMemory）
 2. GraphRAG（KnowledgeGraphFull）
 3. MCP客户端池（ConfigurableMCPClient）
-4. 质量监控（可选）
+4. 领域适配器（DomainAdapter）
+5. 质量监控（可选）
 
 删除组件：
 - 元学习引擎
 - 工具性能追踪
 - 复杂的验证逻辑
 
-版本：v3.2.0
-日期：2025-12-13
+版本：v3.3.0
+日期：2026-01-11
 """
 
 import asyncio
 import logging
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Type
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -34,6 +35,7 @@ class InitResult:
     components: Dict[str, Any] = field(default_factory=dict)
     errors: Dict[str, str] = field(default_factory=dict)
     duration_seconds: float = 0.0
+    domain_adapter: Optional[Any] = None  # 领域适配器实例
 
 
 class SimpleFrameworkInitializer:
@@ -44,8 +46,9 @@ class SimpleFrameworkInitializer:
     1. 存储层（MetadataDB, UserMemory）
     2. GraphRAG（KnowledgeGraphFull）
     3. MCP编排（MCPOrchestrator）
-    4. 模型调度（SimpleModelScheduler）
-    5. 质量监控（SimpleQualityMonitor）
+    4. 领域适配器（DomainAdapter）
+    5. 模型调度（SimpleModelScheduler）
+    6. 质量监控（SimpleQualityMonitor）
     
     删除内容：
     - 元学习引擎
@@ -54,12 +57,13 @@ class SimpleFrameworkInitializer:
     - 详细的健康检查
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None, domain_adapter: Optional[str] = None):
         """
         初始化框架初始化器
         
         Args:
             config: 配置字典（如果为空，从环境变量读取）
+            domain_adapter: 领域适配器名称（如 "fitness"），如果为空则不加载适配器
         """
         # 从环境变量构建默认配置
         default_config = {
@@ -78,10 +82,14 @@ class SimpleFrameworkInitializer:
         # 合并用户配置（用户配置优先）
         self.config = {**default_config, **(config or {})}
         self.components = {}
+        self.domain_adapter_name = domain_adapter
+        self._domain_adapter = None
         
         logger.info("✅ 简化框架初始化器已创建")
         logger.info(f"  - Qdrant URL: {self.config['qdrant_url']}")
         logger.info(f"  - Neo4j URI: {self.config['neo4j_uri']}")
+        if domain_adapter:
+            logger.info(f"  - 领域适配器: {domain_adapter}")
     
     async def initialize(self) -> InitResult:
         """
@@ -180,8 +188,41 @@ class SimpleFrameworkInitializer:
                 logger.error(f"  ❌ MCP客户端池初始化失败: {e}")
                 errors["mcp_client"] = str(e)
             
-            # 4. 初始化质量监控（简化版）
-            logger.info("\n📊 Step 4/5: 初始化质量监控")
+            # 4. 初始化领域适配器
+            logger.info("\n🎯 Step 4/6: 初始化领域适配器")
+            try:
+                if self.domain_adapter_name:
+                    from ..adapters.domain_adapter import DomainAdapterRegistry
+                    
+                    # 尝试加载指定的领域适配器
+                    if self.domain_adapter_name == "fitness":
+                        # 导入健身领域适配器（会自动注册）
+                        from src.applications.fitness.fitness_adapter import FitnessAdapter
+                        
+                    # 从注册表获取适配器
+                    adapter_class = DomainAdapterRegistry.get(self.domain_adapter_name)
+                    if adapter_class:
+                        self._domain_adapter = adapter_class()
+                        await self._domain_adapter.initialize()
+                        self.components["domain_adapter"] = self._domain_adapter
+                        
+                        # 显示适配器信息
+                        logger.info(f"  ✅ 领域适配器初始化成功: {self._domain_adapter.get_display_name()}")
+                        logger.info(f"     - Layer3规则: {len(self._domain_adapter.get_layer3_rules())}条")
+                        logger.info(f"     - DAG模板: {len(self._domain_adapter.get_dag_templates())}个")
+                        logger.info(f"     - MCP工具: {len(self._domain_adapter.get_tools())}个")
+                    else:
+                        logger.warning(f"  ⚠️  未找到领域适配器: {self.domain_adapter_name}")
+                        errors["domain_adapter"] = f"未找到适配器: {self.domain_adapter_name}"
+                else:
+                    logger.info("  ⏭️  未指定领域适配器，跳过")
+                    
+            except Exception as e:
+                logger.error(f"  ❌ 领域适配器初始化失败: {e}")
+                errors["domain_adapter"] = str(e)
+            
+            # 5. 初始化质量监控（简化版）
+            logger.info("\n📊 Step 5/6: 初始化质量监控")
             try:
                 # 简单的质量监控（暂时跳过，后续实现）
                 logger.info("  ⚠️  质量监控暂未实现（可选）")
@@ -211,7 +252,8 @@ class SimpleFrameworkInitializer:
                 success=success,
                 components=self.components,
                 errors=errors,
-                duration_seconds=duration
+                duration_seconds=duration,
+                domain_adapter=self._domain_adapter
             )
             
         except Exception as e:
@@ -221,7 +263,8 @@ class SimpleFrameworkInitializer:
                 success=False,
                 components=self.components,
                 errors={"framework": str(e)},
-                duration_seconds=duration
+                duration_seconds=duration,
+                domain_adapter=None
             )
     
     async def shutdown(self):
@@ -266,12 +309,16 @@ class SimpleFrameworkInitializer:
 _initializer_instance: Optional[SimpleFrameworkInitializer] = None
 
 
-def get_framework_initializer(config: Optional[Dict[str, Any]] = None) -> SimpleFrameworkInitializer:
+def get_framework_initializer(
+    config: Optional[Dict[str, Any]] = None,
+    domain_adapter: Optional[str] = None
+) -> SimpleFrameworkInitializer:
     """
     获取框架初始化器单例
     
     Args:
         config: 配置字典
+        domain_adapter: 领域适配器名称（如 "fitness"）
     
     Returns:
         SimpleFrameworkInitializer实例
@@ -279,20 +326,24 @@ def get_framework_initializer(config: Optional[Dict[str, Any]] = None) -> Simple
     global _initializer_instance
     
     if _initializer_instance is None:
-        _initializer_instance = SimpleFrameworkInitializer(config)
+        _initializer_instance = SimpleFrameworkInitializer(config, domain_adapter)
     
     return _initializer_instance
 
 
-async def initialize_framework(config: Optional[Dict[str, Any]] = None) -> InitResult:
+async def initialize_framework(
+    config: Optional[Dict[str, Any]] = None,
+    domain_adapter: Optional[str] = None
+) -> InitResult:
     """
     便捷函数：初始化框架
     
     Args:
         config: 配置字典
+        domain_adapter: 领域适配器名称（如 "fitness"）
     
     Returns:
         InitResult: 初始化结果
     """
-    initializer = get_framework_initializer(config)
+    initializer = get_framework_initializer(config, domain_adapter)
     return await initializer.initialize()

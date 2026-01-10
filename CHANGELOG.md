@@ -1,8 +1,120 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.8.0
+**版本**: v9.10.0
 **更新日期**: 2026-01-11
-**状态**: ✅ P0三端历史对话打通
+**状态**: ✅ P2领域适配器抽象
+
+---
+
+### v9.10.0 (2026-01-11) - P2领域适配器抽象 ✅
+
+**变更类型**: ✨ 功能增强（P2级别）
+
+**需求背景**:
+- 实现DAML-RAG开源规范中的任务8：领域适配器抽象
+- Requirements: 5.1-5.6
+
+**实现内容**:
+
+1. **任务8.1: 定义DomainAdapter抽象接口** ✅
+   - 创建 `src/framework/adapters/domain_adapter.py`
+   - 定义数据类：`Layer3Rule`, `DAGTemplateDefinition`, `ToolDefinition`, `DomainConfig`
+   - 定义枚举：`RuleSeverity`, `RuleCategory`
+   - 定义抽象基类 `DomainAdapter`：
+     - `get_name()` - 返回领域名称
+     - `get_display_name()` - 返回显示名称
+     - `get_description()` - 返回描述
+     - `get_layer3_rules()` - 返回Layer3规则
+     - `get_dag_templates()` - 返回DAG模板
+     - `get_tools()` - 返回MCP工具
+   - 实现 `DomainAdapterRegistry` 注册表
+   - 实现 `@register_domain_adapter` 装饰器
+
+2. **任务8.2: 实现FitnessAdapter参考实现** ✅
+   - 创建 `src/applications/fitness/fitness_adapter.py`
+   - 定义 `FITNESS_LAYER3_RULES` - 11条健身领域规则
+   - 定义 `FITNESS_DAG_TEMPLATES` - 10个DAG模板
+   - 定义 `FITNESS_TOOLS` - 17个MCP工具定义
+   - 实现 `FitnessAdapter` 类
+   - 更新 `fitness/__init__.py` 导出新组件
+
+3. **任务8.3: 修改框架初始化流程** ✅
+   - 修改 `SimpleFrameworkInitializer` 支持 `domain_adapter` 参数
+   - 添加领域适配器初始化步骤（Step 4/6）
+   - 更新 `InitResult` 包含 `domain_adapter` 字段
+   - 更新 `get_framework_initializer()` 和 `initialize_framework()` 函数
+
+**文件变更**:
+- 新增: `src/framework/adapters/domain_adapter.py`
+- 新增: `src/applications/fitness/fitness_adapter.py`
+- 修改: `src/framework/adapters/__init__.py`
+- 修改: `src/applications/fitness/__init__.py`
+- 修改: `src/framework/core/simple_framework_initializer.py`
+
+---
+
+### v9.9.0 (2026-01-11) - P2三层检索引擎优化 ✅
+
+**变更类型**: ✨ 功能增强（P2级别）
+
+**需求背景**:
+- 实现DAML-RAG开源规范中的P2任务：三层检索引擎优化
+- Requirements: 4.2, 4.3, 4.6, 3.6
+
+**实现内容**:
+
+1. **任务6.1: 验证三层执行流程** ✅
+   - 创建验证脚本 `scripts/verify_three_layer_flow.py`
+   - 确认Layer1→Layer2→Layer3顺序执行
+   - 验证降级策略正常工作（Layer1失败时回退到Layer2）
+   - 测试结果：4/4测试通过
+
+2. **任务6.2: 增强Layer3安全规则** ✅
+   - 增强 `_validate_safety()` 方法（true_three_layer_engine.py）
+     - 添加慢性病检查（心血管疾病、骨质疏松等）
+     - 添加关节损伤检查（基于关节关键词映射）
+     - 添加体态问题检查（骨盆前倾、圆肩等）
+     - 添加年龄限制（高龄用户、青少年用户）
+   - 增强 `joint_load_rule` 方法（layer3_rule_engine.py）
+     - 支持severity级别（absolute/relative/caution）
+     - 绝对禁忌完全过滤，相对禁忌降低优先级
+     - 添加详细的关节关键词映射
+   - 创建验证脚本 `scripts/verify_enhanced_safety_rules.py`
+   - 测试结果：3/3测试通过
+
+3. **任务6.3: 统一超时配置** ✅
+   - 在 `config.toml` 添加 `[timeout]` 配置节
+     - 三层检索超时：layer1/layer2/layer3/total
+     - HTTP超时：connect/read/total
+     - 数据库超时：neo4j/qdrant/redis
+     - MCP工具超时：tool/dag
+     - LLM超时：api/streaming
+   - 创建 `timeout_manager.py` 超时管理器
+     - 单例模式，全局配置管理
+     - 提供超时装饰器 `@with_timeout`
+     - 提供 `run_with_timeout()` 方法
+   - 集成到 `TrueThreeLayerEngine`
+     - 初始化时加载超时管理器
+     - Layer1使用配置的超时时间
+     - 添加超时计数统计
+   - 创建验证脚本 `scripts/verify_timeout_config.py`
+   - 测试结果：4/4测试通过
+
+**新增文件**:
+- `src/framework/retrieval/timeout_manager.py` - 超时管理器
+- `scripts/verify_three_layer_flow.py` - 三层流程验证脚本
+- `scripts/verify_enhanced_safety_rules.py` - 安全规则验证脚本
+- `scripts/verify_timeout_config.py` - 超时配置验证脚本
+
+**修改文件**:
+- `config.toml` - 添加[timeout]配置节
+- `src/framework/retrieval/true_three_layer_engine.py` - 增强安全验证、集成超时管理
+- `src/framework/retrieval/layer3_rule_engine.py` - 增强关节负荷规则
+
+**影响范围**:
+- Layer3安全规则更加完善，支持更多健康状况检查
+- 超时配置统一管理，便于调优和监控
+- 三层检索流程验证通过，降级策略正常工作
 
 ---
 

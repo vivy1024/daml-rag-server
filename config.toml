@@ -112,3 +112,29 @@ level = "INFO"
 format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 json_format = false  # 结构化JSON日志（生产环境建议true）
 
+[timeout]
+# 全局超时配置（Requirements 3.6）
+# 三层检索引擎超时
+layer1_timeout_ms = 5000      # Layer1向量检索超时（毫秒）
+layer2_timeout_ms = 10000     # Layer2图检索超时（毫秒）
+layer3_timeout_ms = 3000      # Layer3规则验证超时（毫秒）
+total_retrieval_timeout_ms = 30000  # 总检索超时（毫秒）
+
+# HTTP客户端超时
+http_connect_timeout_ms = 5000    # HTTP连接超时
+http_read_timeout_ms = 60000      # HTTP读取超时
+http_total_timeout_ms = 120000    # HTTP总超时
+
+# 数据库连接超时
+neo4j_connection_timeout_ms = 30000   # Neo4j连接超时
+qdrant_timeout_ms = 10000             # Qdrant操作超时
+redis_timeout_ms = 5000               # Redis操作超时
+
+# MCP工具执行超时
+mcp_tool_timeout_ms = 30000       # 单个MCP工具执行超时
+mcp_dag_timeout_ms = 60000        # DAG编排总超时
+
+# LLM调用超时
+llm_timeout_ms = 120000           # LLM API调用超时
+llm_streaming_timeout_ms = 180000 # LLM流式响应超时
+

@@ -14,9 +14,10 @@
 2. 优雅降级 - Neo4j失败时自动降级到API
 3. 清晰分层 - 每层职责明确,互不耦合
 4. 完善监控 - 详细日志和性能指标
+5. 统一超时 - 全局超时配置管理 (Requirements 3.6)
 
-版本: v2.0.0
-日期: 2025-11-25
+版本: v2.1.0
+日期: 2026-01-11
 作者: 薛小川
 """
 
@@ -28,6 +29,9 @@ from datetime import datetime
 from dataclasses import dataclass, field
 from contextlib import contextmanager
 import aiohttp
+
+# 导入超时管理器
+from .timeout_manager import TimeoutManager, get_timeout_manager
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +206,8 @@ class TrueThreeLayerEngine:
         neo4j_password: str = None,
         enable_neo4j_direct: bool = True,
         enable_parallel_execution: bool = False,  # Layer 1和2不能并行,因为2依赖1
-        connection_pool_manager=None  # ✅ 新增：连接池管理器
+        connection_pool_manager=None,  # ✅ 连接池管理器
+        timeout_manager: Optional[TimeoutManager] = None  # ✅ 新增：超时管理器
     ):
         """初始化三层检索引擎"""
         # API配置
@@ -218,8 +223,11 @@ class TrueThreeLayerEngine:
         self.enable_neo4j_direct = enable_neo4j_direct
         self.enable_parallel_execution = enable_parallel_execution
         
-        # ✅ 新增：连接池管理器
+        # ✅ 连接池管理器
         self.connection_pool_manager = connection_pool_manager
+        
+        # ✅ 超时管理器（Requirements 3.6）
+        self.timeout_manager = timeout_manager or get_timeout_manager()
 
         # Neo4j连接管理器
         self.neo4j_manager: Optional[Neo4jConnectionManager] = None
@@ -232,10 +240,14 @@ class TrueThreeLayerEngine:
             "layer2_neo4j_direct": 0,
             "layer2_api_fallback": 0,
             "layer3_success": 0,
-            "total_errors": 0
+            "total_errors": 0,
+            "timeout_count": 0  # ✅ 新增：超时计数
         }
 
         logger.info(f"三层检索引擎已创建 - GraphRAG API: {self.graphrag_api_base}")
+        logger.info(f"  → 超时配置: Layer1={self.timeout_manager.get_timeout_ms('layer1_timeout_ms')}ms, "
+                   f"Layer2={self.timeout_manager.get_timeout_ms('layer2_timeout_ms')}ms, "
+                   f"Layer3={self.timeout_manager.get_timeout_ms('layer3_timeout_ms')}ms")
 
         # 初始化Neo4j连接
         if self.enable_neo4j_direct:
@@ -473,7 +485,7 @@ class TrueThreeLayerEngine:
         user_id: Optional[str] = None,
         max_retries: int = 3,
         initial_retry_delay: float = 1.0,
-        min_confidence: float = 0.70  # ✅ 新增：最低置信度阈值
+        min_confidence: float = 0.70  # ✅ 最低置信度阈值
     ) -> LayerExecutionResult:
         """
         Layer 1: 向量语义检索 (Qdrant via GraphRAG API)
@@ -483,9 +495,14 @@ class TrueThreeLayerEngine:
         - 指数退避：1s, 2s, 4s
         - 详细日志：记录每次重试
         - ✅ 质量评估：标记低质量结果（置信度 < min_confidence）
+        - ✅ 统一超时：使用TimeoutManager配置 (Requirements 3.6)
         """
         start_time = datetime.now()
         logger.info("→ Layer 1: 向量语义检索 (Qdrant)")
+        
+        # ✅ 从超时管理器获取配置
+        layer1_timeout = self.timeout_manager.get_timeout("layer1_timeout_ms", 5000)
+        http_timeout = self.timeout_manager.get_timeout("http_total_timeout_ms", 60000)
         
         retry_delay = initial_retry_delay
         last_error = None
@@ -496,6 +513,7 @@ class TrueThreeLayerEngine:
                     logger.info(f"  ⟳ 重试 {attempt}/{max_retries-1}，等待{retry_delay:.1f}秒...")
                     await asyncio.sleep(retry_delay)
                 
+                # ✅ 使用超时管理器配置的超时时间
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
                         f"{self.graphrag_api_base}/query",
@@ -508,7 +526,7 @@ class TrueThreeLayerEngine:
                             "return_reason": False,
                             "user_id": user_id or "anonymous"
                         },
-                        timeout=aiohttp.ClientTimeout(total=60)
+                        timeout=aiohttp.ClientTimeout(total=min(layer1_timeout, http_timeout))
                     ) as response:
                         if response.status == 200:
                             data = await response.json()
@@ -563,8 +581,9 @@ class TrueThreeLayerEngine:
                             retry_delay *= 2
 
             except asyncio.TimeoutError:
-                last_error = "Layer 1超时"
+                last_error = f"Layer 1超时 (配置: {layer1_timeout}s)"
                 logger.warning(f"  ⚠️ 尝试{attempt+1}/{max_retries}超时")
+                self.stats["timeout_count"] += 1  # ✅ 记录超时
                 
                 if attempt == max_retries - 1:
                     logger.error(f"  ✗ Layer 1最终失败: {last_error}")
@@ -1365,26 +1384,173 @@ class TrueThreeLayerEngine:
         exercise: Dict[str, Any],
         user_profile: Dict[str, Any]
     ) -> bool:
-        """安全性验证"""
+        """
+        增强版安全性验证 (Requirements 4.3, 4.6)
+        
+        检查项目：
+        1. 禁忌症匹配（绝对禁忌/相对禁忌/谨慎使用）
+        2. 年龄限制
+        3. 健康状况检查（慢性病、损伤史）
+        4. 关节损伤检查
+        5. 体态问题检查
+        """
         if not user_profile:
             return True
 
-        # 检查禁忌症
+        exercise_name = exercise.get("exercise_name_zh", "Unknown")
+        
+        # ============ 1. 禁忌症检查（支持severity级别）============
         contraindications = exercise.get("contraindications", [])
         user_conditions = user_profile.get("medical_conditions", [])
-
-        for condition in user_conditions:
+        
+        # 获取健康档案
+        health_profile = user_profile.get("health_profile", {})
+        
+        # 整合所有健康状况
+        all_conditions = set(user_conditions)
+        
+        # 添加慢性病
+        chronic_conditions = health_profile.get("chronic_conditions", [])
+        for condition in chronic_conditions:
+            if isinstance(condition, dict):
+                all_conditions.add(condition.get("name", ""))
+            else:
+                all_conditions.add(str(condition))
+        
+        # 添加当前症状
+        current_symptoms = health_profile.get("current_symptoms", [])
+        for symptom in current_symptoms:
+            all_conditions.add(str(symptom))
+        
+        # 检查禁忌症匹配
+        for condition in all_conditions:
+            if not condition:
+                continue
+            # 精确匹配
             if condition in contraindications:
-                logger.debug(f"安全过滤: {exercise.get('exercise_name_zh')} - 禁忌症 {condition}")
+                logger.debug(f"安全过滤: {exercise_name} - 禁忌症 {condition}")
                 return False
+            # 模糊匹配（部分包含）
+            for contra in contraindications:
+                if isinstance(contra, str) and (condition in contra or contra in condition):
+                    logger.debug(f"安全过滤: {exercise_name} - 禁忌症匹配 {condition} ~ {contra}")
+                    return False
 
-        # 年龄限制
-        user_age = user_profile.get("age", 30)
+        # ============ 2. 年龄限制检查 ============
+        basic_info = user_profile.get("basic_info", {})
+        user_age = basic_info.get("age") or user_profile.get("age", 30)
+        
+        difficulty = (exercise.get("difficulty_zh") or exercise.get("difficulty_en") or "").lower()
+        
+        # 高龄用户限制
         if user_age > 60:
-            # 使用统一字段名：difficulty_zh / difficulty_en
-            difficulty = (exercise.get("difficulty_zh") or exercise.get("difficulty_en") or "").lower()
-            if "advanced" in difficulty or "elite" in difficulty or "高级" in difficulty:
-                logger.debug(f"安全过滤: {exercise.get('exercise_name_zh')} - 高龄不适合高难度")
+            if "advanced" in difficulty or "elite" in difficulty or "高级" in difficulty or "精英" in difficulty:
+                logger.debug(f"安全过滤: {exercise_name} - 高龄(>{user_age})不适合高难度")
+                return False
+        
+        # 青少年用户限制（<16岁）
+        if user_age < 16:
+            # 限制大重量复合动作
+            high_load_keywords = ["硬拉", "深蹲", "卧推", "推举", "deadlift", "squat", "bench press"]
+            if any(kw in exercise_name.lower() for kw in high_load_keywords):
+                if "advanced" in difficulty or "高级" in difficulty:
+                    logger.debug(f"安全过滤: {exercise_name} - 青少年(<16)不适合高负荷动作")
+                    return False
+
+        # ============ 3. 关节损伤检查 ============
+        injuries = health_profile.get("injuries", [])
+        injury_history = health_profile.get("injury_history", [])
+        
+        # 整合所有损伤信息
+        injured_parts = set()
+        for injury in injuries + injury_history:
+            if isinstance(injury, dict):
+                body_part = injury.get("body_part", "")
+                injury_type = injury.get("type", "")
+                if body_part:
+                    injured_parts.add(body_part.lower())
+                if injury_type:
+                    injured_parts.add(injury_type.lower())
+            elif isinstance(injury, str):
+                injured_parts.add(injury.lower())
+        
+        if injured_parts:
+            # 获取动作涉及的关节/部位
+            involved_joints = exercise.get("involved_joints", [])
+            target_muscle = (exercise.get("primary_muscle_zh") or exercise.get("target_muscle") or "").lower()
+            
+            # 关节关键词映射
+            joint_keywords = {
+                "肩": ["肩", "shoulder", "三角肌", "deltoid"],
+                "膝": ["膝", "knee", "股四头肌", "quadriceps"],
+                "腰": ["腰", "lower back", "竖脊肌", "erector"],
+                "颈": ["颈", "neck", "斜方肌上部"],
+                "肘": ["肘", "elbow", "肱二头肌", "肱三头肌"],
+                "腕": ["腕", "wrist", "前臂"],
+                "踝": ["踝", "ankle", "小腿"],
+                "髋": ["髋", "hip", "臀", "glute"],
+            }
+            
+            for injured_part in injured_parts:
+                # 检查是否涉及受伤部位
+                for joint_name, keywords in joint_keywords.items():
+                    if any(kw in injured_part for kw in keywords):
+                        # 检查动作是否涉及该关节
+                        exercise_text = f"{exercise_name} {target_muscle} {' '.join(involved_joints)}".lower()
+                        if any(kw in exercise_text for kw in keywords):
+                            logger.debug(f"安全过滤: {exercise_name} - 涉及受伤部位 {injured_part}")
+                            return False
+
+        # ============ 4. 体态问题检查 ============
+        postural_issues = health_profile.get("postural_issues", [])
+        
+        # 体态问题与禁忌动作映射
+        postural_contraindications = {
+            "骨盆前倾": ["深蹲", "硬拉", "弓步蹲", "腿举"],
+            "骨盆后倾": ["卷腹", "仰卧起坐", "悬垂举腿"],
+            "圆肩": ["卧推", "俯卧撑", "前平举", "上斜卧推"],
+            "头前伸": ["耸肩", "颈后推举", "直立划船"],
+            "驼背": ["卷腹", "仰卧起坐", "俯身划船"],
+            "脊柱侧弯": ["大重量深蹲", "大重量硬拉", "单侧负重"],
+        }
+        
+        for issue in postural_issues:
+            issue_name = issue if isinstance(issue, str) else issue.get("name", "")
+            if issue_name in postural_contraindications:
+                contra_exercises = postural_contraindications[issue_name]
+                if any(contra in exercise_name for contra in contra_exercises):
+                    # 不完全禁止，但在高难度时过滤
+                    if "advanced" in difficulty or "高级" in difficulty:
+                        logger.debug(f"安全过滤: {exercise_name} - 体态问题 {issue_name} 不适合高难度")
+                        return False
+
+        # ============ 5. 特殊健康状况检查 ============
+        # 心血管疾病
+        cardiovascular_conditions = ["高血压", "心脏病", "心律不齐", "冠心病", "hypertension", "heart disease"]
+        has_cardiovascular = any(
+            any(cv in str(cond).lower() for cv in cardiovascular_conditions)
+            for cond in all_conditions
+        )
+        
+        if has_cardiovascular:
+            # 限制高强度动作
+            high_intensity_keywords = ["爆发", "冲刺", "跳跃", "波比跳", "burpee", "sprint", "plyometric"]
+            if any(kw in exercise_name.lower() for kw in high_intensity_keywords):
+                logger.debug(f"安全过滤: {exercise_name} - 心血管疾病不适合高强度动作")
+                return False
+        
+        # 骨质疏松
+        osteoporosis_conditions = ["骨质疏松", "osteoporosis"]
+        has_osteoporosis = any(
+            any(op in str(cond).lower() for op in osteoporosis_conditions)
+            for cond in all_conditions
+        )
+        
+        if has_osteoporosis:
+            # 限制高冲击动作
+            high_impact_keywords = ["跳跃", "跑步", "跳绳", "波比跳", "jump", "running", "plyometric"]
+            if any(kw in exercise_name.lower() for kw in high_impact_keywords):
+                logger.debug(f"安全过滤: {exercise_name} - 骨质疏松不适合高冲击动作")
                 return False
 
         return True

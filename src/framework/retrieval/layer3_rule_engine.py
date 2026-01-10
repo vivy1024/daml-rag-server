@@ -486,58 +486,133 @@ class Layer3RuleEngine:
         recent_training: List[Dict[str, Any]]
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """
-        关节负荷规则 - 排除涉及受伤关节的动作
+        关节负荷规则 - 排除涉及受伤关节的动作（增强版）
         
-        Requirements: 11.3
+        Requirements: 11.3, 4.3, 4.6
         
         规则逻辑:
-        - 获取用户受伤关节列表
-        - 查询INVOLVES_JOINT关系排除危险动作
-        - 高负荷关节动作优先排除
+        1. 获取用户受伤关节列表
+        2. 区分绝对禁忌（absolute）和相对禁忌（relative）
+        3. 绝对禁忌：完全排除
+        4. 相对禁忌：降低优先级但不完全排除
+        5. 高负荷关节动作优先排除
         """
         health_profile = user_profile.get("health_profile", {})
         injuries = health_profile.get("injuries", [])
+        injury_history = health_profile.get("injury_history", [])
         
-        if not injuries:
+        if not injuries and not injury_history:
             return candidates, {"skipped": True, "reason": "无伤病记录"}
         
-        # 提取受伤关节
-        injured_joints = set()
-        for injury in injuries:
+        # 提取受伤关节及其严重程度
+        injured_joints = {}  # joint -> severity (absolute/relative/caution)
+        
+        for injury in injuries + injury_history:
             if isinstance(injury, dict):
                 body_part = injury.get("body_part", "")
-                if body_part:
-                    injured_joints.add(body_part.lower())
+                severity = injury.get("severity", "relative")  # 默认相对禁忌
+                status = injury.get("status", "active")  # active/recovered
+                
+                if body_part and status != "recovered":
+                    # 如果已有记录，取更严重的级别
+                    current_severity = injured_joints.get(body_part.lower())
+                    if current_severity != "absolute":
+                        injured_joints[body_part.lower()] = severity
             elif isinstance(injury, str):
-                injured_joints.add(injury.lower())
+                injured_joints[injury.lower()] = "relative"
         
         if not injured_joints:
-            return candidates, {"skipped": True, "reason": "无关节伤病"}
+            return candidates, {"skipped": True, "reason": "无活跃关节伤病"}
+        
+        # 关节关键词映射（扩展版）
+        joint_keywords = {
+            "肩": ["肩", "shoulder", "三角肌", "deltoid", "肩袖", "rotator"],
+            "膝": ["膝", "knee", "股四头肌", "quadriceps", "髌骨", "patella"],
+            "腰": ["腰", "lower back", "竖脊肌", "erector", "腰椎", "lumbar"],
+            "颈": ["颈", "neck", "颈椎", "cervical"],
+            "肘": ["肘", "elbow", "肱", "triceps", "biceps"],
+            "腕": ["腕", "wrist", "前臂", "forearm"],
+            "踝": ["踝", "ankle", "小腿", "calf"],
+            "髋": ["髋", "hip", "臀", "glute", "髋关节"],
+            "脊柱": ["脊柱", "spine", "背", "back"],
+        }
         
         # 过滤涉及受伤关节的动作
         safe_candidates = []
+        relative_risk_candidates = []  # 相对禁忌的动作
         filtered_exercises = []
         
         for candidate in candidates:
+            exercise_name = candidate.get("exercise_name_zh", "")
             involved_joints = self._get_involved_joints(candidate)
+            target_muscle = (candidate.get("primary_muscle_zh") or candidate.get("target_muscle") or "").lower()
+            
+            # 构建动作文本用于匹配
+            exercise_text = f"{exercise_name} {target_muscle} {' '.join(involved_joints)}".lower()
             
             # 检查是否涉及受伤关节
-            has_injured_joint = any(
-                joint.lower() in injured_joints or
-                any(ij in joint.lower() for ij in injured_joints)
-                for joint in involved_joints
-            )
+            is_absolute_risk = False
+            is_relative_risk = False
+            matched_joint = None
             
-            if has_injured_joint:
-                filtered_exercises.append(candidate.get("exercise_name_zh", ""))
+            for injured_joint, severity in injured_joints.items():
+                # 查找匹配的关节关键词
+                for joint_name, keywords in joint_keywords.items():
+                    if any(kw in injured_joint for kw in keywords):
+                        # 检查动作是否涉及该关节
+                        if any(kw in exercise_text for kw in keywords):
+                            matched_joint = injured_joint
+                            if severity == "absolute":
+                                is_absolute_risk = True
+                                break
+                            else:
+                                is_relative_risk = True
+                
+                if is_absolute_risk:
+                    break
+            
+            if is_absolute_risk:
+                # 绝对禁忌：完全排除
+                filtered_exercises.append(exercise_name)
+                logger.debug(f"关节负荷规则-绝对禁忌: {exercise_name} - 涉及 {matched_joint}")
+            elif is_relative_risk:
+                # 相对禁忌：降低优先级
+                candidate["joint_load_penalty"] = -0.3
+                candidate["joint_risk_level"] = "relative"
+                candidate["affected_joint"] = matched_joint
+                relative_risk_candidates.append(candidate)
+                logger.debug(f"关节负荷规则-相对禁忌: {exercise_name} - 涉及 {matched_joint}")
             else:
                 safe_candidates.append(candidate)
         
-        return safe_candidates, {
-            "injured_joints": list(injured_joints),
-            "filtered_count": len(filtered_exercises),
-            "filtered_exercises": filtered_exercises[:5]  # 只记录前5个
+        # 安全动作优先，相对禁忌动作放后面
+        sorted_candidates = safe_candidates + relative_risk_candidates
+        
+        return sorted_candidates, {
+            "injured_joints": dict(injured_joints),
+            "absolute_filtered_count": len(filtered_exercises),
+            "relative_risk_count": len(relative_risk_candidates),
+            "filtered_exercises": filtered_exercises[:5],  # 只记录前5个
+            "severity_levels": {
+                "absolute": sum(1 for s in injured_joints.values() if s == "absolute"),
+                "relative": sum(1 for s in injured_joints.values() if s == "relative"),
+                "caution": sum(1 for s in injured_joints.values() if s == "caution")
+            }
         }
+    
+    def _get_involved_joints(self, exercise: Dict[str, Any]) -> List[str]:
+        """获取动作涉及的关节"""
+        # 尝试多个可能的字段名
+        joints = exercise.get("involved_joints", [])
+        if not joints:
+            joints = exercise.get("joints", [])
+        if not joints:
+            joints = exercise.get("target_joints", [])
+        
+        if isinstance(joints, str):
+            joints = [joints]
+        
+        return joints or []
     
     async def _apply_postural_correction_rule(
         self,
@@ -1131,20 +1206,6 @@ class Layer3RuleEngine:
         }
         
         return kinetic_mapping.get(kinetic, KineticChainType.UNKNOWN)
-    
-    def _get_involved_joints(self, exercise: Dict[str, Any]) -> List[str]:
-        """获取动作涉及的关节"""
-        # 尝试多个可能的字段名
-        joints = exercise.get("involved_joints", [])
-        if not joints:
-            joints = exercise.get("joints", [])
-        if not joints:
-            joints = exercise.get("target_joints", [])
-        
-        if isinstance(joints, str):
-            joints = [joints]
-        
-        return joints or []
     
     def get_execution_logs(self, limit: int = 10) -> List[Layer3ExecutionLog]:
         """获取最近的执行日志"""
