@@ -42,8 +42,8 @@ class KnowledgeGraphFull:
         qdrant_port: int = 6333,
         qdrant_collection: str = None,  # 默认从环境变量读取
         vector_size: int = 1024,  # BGE-M3 生成1024维向量
-        # Embedding配置
-        embedding_model: Optional[str] = None
+        # Embedding配置 - 默认使用GTE-Large-zh（与Qdrant中存储的向量一致）
+        embedding_model: Optional[str] = "thenlper/gte-large-zh"
     ):
         """
         初始化知识图谱系统

@@ -410,6 +410,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                         user_message=query_text,
                         assistant_response=state.get("final_response", ""),
                         topic_id=state.get("topic_id"),
+                        session_id=state.get("session_id"),
                         tools_used=state.get("_mcp_tools_called", []),
                         metadata={
                             "request_id": request_id,

@@ -67,13 +67,12 @@ from .workflow import (
     # 单例管理
     get_user_cache,
     get_membership_cache,
-    get_workflow_monitor,
-    get_dag_visualizer,
+    # get_workflow_monitor,  # 已删除
     get_cache_manager,
     get_connection_pool_manager,
     get_llm_degradation_manager,
     get_concurrency_limiter,
-    get_performance_monitor,
+    # get_performance_monitor,  # 已删除
     initialize_performance_components,
     reset_all_singletons,
 )
@@ -165,13 +164,12 @@ __all__ = [
     # 单例管理
     "get_user_cache",
     "get_membership_cache",
-    "get_workflow_monitor",
-    "get_dag_visualizer",
+    # "get_workflow_monitor",  # 已删除
     "get_cache_manager",
     "get_connection_pool_manager",
     "get_llm_degradation_manager",
     "get_concurrency_limiter",
-    "get_performance_monitor",
+    # "get_performance_monitor",  # 已删除
     "initialize_performance_components",
     "reset_all_singletons",
     

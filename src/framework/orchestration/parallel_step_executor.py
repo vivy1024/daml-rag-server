@@ -107,14 +107,10 @@ class ParallelStepExecutor:
         self.enable_fallback = enable_fallback
         self.enable_monitoring = enable_monitoring
         
-        # 性能监控器（如果启用）
+        # 性能监控器（已废弃）
         self.performance_monitor = None
         if enable_monitoring:
-            try:
-                from ...monitoring.performance_monitor import get_performance_monitor
-                self.performance_monitor = get_performance_monitor()
-            except Exception as e:
-                logger.warning(f"性能监控器初始化失败: {e}")
+            logger.info("性能监控已简化，不再使用performance_monitor")
     
     async def execute_parallel_steps(
         self,
