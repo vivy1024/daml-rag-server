@@ -384,6 +384,111 @@ class DomainAdapter(ABC):
         """
         pass
     
+    @abstractmethod
+    def get_fallback_recommendations(self) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        返回降级推荐数据
+        
+        当Layer1和Layer2都失败时，使用此数据进行规则匹配降级。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, List[Dict[str, Any]]]: 关键词 -> 推荐项列表
+            
+        示例:
+        ```python
+        {
+            "关键词1": [
+                {"name": "项目1", "difficulty": "beginner", ...},
+                {"name": "项目2", "difficulty": "intermediate", ...},
+            ],
+            "关键词2": [...],
+        }
+        ```
+        """
+        pass
+    
+    @abstractmethod
+    def get_keyword_mapping(self) -> Dict[str, List[str]]:
+        """
+        返回关键词映射表
+        
+        用于从查询中提取领域相关关键词。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, List[str]]: 主关键词 -> 同义词列表
+            
+        示例:
+        ```python
+        {
+            "主题1": ["同义词1", "同义词2", "英文名"],
+            "主题2": ["同义词3", "同义词4"],
+        }
+        ```
+        """
+        pass
+    
+    @abstractmethod
+    def get_safety_contraindications(self) -> Dict[str, List[str]]:
+        """
+        返回安全禁忌映射
+        
+        用于安全检查时过滤不适合的项目。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, List[str]]: 用户状况 -> 禁忌项目列表
+            
+        示例:
+        ```python
+        {
+            "状况1": ["禁忌项1", "禁忌项2"],
+            "状况2": ["禁忌项3", "禁忌项4"],
+        }
+        ```
+        """
+        pass
+    
+    @abstractmethod
+    def get_joint_keywords(self) -> Dict[str, List[str]]:
+        """
+        返回关节/部位关键词映射
+        
+        用于关节损伤检查时匹配相关项目。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, List[str]]: 部位名称 -> 关键词列表
+            
+        示例:
+        ```python
+        {
+            "部位1": ["关键词1", "关键词2"],
+            "部位2": ["关键词3", "关键词4"],
+        }
+        ```
+        """
+        pass
+    
+    @abstractmethod
+    def get_default_fallback_items(self) -> List[Dict[str, Any]]:
+        """
+        返回默认降级项目
+        
+        当没有匹配到任何关键词时返回的通用项目。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            List[Dict[str, Any]]: 默认项目列表
+        """
+        pass
+    
     # =========================================================================
     # 可选方法（子类可覆盖）
     # =========================================================================

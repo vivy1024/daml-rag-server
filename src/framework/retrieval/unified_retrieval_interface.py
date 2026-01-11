@@ -52,7 +52,7 @@ class ProcessingLevel(Enum):
 class RetrievalRequest:
     """统一的检索请求"""
     query: str
-    domain: str = "fitness"
+    domain: str = "general"  # ✅ 修改：默认值改为通用领域 (Requirements 6.2)
     user_id: Optional[str] = None
     user_profile: Optional[Dict[str, Any]] = None
     context: Optional[Dict[str, Any]] = None

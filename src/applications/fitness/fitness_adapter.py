@@ -933,6 +933,183 @@ class FitnessAdapter(DomainAdapter):
     def get_p1_tools(self) -> List[ToolDefinition]:
         """获取P1优先级工具"""
         return self.get_tools_by_priority("P1")
+    
+    # =========================================================================
+    # 领域数据方法（框架层领域无关支持）- Requirements 6.1, 6.2
+    # =========================================================================
+    
+    def get_fallback_recommendations(self) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        返回健身领域降级推荐数据
+        
+        当Layer1和Layer2都失败时，使用此数据进行规则匹配降级。
+        
+        Returns:
+            Dict[str, List[Dict[str, Any]]]: 肌肉群关键词 -> 推荐动作列表
+        """
+        return {
+            "胸": [
+                {"exercise_name_zh": "俯卧撑", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "胸大肌"},
+                {"exercise_name_zh": "哑铃卧推", "difficulty": "intermediate", "equipment": "哑铃", "target_muscle": "胸大肌"},
+                {"exercise_name_zh": "杠铃卧推", "difficulty": "intermediate", "equipment": "杠铃", "target_muscle": "胸大肌"},
+            ],
+            "背": [
+                {"exercise_name_zh": "引体向上", "difficulty": "intermediate", "equipment": "单杠", "target_muscle": "背阔肌"},
+                {"exercise_name_zh": "哑铃划船", "difficulty": "beginner", "equipment": "哑铃", "target_muscle": "背阔肌"},
+                {"exercise_name_zh": "杠铃划船", "difficulty": "intermediate", "equipment": "杠铃", "target_muscle": "背阔肌"},
+            ],
+            "腿": [
+                {"exercise_name_zh": "深蹲", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "股四头肌"},
+                {"exercise_name_zh": "杠铃深蹲", "difficulty": "intermediate", "equipment": "杠铃", "target_muscle": "股四头肌"},
+                {"exercise_name_zh": "腿举", "difficulty": "beginner", "equipment": "器械", "target_muscle": "股四头肌"},
+            ],
+            "肩": [
+                {"exercise_name_zh": "哑铃推举", "difficulty": "beginner", "equipment": "哑铃", "target_muscle": "三角肌"},
+                {"exercise_name_zh": "侧平举", "difficulty": "beginner", "equipment": "哑铃", "target_muscle": "三角肌"},
+                {"exercise_name_zh": "杠铃推举", "difficulty": "intermediate", "equipment": "杠铃", "target_muscle": "三角肌"},
+            ],
+            "臂": [
+                {"exercise_name_zh": "哑铃弯举", "difficulty": "beginner", "equipment": "哑铃", "target_muscle": "肱二头肌"},
+                {"exercise_name_zh": "三头臂屈伸", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "肱三头肌"},
+                {"exercise_name_zh": "杠铃弯举", "difficulty": "intermediate", "equipment": "杠铃", "target_muscle": "肱二头肌"},
+            ],
+            "腹": [
+                {"exercise_name_zh": "卷腹", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "腹直肌"},
+                {"exercise_name_zh": "平板支撑", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "核心"},
+                {"exercise_name_zh": "仰卧举腿", "difficulty": "intermediate", "equipment": "徒手", "target_muscle": "腹直肌"},
+            ],
+        }
+    
+    def get_keyword_mapping(self) -> Dict[str, List[str]]:
+        """
+        返回健身领域关键词映射表
+        
+        用于从查询中提取肌肉群相关关键词。
+        
+        Returns:
+            Dict[str, List[str]]: 主关键词 -> 同义词列表
+        """
+        return {
+            "胸": ["胸大肌", "胸部", "Chest", "Pectoralis"],
+            "背": ["背阔肌", "背部", "Back", "Latissimus"],
+            "肩": ["三角肌", "肩部", "Shoulder", "Deltoid"],
+            "臂": ["肱二头肌", "肱三头肌", "手臂", "Biceps", "Triceps"],
+            "腿": ["股四头肌", "腘绳肌", "腿部", "Quadriceps", "Hamstrings"],
+            "臀": ["臀大肌", "臀部", "Glutes"],
+            "腹": ["腹直肌", "腹肌", "腹部", "Abs", "Rectus Abdominis"],
+            "核心": ["核心", "Core"],
+        }
+    
+    def get_safety_contraindications(self) -> Dict[str, List[str]]:
+        """
+        返回健身领域安全禁忌映射
+        
+        用于安全检查时过滤不适合的动作。
+        
+        Returns:
+            Dict[str, List[str]]: 体态问题 -> 禁忌动作列表
+        """
+        return {
+            "骨盆前倾": ["深蹲", "硬拉", "弓步蹲", "腿举"],
+            "骨盆后倾": ["卷腹", "仰卧起坐", "悬垂举腿"],
+            "圆肩": ["卧推", "俯卧撑", "前平举", "上斜卧推"],
+            "头前伸": ["耸肩", "颈后推举", "直立划船"],
+            "驼背": ["卷腹", "仰卧起坐", "俯身划船"],
+            "脊柱侧弯": ["大重量深蹲", "大重量硬拉", "单侧负重"],
+        }
+    
+    def get_joint_keywords(self) -> Dict[str, List[str]]:
+        """
+        返回健身领域关节关键词映射
+        
+        用于关节损伤检查时匹配相关动作。
+        
+        Returns:
+            Dict[str, List[str]]: 关节名称 -> 关键词列表
+        """
+        return {
+            "肩": ["肩", "shoulder", "三角肌", "deltoid"],
+            "膝": ["膝", "knee", "股四头肌", "quadriceps"],
+            "腰": ["腰", "lower back", "竖脊肌", "erector"],
+            "肘": ["肘", "elbow", "肱二头肌", "肱三头肌"],
+            "腕": ["腕", "wrist", "前臂"],
+            "踝": ["踝", "ankle", "小腿"],
+        }
+    
+    def get_default_fallback_items(self) -> List[Dict[str, Any]]:
+        """
+        返回健身领域默认降级项目
+        
+        当没有匹配到任何关键词时返回的通用动作。
+        
+        Returns:
+            List[Dict[str, Any]]: 默认动作列表
+        """
+        return [
+            {"exercise_name_zh": "俯卧撑", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "胸大肌", "source": "rule_based_fallback", "score": 0.4},
+            {"exercise_name_zh": "深蹲", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "股四头肌", "source": "rule_based_fallback", "score": 0.4},
+            {"exercise_name_zh": "平板支撑", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "核心", "source": "rule_based_fallback", "score": 0.4},
+        ]
+    
+    def get_high_load_keywords(self) -> List[str]:
+        """
+        返回高负荷动作关键词
+        
+        用于安全检查时识别高负荷动作。
+        
+        Returns:
+            List[str]: 高负荷动作关键词列表
+        """
+        return ["硬拉", "深蹲", "卧推", "推举", "deadlift", "squat", "bench press"]
+    
+    def get_cypher_templates(self) -> Dict[str, str]:
+        """
+        返回健身领域Cypher查询模板
+        
+        用于Neo4j图谱查询。
+        
+        Returns:
+            Dict[str, str]: 模板名称 -> Cypher查询
+        """
+        return {
+            "muscle_exercise_search": """
+                MATCH (m:Muscle)
+                WHERE m.name_zh CONTAINS $muscle
+                   OR m.name_en CONTAINS $muscle
+                   OR m.name CONTAINS $muscle
+                MATCH (e:Exercise)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m)
+                RETURN
+                    e.name_zh AS exercise_zh,
+                    e.name AS exercise_en,
+                    e.difficulty AS difficulty,
+                    e.equipment_zh AS equipment,
+                    m.name_zh AS muscle_name,
+                    type(r) AS relationship_type,
+                    m.mev AS mev,
+                    m.mav AS mav,
+                    m.mrv AS mrv
+                LIMIT $limit
+            """,
+            "muscle_exercise_search_with_equipment": """
+                MATCH (m:Muscle)
+                WHERE m.name_zh CONTAINS $muscle
+                   OR m.name_en CONTAINS $muscle
+                   OR m.name CONTAINS $muscle
+                MATCH (e:Exercise)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m)
+                WHERE ANY(equip IN e.equipment_zh WHERE equip IN $equipment)
+                RETURN
+                    e.name_zh AS exercise_zh,
+                    e.name AS exercise_en,
+                    e.difficulty AS difficulty,
+                    e.equipment_zh AS equipment,
+                    m.name_zh AS muscle_name,
+                    type(r) AS relationship_type,
+                    m.mev AS mev,
+                    m.mav AS mav,
+                    m.mrv AS mrv
+                LIMIT $limit
+            """,
+        }
 
 
 # =============================================================================

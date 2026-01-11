@@ -942,6 +942,252 @@ class BackendClient:
             '_fallback': True  # 标记为降级数据
         }
 
+    # ============= 用量统计API（会员自动化控制） =============
+    # Requirements: 7.3, 7.4
+
+    async def get_permissions(self, user_id: int) -> Dict[str, Any]:
+        """
+        获取用户权限信息（用于PermissionChecker）
+        
+        Requirements: 7.3
+        
+        Args:
+            user_id: 用户ID
+            
+        Returns:
+            Dict[str, Any]: 权限信息，包含tier和permissions
+            
+        Example:
+            ```python
+            permissions = await client.get_permissions(user_id=1)
+            print(f"会员等级: {permissions['tier']}")
+            print(f"权限: {permissions['permissions']}")
+            ```
+        """
+        endpoint = f"/api/internal/membership/user/{user_id}"
+        
+        # 使用配置的会员权限超时（2000ms）
+        timeout = self.config.membership_timeout_ms / 1000.0
+        original_timeout = self.config.timeout
+        self.config.timeout = timeout
+        
+        try:
+            data = await self._request("GET", endpoint)
+            
+            result = {
+                'user_id': user_id,
+                'tier': data.get('tier', 'free'),
+                'status': data.get('status', 'active'),
+                'permissions': data.get('permissions', {}),
+                'started_at': data.get('started_at'),
+                'expired_at': data.get('expired_at'),
+            }
+            
+            logger.info(
+                f"✅ 获取用户权限成功: user_id={user_id}, tier={result['tier']}",
+                extra={'user_id': user_id, 'tier': result['tier']}
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.warning(f"⚠️ 获取用户权限失败，使用降级数据: user_id={user_id}, error={e}")
+            return self._get_fallback_membership(user_id)
+        finally:
+            # 恢复原始超时
+            self.config.timeout = original_timeout
+
+    async def check_usage(self, user_id: int, mode: str = "dag") -> Dict[str, Any]:
+        """
+        检查用户用量（用于PermissionChecker）
+        
+        Requirements: 7.3
+        
+        Args:
+            user_id: 用户ID
+            mode: 查询模式（dag或agent）
+            
+        Returns:
+            Dict[str, Any]: 用量信息
+            
+        Example:
+            ```python
+            usage = await client.check_usage(user_id=1, mode="dag")
+            if usage['can_execute']:
+                print(f"可以执行，剩余{usage['dag_remaining']}次")
+            else:
+                print(f"已达上限: {usage['message']}")
+            ```
+        """
+        endpoint = "/api/usage/check"
+        
+        try:
+            data = await self._request(
+                "POST",
+                endpoint,
+                json={
+                    'user_id': user_id,
+                    'mode': mode
+                }
+            )
+            
+            result = {
+                'can_execute': data.get('can_execute', True),
+                'dag_used': data.get('dag_used', 0),
+                'dag_limit': data.get('dag_limit', -1),
+                'dag_remaining': data.get('dag_remaining', -1),
+                'agent_used': data.get('agent_used', 0),
+                'agent_limit': data.get('agent_limit', -1),
+                'agent_remaining': data.get('agent_remaining', -1),
+                'dag_credits': data.get('dag_credits', 0),
+                'agent_credits': data.get('agent_credits', 0),
+                'message': data.get('message', ''),
+            }
+            
+            logger.debug(
+                f"✅ 用量检查成功: user_id={user_id}, mode={mode}, "
+                f"can_execute={result['can_execute']}",
+                extra={'user_id': user_id, 'mode': mode, 'usage': result}
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.warning(f"⚠️ 用量检查失败，允许执行: user_id={user_id}, mode={mode}, error={e}")
+            # 用量检查失败时，返回允许执行（避免阻塞用户）
+            return {
+                'can_execute': True,
+                'dag_used': 0,
+                'dag_limit': -1,
+                'dag_remaining': -1,
+                'agent_used': 0,
+                'agent_limit': -1,
+                'agent_remaining': -1,
+                'dag_credits': 0,
+                'agent_credits': 0,
+                'message': '用量检查失败，暂时允许执行',
+            }
+
+    async def increment_usage(self, user_id: int, mode: str = "dag") -> Dict[str, Any]:
+        """
+        增加用量计数（用于PermissionChecker）
+        
+        Requirements: 7.4
+        
+        在查询完成后调用，增加用户的用量计数。
+        
+        Args:
+            user_id: 用户ID
+            mode: 查询模式（dag或agent）
+            
+        Returns:
+            Dict[str, Any]: 更新后的用量信息
+            
+        Example:
+            ```python
+            result = await client.increment_usage(user_id=1, mode="dag")
+            print(f"今日已使用: {result['dag_used']}次")
+            ```
+        """
+        endpoint = "/api/usage/increment"
+        
+        try:
+            data = await self._request(
+                "POST",
+                endpoint,
+                json={
+                    'user_id': user_id,
+                    'mode': mode
+                }
+            )
+            
+            result = {
+                'success': data.get('success', True),
+                'dag_used': data.get('dag_used', 0),
+                'dag_remaining': data.get('dag_remaining', -1),
+                'agent_used': data.get('agent_used', 0),
+                'agent_remaining': data.get('agent_remaining', -1),
+            }
+            
+            logger.info(
+                f"✅ 用量增加成功: user_id={user_id}, mode={mode}, "
+                f"dag_used={result['dag_used']}, agent_used={result['agent_used']}",
+                extra={'user_id': user_id, 'mode': mode, 'usage': result}
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ 用量增加失败: user_id={user_id}, mode={mode}, error={e}")
+            # 用量增加失败不影响用户体验，只记录日志
+            return {
+                'success': False,
+                'error': str(e),
+                'dag_used': 0,
+                'dag_remaining': -1,
+                'agent_used': 0,
+                'agent_remaining': -1,
+            }
+
+    async def get_today_usage(self, user_id: int) -> Dict[str, Any]:
+        """
+        获取用户今日用量统计
+        
+        Args:
+            user_id: 用户ID
+            
+        Returns:
+            Dict[str, Any]: 今日用量统计
+            
+        Example:
+            ```python
+            usage = await client.get_today_usage(user_id=1)
+            print(f"今日DAG: {usage['dag_used']}/{usage['dag_limit']}")
+            print(f"今日Agent: {usage['agent_used']}/{usage['agent_limit']}")
+            ```
+        """
+        endpoint = "/api/usage/today"
+        
+        try:
+            data = await self._request(
+                "GET",
+                endpoint,
+                params={'user_id': user_id}
+            )
+            
+            result = {
+                'dag_used': data.get('dag_used', 0),
+                'dag_limit': data.get('dag_limit', -1),
+                'dag_remaining': data.get('dag_remaining', -1),
+                'agent_used': data.get('agent_used', 0),
+                'agent_limit': data.get('agent_limit', -1),
+                'agent_remaining': data.get('agent_remaining', -1),
+                'dag_credits': data.get('dag_credits', 0),
+                'agent_credits': data.get('agent_credits', 0),
+                'reset_time': data.get('reset_time'),
+            }
+            
+            logger.debug(
+                f"✅ 获取今日用量成功: user_id={user_id}",
+                extra={'user_id': user_id, 'usage': result}
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.warning(f"⚠️ 获取今日用量失败: user_id={user_id}, error={e}")
+            return {
+                'dag_used': 0,
+                'dag_limit': -1,
+                'dag_remaining': -1,
+                'agent_used': 0,
+                'agent_limit': -1,
+                'agent_remaining': -1,
+                'dag_credits': 0,
+                'agent_credits': 0,
+                'reset_time': None,
+            }
+
     # ============= 训练日志API =============
 
     async def get_training_logs(
