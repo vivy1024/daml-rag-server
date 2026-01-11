@@ -848,9 +848,11 @@ class MCPOrchestrator:
                     import os
 
                     # 初始化KnowledgeGraphFull
+                    # 框架层领域无关 - Requirements 6.2
+                    # 所有配置从环境变量读取，无硬编码默认值
                     neo4j_uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
                     neo4j_user = os.getenv('NEO4J_USER', 'neo4j')
-                    neo4j_password = os.getenv('NEO4J_PASSWORD', 'build_body_2024')
+                    neo4j_password = os.getenv('NEO4J_PASSWORD', '')
                     qdrant_host = os.getenv('QDRANT_HOST', 'qdrant')
                     qdrant_port = int(os.getenv('QDRANT_PORT', '6333'))
 
