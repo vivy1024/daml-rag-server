@@ -1071,6 +1071,8 @@ class FitnessAdapter(DomainAdapter):
             
         参数约定:
         - $keyword: 搜索关键词
+        - $candidate_ids: 候选ID列表
+        - $muscle_keywords: 肌肉关键词列表
         - $filter_values: 过滤值列表（如器械列表）
         - $limit: 结果数量限制
         """
@@ -1113,6 +1115,52 @@ class FitnessAdapter(DomainAdapter):
                     m.mev AS mev,
                     m.mav AS mav,
                     m.mrv AS mrv
+                LIMIT $limit
+            """,
+            
+            # 三层检索基础查询（无关键词）
+            "three_layer_basic": """
+                MATCH (e:Exercise)
+                WHERE e.id IN $candidate_ids
+                RETURN
+                    e.id AS id,
+                    e.name_zh AS name_zh,
+                    e.name_en AS name_en,
+                    e.equipment AS equipment,
+                    e.difficulty AS difficulty
+                LIMIT $limit
+            """,
+            
+            # 三层检索带关键词查询
+            "three_layer_with_keywords": """
+                MATCH (e:Exercise)
+                WHERE e.id IN $candidate_ids
+                MATCH (e)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m:Muscle)
+                WHERE ANY(muscle IN $muscle_keywords
+                          WHERE m.name_zh CONTAINS muscle
+                             OR m.name_en CONTAINS muscle
+                             OR m.name CONTAINS muscle)
+                RETURN
+                    e.id AS id,
+                    e.name_zh AS name_zh,
+                    e.name_en AS name_en,
+                    e.equipment AS equipment,
+                    e.difficulty AS difficulty,
+                    m.name_zh AS target_muscle,
+                    type(r) AS relationship_type,
+                    m.mev AS mev,
+                    m.mav AS mav,
+                    m.mrv AS mrv
+                ORDER BY
+                    CASE WHEN m.mev IS NOT NULL THEN 1 ELSE 0 END DESC,
+                    CASE WHEN type(r) = 'TARGETS_PRIMARY' THEN 1 ELSE 0 END DESC
+                LIMIT $limit
+            """,
+            
+            # 基础搜索（通用）
+            "basic_search": """
+                MATCH (n:Exercise)
+                RETURN n
                 LIMIT $limit
             """,
         }

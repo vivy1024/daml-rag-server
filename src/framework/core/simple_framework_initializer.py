@@ -66,15 +66,17 @@ class SimpleFrameworkInitializer:
             domain_adapter: 领域适配器名称（如 "fitness"），如果为空则不加载适配器
         """
         # 从环境变量构建默认配置
+        # 框架层领域无关 - Requirements 6.1, 6.2
+        # 所有领域特定配置应通过环境变量或配置文件传入
         default_config = {
             "metadata_db_path": os.getenv("METADATA_DB_PATH", "/tmp/metadata.db"),
             "qdrant_url": f"http://{os.getenv('QDRANT_HOST', 'qdrant')}:{os.getenv('QDRANT_PORT', '6333')}",
             "qdrant_host": os.getenv("QDRANT_HOST", "qdrant"),
             "qdrant_port": int(os.getenv("QDRANT_PORT", "6333")),
-            "qdrant_collection": os.getenv("QDRANT_COLLECTION", "fitness_exercises_v2"),
+            "qdrant_collection": os.getenv("QDRANT_COLLECTION", "default_collection"),
             "neo4j_uri": os.getenv("NEO4J_URI", "bolt://neo4j:7687"),
             "neo4j_user": os.getenv("NEO4J_USER", "neo4j"),
-            "neo4j_password": os.getenv("NEO4J_PASSWORD", "build_body_2024"),
+            "neo4j_password": os.getenv("NEO4J_PASSWORD", ""),
             "mcp_config_path": os.getenv("MCP_CONFIG_PATH", "/app/config/mcp_registry.json"),
             "embedding_model": os.getenv("EMBEDDING_MODEL", "thenlper/gte-large-zh"),
         }

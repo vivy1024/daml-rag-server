@@ -1,8 +1,49 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.17.0
+**版本**: v9.18.0
 **更新日期**: 2026-01-11
-**状态**: ✅ 框架层领域泄漏修复（子任务11.1完成）
+**状态**: ✅ 框架层领域泄漏修复（子任务11.2、11.3完成）
+
+---
+
+### v9.18.0 (2026-01-11) - 框架层领域泄漏修复（子任务11.2、11.3） ✅
+
+**变更类型**: 🔧 重构（框架层领域无关）
+
+**需求背景**:
+- 继续修复框架层的领域泄漏问题
+- 抽象Cypher查询模板，修改默认参数
+
+**实现内容**:
+
+1. **Cypher查询模板抽象** ✅ (子任务11.2)
+   - `graphrag.py` 的 `_build_cypher_query()` 使用 `domain_adapter.get_cypher_templates()`
+   - `graphrag.py` 的 `_build_three_layer_cypher_query()` 使用 `domain_adapter.get_cypher_templates()`
+   - `FitnessAdapter` 新增 `get_cypher_templates()` 方法，提供5个Cypher模板
+   - 框架层降级使用通用查询（不指定标签）
+
+2. **默认参数修改** ✅ (子任务11.3)
+   - `mcp_orchestrator.py`: domain参数默认值从 `"fitness_exercises"` 改为 `"general"`
+   - `framework/__init__.py`: GraphRAG API URL从硬编码改为环境变量 `GRAPHRAG_API_URL`
+   - `graphrag.py`: Domain枚举移除 `FITNESS_EXERCISES`，改为通用领域类型
+   - `best_practices_retriever.py`: domain参数默认值从 `"fitness"` 改为 `"general"`
+   - `enhanced_few_shot_retriever.py`: domain参数默认值从 `"fitness"` 改为 `"general"`
+   - `simple_framework_initializer.py`: 移除硬编码的 `fitness_exercises_v2` 和 `build_body_2024`
+   - `kg_full.py`: 移除硬编码的 `fitness_exercises_v2` 和 `build_body_2024`
+
+3. **注释清理** ✅
+   - `graphrag.py`: 移除健身领域特定的Qdrant字段描述
+   - 添加框架层领域无关的注释说明
+
+**影响范围**:
+- `src/framework/retrieval/graphrag.py`
+- `src/framework/retrieval/best_practices_retriever.py`
+- `src/framework/retrieval/enhanced_few_shot_retriever.py`
+- `src/framework/retrieval/graph/kg_full.py`
+- `src/framework/orchestration/mcp_orchestrator.py`
+- `src/framework/core/simple_framework_initializer.py`
+- `src/framework/__init__.py`
+- `src/applications/fitness/fitness_adapter.py`
 
 ---
 
