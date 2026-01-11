@@ -96,9 +96,16 @@ class BestPracticesRetriever:
         )
 
     def _initialize_builtin_practices(self) -> List[BestPractice]:
-        """初始化内置最佳实践（健身领域）"""
+        """
+        初始化内置最佳实践
+        
+        注意：这些是示例最佳实践，用于演示框架功能。
+        实际应用中，应通过domain_adapter或配置文件加载领域特定的最佳实践。
+        
+        框架层领域无关 - Requirements 6.3
+        """
         practices = [
-            # 训练计划制定最佳实践
+            # 示例：训练计划制定最佳实践
             BestPractice(
                 pattern_id="training_plan_comprehensive",
                 query_pattern="制定训练计划|安排训练|训练计划",
@@ -124,11 +131,11 @@ class BestPracticesRetriever:
                 quality_score=4.8,
                 usage_count=156,
                 success_rate=0.92,
-                domain="fitness",
+                domain="example",  # 标记为示例领域
                 tags=["训练计划", "个性化", "周期化"]
             ),
 
-            # 动作指导最佳实践
+            # 示例：动作指导最佳实践
             BestPractice(
                 pattern_id="exercise_instruction_detailed",
                 query_pattern="如何做.*动作|动作要领|标准动作",
@@ -157,11 +164,11 @@ class BestPracticesRetriever:
                 quality_score=4.7,
                 usage_count=203,
                 success_rate=0.89,
-                domain="fitness",
+                domain="example",  # 标记为示例领域
                 tags=["动作指导", "技术要领", "安全"]
             ),
 
-            # 营养建议最佳实践
+            # 示例：营养建议最佳实践
             BestPractice(
                 pattern_id="nutrition_advice_personalized",
                 query_pattern="营养.*建议|饮食.*搭配|吃什么",
@@ -255,11 +262,11 @@ class BestPracticesRetriever:
                 quality_score=4.7,
                 usage_count=134,
                 success_rate=0.91,
-                domain="fitness",
+                domain="example",  # 标记为示例领域
                 tags=["增肌", "容量", "营养", "恢复"]
             ),
 
-            # 减脂建议最佳实践
+            # 示例：减脂建议最佳实践
             BestPractice(
                 pattern_id="fat_loss_complete",
                 query_pattern="减脂.*训练|减肥.*方法|体重.*控制",
@@ -294,12 +301,12 @@ class BestPracticesRetriever:
                 quality_score=4.6,
                 usage_count=167,
                 success_rate=0.86,
-                domain="fitness",
+                domain="example",  # 标记为示例领域
                 tags=["减脂", "有氧", "力量", "饮食"]
             )
         ]
 
-        logger.info(f"Initialized {len(practices)} builtin best practices")
+        logger.info(f"Initialized {len(practices)} builtin best practices (example domain)")
         return practices
 
     async def retrieve_best_practices(

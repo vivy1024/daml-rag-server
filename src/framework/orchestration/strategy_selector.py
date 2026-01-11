@@ -160,10 +160,10 @@ class StrategySelector:
         default_strategy=ExecutionStrategy.DAG
     )
     
-    # 选择策略
+    # 选择策略（示例查询，实际应用中替换为领域特定查询）
     decision = await selector.select_strategy(
-        query="帮我制定一个增肌训练计划",
-        user_profile={"goal": "增肌"},
+        query="帮我制定一个计划",
+        user_profile={"goal": "目标"},
         membership_level="warmheart"
     )
     
