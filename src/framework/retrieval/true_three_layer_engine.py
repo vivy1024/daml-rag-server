@@ -15,8 +15,9 @@
 3. 清晰分层 - 每层职责明确,互不耦合
 4. 完善监控 - 详细日志和性能指标
 5. 统一超时 - 全局超时配置管理 (Requirements 3.6)
+6. 领域无关 - 通过DomainAdapter注入领域数据 (Requirements 6.1, 6.2)
 
-版本: v2.1.0
+版本: v2.2.0
 日期: 2026-01-11
 作者: 薛小川
 """
@@ -24,7 +25,7 @@
 import asyncio
 import logging
 import os
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, TYPE_CHECKING
 from datetime import datetime
 from dataclasses import dataclass, field
 from contextlib import contextmanager
@@ -32,6 +33,10 @@ import aiohttp
 
 # 导入超时管理器
 from .timeout_manager import TimeoutManager, get_timeout_manager
+
+# 类型检查时导入（避免循环导入）
+if TYPE_CHECKING:
+    from src.framework.adapters.domain_adapter import DomainAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +201,7 @@ class TrueThreeLayerEngine:
     - 优雅降级
     - 并行执行
     - 完善监控
+    - 领域无关（通过DomainAdapter注入领域数据）
     """
 
     def __init__(
@@ -207,7 +213,8 @@ class TrueThreeLayerEngine:
         enable_neo4j_direct: bool = True,
         enable_parallel_execution: bool = False,  # Layer 1和2不能并行,因为2依赖1
         connection_pool_manager=None,  # ✅ 连接池管理器
-        timeout_manager: Optional[TimeoutManager] = None  # ✅ 新增：超时管理器
+        timeout_manager: Optional[TimeoutManager] = None,  # ✅ 超时管理器
+        domain_adapter: Optional["DomainAdapter"] = None  # ✅ 新增：领域适配器 (Requirements 6.1, 6.2)
     ):
         """初始化三层检索引擎"""
         # API配置
@@ -228,6 +235,12 @@ class TrueThreeLayerEngine:
         
         # ✅ 超时管理器（Requirements 3.6）
         self.timeout_manager = timeout_manager or get_timeout_manager()
+        
+        # ✅ 领域适配器（Requirements 6.1, 6.2）
+        # 如果未提供，尝试从注册表获取默认适配器
+        self.domain_adapter = domain_adapter
+        if self.domain_adapter:
+            logger.info(f"  → 领域适配器: {self.domain_adapter.get_name()}")
 
         # Neo4j连接管理器
         self.neo4j_manager: Optional[Neo4jConnectionManager] = None
@@ -253,6 +266,16 @@ class TrueThreeLayerEngine:
         if self.enable_neo4j_direct:
             self._initialize_neo4j_connection()
 
+    def set_domain_adapter(self, adapter: "DomainAdapter") -> None:
+        """
+        设置领域适配器
+        
+        Args:
+            adapter: 领域适配器实例
+        """
+        self.domain_adapter = adapter
+        logger.info(f"设置领域适配器: {adapter.get_name()}")
+
     def _initialize_neo4j_connection(self):
         """初始化Neo4j直连"""
         try:
@@ -277,7 +300,7 @@ class TrueThreeLayerEngine:
     async def execute_three_layer_query(
         self,
         query: str,
-        domain: str = "fitness_exercises",
+        domain: str = "general",  # ✅ 修改：默认值改为通用领域 (Requirements 6.2)
         user_id: Optional[str] = None,
         user_profile: Optional[Dict[str, Any]] = None,
         filters: Optional[Dict[str, Any]] = None,
@@ -290,7 +313,7 @@ class TrueThreeLayerEngine:
 
         Args:
             query: 用户查询文本
-            domain: 检索领域
+            domain: 检索领域（默认"general"，具体领域由适配器决定）
             user_id: 用户ID
             user_profile: 用户档案
             filters: 过滤条件
@@ -449,7 +472,7 @@ class TrueThreeLayerEngine:
     async def execute_three_layer_search(
         self,
         query: str,
-        domain: str = "fitness",
+        domain: str = "general",  # ✅ 修改：默认值改为通用领域 (Requirements 6.2)
         user_id: str = None,
         context: Dict[str, Any] = None
     ):
@@ -645,170 +668,86 @@ class TrueThreeLayerEngine:
         top_k: int,
         filters: Optional[Dict[str, Any]] = None
     ) -> LayerExecutionResult:
-        """通过Neo4j直连查询图谱（使用连接池）"""
+        """
+        通过Neo4j直连查询图谱（使用连接池）
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        Cypher查询模板从领域适配器获取。
+        """
         start_time = datetime.now()
 
         try:
-            # 从查询中提取肌肉关键词
-            muscle_keywords = self._extract_muscle_keywords(query)
+            # 从查询中提取关键词（使用适配器）
+            keywords = self._extract_muscle_keywords(query)
             graph_results = []
             
-            # 从filters中提取器械过滤条件
+            # 从filters中提取过滤条件
             available_equipment = None
             if filters:
                 available_equipment = filters.get("available_equipment", [])
+
+            # ✅ 从领域适配器获取Cypher模板（领域无关）
+            if self.domain_adapter:
+                cypher_templates = self.domain_adapter.get_cypher_templates()
+            else:
+                # 无适配器时无法执行图谱查询
+                logger.warning("  ⚠️ 未配置领域适配器，无法执行Neo4j查询")
+                return self._empty_layer_result("Layer2-Graph", error="未配置领域适配器")
+            
+            # 选择合适的Cypher模板
+            if available_equipment:
+                template_key = "muscle_exercise_search_with_equipment"
+            else:
+                template_key = "muscle_exercise_search"
+            
+            cypher_query = cypher_templates.get(template_key)
+            if not cypher_query:
+                logger.warning(f"  ⚠️ 未找到Cypher模板: {template_key}")
+                return self._empty_layer_result("Layer2-Graph", error=f"未找到Cypher模板: {template_key}")
 
             # ✅ 优先使用连接池管理器
             if self.connection_pool_manager and self.connection_pool_manager.neo4j_pool:
                 logger.debug("  → 使用Neo4j连接池")
                 async with self.connection_pool_manager.get_neo4j_session() as session:
-                    for muscle in muscle_keywords[:3]:  # 限制关键词数量
-                        # 构建Cypher查询（根据是否有器械过滤条件）
+                    for keyword in keywords[:3]:  # 限制关键词数量
                         if available_equipment:
-                            cypher_query = """
-                            MATCH (m:Muscle)
-                            WHERE m.name_zh CONTAINS $muscle
-                               OR m.name_en CONTAINS $muscle
-                               OR m.name CONTAINS $muscle
-                            MATCH (e:Exercise)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m)
-                            WHERE ANY(equip IN e.equipment_zh WHERE equip IN $equipment)
-                            RETURN
-                                e.name_zh AS exercise_zh,
-                                e.name AS exercise_en,
-                                e.difficulty AS difficulty,
-                                e.equipment_zh AS equipment,
-                                m.name_zh AS muscle_name,
-                                type(r) AS relationship_type,
-                                m.mev AS mev,
-                                m.mav AS mav,
-                                m.mrv AS mrv
-                            LIMIT $limit
-                            """
-                            
                             result = await session.run(
                                 cypher_query,
-                                muscle=muscle,
+                                muscle=keyword,
                                 equipment=available_equipment,
                                 limit=top_k
                             )
                         else:
-                            cypher_query = """
-                            MATCH (m:Muscle)
-                            WHERE m.name_zh CONTAINS $muscle
-                               OR m.name_en CONTAINS $muscle
-                               OR m.name CONTAINS $muscle
-                            MATCH (e:Exercise)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m)
-                            RETURN
-                                e.name_zh AS exercise_zh,
-                                e.name AS exercise_en,
-                                e.difficulty AS difficulty,
-                                e.equipment_zh AS equipment,
-                                m.name_zh AS muscle_name,
-                                type(r) AS relationship_type,
-                                m.mev AS mev,
-                                m.mav AS mav,
-                                m.mrv AS mrv
-                            LIMIT $limit
-                            """
-
                             result = await session.run(
                                 cypher_query,
-                                muscle=muscle,
+                                muscle=keyword,
                                 limit=top_k
                             )
 
                         async for record in result:
-                            graph_results.append({
-                                "exercise_name_zh": record.get("exercise_zh", ""),
-                                "exercise_name_en": record.get("exercise_en", ""),
-                                "difficulty": record.get("difficulty", ""),
-                                "equipment": record.get("equipment", ""),
-                                "target_muscle": record.get("muscle_name", ""),
-                                "relationship_type": record.get("relationship_type", ""),
-                                "training_volume": {
-                                    "mev": record.get("mev"),
-                                    "mav": record.get("mav"),
-                                    "mrv": record.get("mrv")
-                                },
-                                "source": "neo4j_pool",
-                                "score": 0.8  # Neo4j图查询默认高分
-                            })
+                            graph_results.append(self._parse_neo4j_record(record, "neo4j_pool"))
             
             # ✅ 降级：使用传统Neo4jConnectionManager
-            elif muscle_keywords and self.neo4j_manager:
+            elif keywords and self.neo4j_manager:
                 logger.debug("  → 使用传统Neo4j连接管理器")
                 with self.neo4j_manager.get_session() as session:
-                    for muscle in muscle_keywords[:3]:  # 限制关键词数量
-                        # 构建Cypher查询（根据是否有器械过滤条件）
+                    for keyword in keywords[:3]:  # 限制关键词数量
                         if available_equipment:
-                            cypher_query = """
-                            MATCH (m:Muscle)
-                            WHERE m.name_zh CONTAINS $muscle
-                               OR m.name_en CONTAINS $muscle
-                               OR m.name CONTAINS $muscle
-                            MATCH (e:Exercise)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m)
-                            WHERE ANY(equip IN e.equipment_zh WHERE equip IN $equipment)
-                            RETURN
-                                e.name_zh AS exercise_zh,
-                                e.name AS exercise_en,
-                                e.difficulty AS difficulty,
-                                e.equipment_zh AS equipment,
-                                m.name_zh AS muscle_name,
-                                type(r) AS relationship_type,
-                                m.mev AS mev,
-                                m.mav AS mav,
-                                m.mrv AS mrv
-                            LIMIT $limit
-                            """
-                            
                             result = session.run(
                                 cypher_query,
-                                muscle=muscle,
+                                muscle=keyword,
                                 equipment=available_equipment,
                                 limit=top_k
                             )
                         else:
-                            cypher_query = """
-                            MATCH (m:Muscle)
-                            WHERE m.name_zh CONTAINS $muscle
-                               OR m.name_en CONTAINS $muscle
-                               OR m.name CONTAINS $muscle
-                            MATCH (e:Exercise)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m)
-                            RETURN
-                                e.name_zh AS exercise_zh,
-                                e.name AS exercise_en,
-                                e.difficulty AS difficulty,
-                                e.equipment_zh AS equipment,
-                                m.name_zh AS muscle_name,
-                                type(r) AS relationship_type,
-                                m.mev AS mev,
-                                m.mav AS mav,
-                                m.mrv AS mrv
-                            LIMIT $limit
-                            """
-
                             result = session.run(
                                 cypher_query,
-                                muscle=muscle,
+                                muscle=keyword,
                                 limit=top_k
                             )
 
                         for record in result:
-                            graph_results.append({
-                                "exercise_name_zh": record.get("exercise_zh", ""),
-                                "exercise_name_en": record.get("exercise_en", ""),
-                                "difficulty": record.get("difficulty", ""),
-                                "equipment": record.get("equipment", ""),
-                                "target_muscle": record.get("muscle_name", ""),
-                                "relationship_type": record.get("relationship_type", ""),
-                                "training_volume": {
-                                    "mev": record.get("mev"),
-                                    "mav": record.get("mav"),
-                                    "mrv": record.get("mrv")
-                                },
-                                "source": "neo4j_direct",
-                                "score": 0.8  # Neo4j图查询默认高分
-                            })
+                            graph_results.append(self._parse_neo4j_record(record, "neo4j_direct"))
 
             execution_time = (datetime.now() - start_time).total_seconds() * 1000
             confidence = 0.9 if graph_results else 0.0
@@ -824,7 +763,7 @@ class TrueThreeLayerEngine:
                 metadata={
                     "source": "neo4j_pool" if self.connection_pool_manager else "neo4j_direct",
                     "count": len(graph_results),
-                    "muscle_keywords": muscle_keywords,
+                    "keywords": keywords,
                     "equipment_filtered": bool(available_equipment)
                 }
             )
@@ -832,6 +771,34 @@ class TrueThreeLayerEngine:
         except Exception as e:
             logger.error(f"  ✗ Neo4j直连查询失败: {e}")
             return self._empty_layer_result("Layer2-Graph", error=str(e))
+    
+    def _parse_neo4j_record(self, record: Any, source: str, score: float = 0.8) -> Dict[str, Any]:
+        """
+        解析Neo4j查询记录为统一格式
+        
+        Args:
+            record: Neo4j查询记录
+            source: 数据来源标识
+            score: 默认分数
+            
+        Returns:
+            Dict[str, Any]: 统一格式的结果字典
+        """
+        return {
+            "exercise_name_zh": record.get("exercise_zh", ""),
+            "exercise_name_en": record.get("exercise_en", ""),
+            "difficulty": record.get("difficulty", ""),
+            "equipment": record.get("equipment", ""),
+            "target_muscle": record.get("muscle_name", ""),
+            "relationship_type": record.get("relationship_type", ""),
+            "training_volume": {
+                "mev": record.get("mev"),
+                "mav": record.get("mav"),
+                "mrv": record.get("mrv")
+            },
+            "source": source,
+            "score": score
+        }
 
     async def _execute_layer2_graph_reasoning_fallback(
         self,
@@ -872,58 +839,43 @@ class TrueThreeLayerEngine:
         query: str,
         top_k: int
     ) -> LayerExecutionResult:
-        """Neo4j直连降级查询（无向量结果）"""
+        """
+        Neo4j直连降级查询（无向量结果）
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        Cypher查询模板从领域适配器获取。
+        """
         start_time = datetime.now()
         
         try:
-            # 从查询中提取肌肉关键词
-            muscle_keywords = self._extract_muscle_keywords(query)
+            # 从查询中提取关键词（使用适配器）
+            keywords = self._extract_muscle_keywords(query)
             graph_results = []
             
-            if muscle_keywords and self.neo4j_manager:
+            # ✅ 从领域适配器获取Cypher模板（领域无关）
+            if self.domain_adapter:
+                cypher_templates = self.domain_adapter.get_cypher_templates()
+                cypher_query = cypher_templates.get("muscle_exercise_search")
+            else:
+                # 无适配器时无法执行图谱查询
+                logger.warning("  ⚠️ 未配置领域适配器，无法执行Neo4j降级查询")
+                return self._empty_layer_result("Layer2-Graph-Fallback", error="未配置领域适配器")
+            
+            if not cypher_query:
+                logger.warning("  ⚠️ 未找到Cypher模板: muscle_exercise_search")
+                return self._empty_layer_result("Layer2-Graph-Fallback", error="未找到Cypher模板")
+            
+            if keywords and self.neo4j_manager:
                 with self.neo4j_manager.get_session() as session:
-                    for muscle in muscle_keywords[:3]:  # 限制关键词数量
-                        cypher_query = """
-                        MATCH (m:Muscle)
-                        WHERE m.name_zh CONTAINS $muscle
-                           OR m.name_en CONTAINS $muscle
-                           OR m.name CONTAINS $muscle
-                        MATCH (e:Exercise)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m)
-                        RETURN
-                            e.name_zh AS exercise_zh,
-                            e.name AS exercise_en,
-                            e.difficulty AS difficulty,
-                            e.equipment_zh AS equipment,
-                            m.name_zh AS muscle_name,
-                            type(r) AS relationship_type,
-                            m.mev AS mev,
-                            m.mav AS mav,
-                            m.mrv AS mrv
-                        LIMIT $limit
-                        """
-                        
+                    for keyword in keywords[:3]:  # 限制关键词数量
                         result = session.run(
                             cypher_query,
-                            muscle=muscle,
+                            muscle=keyword,
                             limit=top_k
                         )
                         
                         for record in result:
-                            graph_results.append({
-                                "exercise_name_zh": record.get("exercise_zh", ""),
-                                "exercise_name_en": record.get("exercise_en", ""),
-                                "difficulty": record.get("difficulty", ""),
-                                "equipment": record.get("equipment", ""),
-                                "target_muscle": record.get("muscle_name", ""),
-                                "relationship_type": record.get("relationship_type", ""),
-                                "training_volume": {
-                                    "mev": record.get("mev"),
-                                    "mav": record.get("mav"),
-                                    "mrv": record.get("mrv")
-                                },
-                                "source": "neo4j_direct_fallback",
-                                "score": 0.7  # 降级查询给予中等分数
-                            })
+                            graph_results.append(self._parse_neo4j_record(record, "neo4j_direct_fallback", 0.7))
             
             execution_time = (datetime.now() - start_time).total_seconds() * 1000
             confidence = 0.7 if graph_results else 0.0
@@ -939,7 +891,7 @@ class TrueThreeLayerEngine:
                 metadata={
                     "source": "neo4j_direct_fallback",
                     "count": len(graph_results),
-                    "muscle_keywords": muscle_keywords
+                    "keywords": keywords
                 }
             )
         
@@ -1031,89 +983,63 @@ class TrueThreeLayerEngine:
         规则匹配降级方案：当Layer1和Layer2都失败时使用
         
         策略：
-        1. 基于关键词匹配推荐通用动作
+        1. 基于关键词匹配推荐通用项目（从领域适配器获取）
         2. 基于用户档案推荐适合的难度
-        3. 返回安全的基础动作
+        3. 返回安全的基础项目
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
         """
         start_time = datetime.now()
         logger.info("→ 规则匹配降级: 基于关键词的通用推荐")
         
         try:
-            # 定义通用推荐规则
-            rule_based_recommendations = {
-                "胸": [
-                    {"exercise_name_zh": "俯卧撑", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "胸大肌"},
-                    {"exercise_name_zh": "哑铃卧推", "difficulty": "intermediate", "equipment": "哑铃", "target_muscle": "胸大肌"},
-                    {"exercise_name_zh": "杠铃卧推", "difficulty": "intermediate", "equipment": "杠铃", "target_muscle": "胸大肌"},
-                ],
-                "背": [
-                    {"exercise_name_zh": "引体向上", "difficulty": "intermediate", "equipment": "单杠", "target_muscle": "背阔肌"},
-                    {"exercise_name_zh": "哑铃划船", "difficulty": "beginner", "equipment": "哑铃", "target_muscle": "背阔肌"},
-                    {"exercise_name_zh": "杠铃划船", "difficulty": "intermediate", "equipment": "杠铃", "target_muscle": "背阔肌"},
-                ],
-                "腿": [
-                    {"exercise_name_zh": "深蹲", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "股四头肌"},
-                    {"exercise_name_zh": "杠铃深蹲", "difficulty": "intermediate", "equipment": "杠铃", "target_muscle": "股四头肌"},
-                    {"exercise_name_zh": "腿举", "difficulty": "beginner", "equipment": "器械", "target_muscle": "股四头肌"},
-                ],
-                "肩": [
-                    {"exercise_name_zh": "哑铃推举", "difficulty": "beginner", "equipment": "哑铃", "target_muscle": "三角肌"},
-                    {"exercise_name_zh": "侧平举", "difficulty": "beginner", "equipment": "哑铃", "target_muscle": "三角肌"},
-                    {"exercise_name_zh": "杠铃推举", "difficulty": "intermediate", "equipment": "杠铃", "target_muscle": "三角肌"},
-                ],
-                "臂": [
-                    {"exercise_name_zh": "哑铃弯举", "difficulty": "beginner", "equipment": "哑铃", "target_muscle": "肱二头肌"},
-                    {"exercise_name_zh": "三头臂屈伸", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "肱三头肌"},
-                    {"exercise_name_zh": "杠铃弯举", "difficulty": "intermediate", "equipment": "杠铃", "target_muscle": "肱二头肌"},
-                ],
-                "腹": [
-                    {"exercise_name_zh": "卷腹", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "腹直肌"},
-                    {"exercise_name_zh": "平板支撑", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "核心"},
-                    {"exercise_name_zh": "仰卧举腿", "difficulty": "intermediate", "equipment": "徒手", "target_muscle": "腹直肌"},
-                ],
-            }
+            # ✅ 从领域适配器获取降级推荐数据（领域无关）
+            if self.domain_adapter:
+                rule_based_recommendations = self.domain_adapter.get_fallback_recommendations()
+                default_fallback_items = self.domain_adapter.get_default_fallback_items()
+            else:
+                # 无适配器时返回空结果
+                logger.warning("  ⚠️ 未配置领域适配器，无法执行规则匹配降级")
+                return self._empty_layer_result("Layer2-RuleBased-Fallback", error="未配置领域适配器")
             
             # 从查询中提取关键词
             query_lower = query.lower()
             matched_results = []
             
-            for keyword, exercises in rule_based_recommendations.items():
+            for keyword, items in rule_based_recommendations.items():
                 if keyword in query:
                     # 根据用户档案过滤难度
                     user_level = user_profile.get("fitness_level", "intermediate") if user_profile else "intermediate"
                     
-                    for exercise in exercises:
+                    for item in items:
+                        item_difficulty = item.get("difficulty", "intermediate")
                         # 简单的难度匹配
-                        if user_level == "beginner" and exercise["difficulty"] in ["beginner"]:
+                        if user_level == "beginner" and item_difficulty in ["beginner"]:
                             matched_results.append({
-                                **exercise,
+                                **item,
                                 "source": "rule_based_fallback",
                                 "score": 0.5,
                                 "rule_matched": keyword
                             })
-                        elif user_level == "intermediate" and exercise["difficulty"] in ["beginner", "intermediate"]:
+                        elif user_level == "intermediate" and item_difficulty in ["beginner", "intermediate"]:
                             matched_results.append({
-                                **exercise,
+                                **item,
                                 "source": "rule_based_fallback",
                                 "score": 0.5,
                                 "rule_matched": keyword
                             })
                         elif user_level == "advanced":
                             matched_results.append({
-                                **exercise,
+                                **item,
                                 "source": "rule_based_fallback",
                                 "score": 0.5,
                                 "rule_matched": keyword
                             })
             
-            # 如果没有匹配到关键词，返回通用的基础动作
+            # 如果没有匹配到关键词，返回默认项目
             if not matched_results:
-                logger.info("  → 未匹配到关键词，返回通用基础动作")
-                matched_results = [
-                    {"exercise_name_zh": "俯卧撑", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "胸大肌", "source": "rule_based_fallback", "score": 0.4},
-                    {"exercise_name_zh": "深蹲", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "股四头肌", "source": "rule_based_fallback", "score": 0.4},
-                    {"exercise_name_zh": "平板支撑", "difficulty": "beginner", "equipment": "徒手", "target_muscle": "核心", "source": "rule_based_fallback", "score": 0.4},
-                ]
+                logger.info("  → 未匹配到关键词，返回默认项目")
+                matched_results = default_fallback_items.copy()
             
             # 限制返回数量
             matched_results = matched_results[:top_k]
@@ -1132,7 +1058,8 @@ class TrueThreeLayerEngine:
                 metadata={
                     "source": "rule_based_fallback",
                     "count": len(matched_results),
-                    "fallback_reason": "Layer1和Layer2均失败"
+                    "fallback_reason": "Layer1和Layer2均失败",
+                    "domain": self.domain_adapter.get_name() if self.domain_adapter else "unknown"
                 }
             )
         
@@ -1385,7 +1312,7 @@ class TrueThreeLayerEngine:
         user_profile: Dict[str, Any]
     ) -> bool:
         """
-        增强版安全性验证 (Requirements 4.3, 4.6)
+        增强版安全性验证 (Requirements 4.3, 4.6, 6.1, 6.2)
         
         检查项目：
         1. 禁忌症匹配（绝对禁忌/相对禁忌/谨慎使用）
@@ -1393,11 +1320,13 @@ class TrueThreeLayerEngine:
         3. 健康状况检查（慢性病、损伤史）
         4. 关节损伤检查
         5. 体态问题检查
+        
+        领域数据从适配器获取，保持框架层领域无关。
         """
         if not user_profile:
             return True
 
-        exercise_name = exercise.get("exercise_name_zh", "Unknown")
+        exercise_name = exercise.get("exercise_name_zh", "") or exercise.get("name", "Unknown")
         
         # ============ 1. 禁忌症检查（支持severity级别）============
         contraindications = exercise.get("contraindications", [])
@@ -1440,7 +1369,7 @@ class TrueThreeLayerEngine:
         basic_info = user_profile.get("basic_info", {})
         user_age = basic_info.get("age") or user_profile.get("age", 30)
         
-        difficulty = (exercise.get("difficulty_zh") or exercise.get("difficulty_en") or "").lower()
+        difficulty = (exercise.get("difficulty_zh") or exercise.get("difficulty_en") or exercise.get("difficulty") or "").lower()
         
         # 高龄用户限制
         if user_age > 60:
@@ -1450,11 +1379,15 @@ class TrueThreeLayerEngine:
         
         # 青少年用户限制（<16岁）
         if user_age < 16:
-            # 限制大重量复合动作
-            high_load_keywords = ["硬拉", "深蹲", "卧推", "推举", "deadlift", "squat", "bench press"]
-            if any(kw in exercise_name.lower() for kw in high_load_keywords):
+            # ✅ 从领域适配器获取高负荷关键词（领域无关）
+            if self.domain_adapter and hasattr(self.domain_adapter, 'get_high_load_keywords'):
+                high_load_keywords = self.domain_adapter.get_high_load_keywords()
+            else:
+                high_load_keywords = []  # 无适配器时跳过此检查
+            
+            if high_load_keywords and any(kw in exercise_name.lower() for kw in high_load_keywords):
                 if "advanced" in difficulty or "高级" in difficulty:
-                    logger.debug(f"安全过滤: {exercise_name} - 青少年(<16)不适合高负荷动作")
+                    logger.debug(f"安全过滤: {exercise_name} - 青少年(<16)不适合高负荷项目")
                     return False
 
         # ============ 3. 关节损伤检查 ============
@@ -1475,27 +1408,21 @@ class TrueThreeLayerEngine:
                 injured_parts.add(injury.lower())
         
         if injured_parts:
-            # 获取动作涉及的关节/部位
+            # 获取项目涉及的关节/部位
             involved_joints = exercise.get("involved_joints", [])
             target_muscle = (exercise.get("primary_muscle_zh") or exercise.get("target_muscle") or "").lower()
             
-            # 关节关键词映射
-            joint_keywords = {
-                "肩": ["肩", "shoulder", "三角肌", "deltoid"],
-                "膝": ["膝", "knee", "股四头肌", "quadriceps"],
-                "腰": ["腰", "lower back", "竖脊肌", "erector"],
-                "颈": ["颈", "neck", "斜方肌上部"],
-                "肘": ["肘", "elbow", "肱二头肌", "肱三头肌"],
-                "腕": ["腕", "wrist", "前臂"],
-                "踝": ["踝", "ankle", "小腿"],
-                "髋": ["髋", "hip", "臀", "glute"],
-            }
+            # ✅ 从领域适配器获取关节关键词映射（领域无关）
+            if self.domain_adapter:
+                joint_keywords = self.domain_adapter.get_joint_keywords()
+            else:
+                joint_keywords = {}  # 无适配器时跳过此检查
             
             for injured_part in injured_parts:
                 # 检查是否涉及受伤部位
                 for joint_name, keywords in joint_keywords.items():
                     if any(kw in injured_part for kw in keywords):
-                        # 检查动作是否涉及该关节
+                        # 检查项目是否涉及该关节
                         exercise_text = f"{exercise_name} {target_muscle} {' '.join(involved_joints)}".lower()
                         if any(kw in exercise_text for kw in keywords):
                             logger.debug(f"安全过滤: {exercise_name} - 涉及受伤部位 {injured_part}")
@@ -1504,21 +1431,17 @@ class TrueThreeLayerEngine:
         # ============ 4. 体态问题检查 ============
         postural_issues = health_profile.get("postural_issues", [])
         
-        # 体态问题与禁忌动作映射
-        postural_contraindications = {
-            "骨盆前倾": ["深蹲", "硬拉", "弓步蹲", "腿举"],
-            "骨盆后倾": ["卷腹", "仰卧起坐", "悬垂举腿"],
-            "圆肩": ["卧推", "俯卧撑", "前平举", "上斜卧推"],
-            "头前伸": ["耸肩", "颈后推举", "直立划船"],
-            "驼背": ["卷腹", "仰卧起坐", "俯身划船"],
-            "脊柱侧弯": ["大重量深蹲", "大重量硬拉", "单侧负重"],
-        }
+        # ✅ 从领域适配器获取体态禁忌映射（领域无关）
+        if self.domain_adapter:
+            postural_contraindications = self.domain_adapter.get_safety_contraindications()
+        else:
+            postural_contraindications = {}  # 无适配器时跳过此检查
         
         for issue in postural_issues:
             issue_name = issue if isinstance(issue, str) else issue.get("name", "")
             if issue_name in postural_contraindications:
-                contra_exercises = postural_contraindications[issue_name]
-                if any(contra in exercise_name for contra in contra_exercises):
+                contra_items = postural_contraindications[issue_name]
+                if any(contra in exercise_name for contra in contra_items):
                     # 不完全禁止，但在高难度时过滤
                     if "advanced" in difficulty or "高级" in difficulty:
                         logger.debug(f"安全过滤: {exercise_name} - 体态问题 {issue_name} 不适合高难度")
@@ -1533,10 +1456,10 @@ class TrueThreeLayerEngine:
         )
         
         if has_cardiovascular:
-            # 限制高强度动作
+            # 限制高强度项目
             high_intensity_keywords = ["爆发", "冲刺", "跳跃", "波比跳", "burpee", "sprint", "plyometric"]
             if any(kw in exercise_name.lower() for kw in high_intensity_keywords):
-                logger.debug(f"安全过滤: {exercise_name} - 心血管疾病不适合高强度动作")
+                logger.debug(f"安全过滤: {exercise_name} - 心血管疾病不适合高强度项目")
                 return False
         
         # 骨质疏松
@@ -1547,10 +1470,10 @@ class TrueThreeLayerEngine:
         )
         
         if has_osteoporosis:
-            # 限制高冲击动作
+            # 限制高冲击项目
             high_impact_keywords = ["跳跃", "跑步", "跳绳", "波比跳", "jump", "running", "plyometric"]
             if any(kw in exercise_name.lower() for kw in high_impact_keywords):
-                logger.debug(f"安全过滤: {exercise_name} - 骨质疏松不适合高冲击动作")
+                logger.debug(f"安全过滤: {exercise_name} - 骨质疏松不适合高冲击项目")
                 return False
 
         return True
@@ -1620,24 +1543,25 @@ class TrueThreeLayerEngine:
             return 0.7
 
     def _extract_muscle_keywords(self, query: str) -> List[str]:
-        """从查询中提取肌肉关键词"""
-        muscle_mapping = {
-            "胸": ["胸大肌", "胸部", "Chest", "Pectoralis"],
-            "背": ["背阔肌", "背部", "Back", "Latissimus"],
-            "肩": ["三角肌", "肩部", "Shoulder", "Deltoid"],
-            "臂": ["肱二头肌", "肱三头肌", "手臂", "Biceps", "Triceps"],
-            "腿": ["股四头肌", "腘绳肌", "腿部", "Quadriceps", "Hamstrings"],
-            "臀": ["臀大肌", "臀部", "Glutes"],
-            "腹": ["腹直肌", "腹肌", "腹部", "Abs", "Rectus Abdominis"],
-            "核心": ["核心", "Core"]
-        }
+        """
+        从查询中提取领域关键词
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        """
+        # ✅ 从领域适配器获取关键词映射（领域无关）
+        if self.domain_adapter:
+            keyword_mapping = self.domain_adapter.get_keyword_mapping()
+        else:
+            # 无适配器时返回空列表
+            logger.debug("未配置领域适配器，无法提取关键词")
+            return []
 
         keywords = []
         query_lower = query.lower()
 
-        for key, muscles in muscle_mapping.items():
-            if key in query or any(m.lower() in query_lower for m in muscles):
-                keywords.extend(muscles)
+        for key, synonyms in keyword_mapping.items():
+            if key in query or any(s.lower() in query_lower for s in synonyms):
+                keywords.extend(synonyms)
 
         return list(set(keywords))  # 去重
 

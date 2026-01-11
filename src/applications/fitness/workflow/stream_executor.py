@@ -144,6 +144,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         
         步骤1-9保持同步执行，步骤10改为流式LLM调用。
         集成上下文工程模块进行多轮对话管理。
+        集成权限检查模块进行用量控制（Requirements 7.1, 7.4）。
         
         Args:
             query_text: 用户查询文本
@@ -168,6 +169,24 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         logger.info(f"👤 用户: {user_id}")
         logger.info(f"🎯 策略: {strategy}")
         
+        # ========== 权限检查（Requirements 7.1, 7.2） ==========
+        permission_result = await self._check_permission_before_execute(
+            user_id=user_id,
+            strategy=strategy,
+            request_id=request_id
+        )
+        
+        if not permission_result.get("allowed", True):
+            # 权限检查失败，返回错误事件
+            yield {
+                "type": "error",
+                "error": permission_result.get("message", "权限检查失败"),
+                "error_code": "PERMISSION_DENIED",
+                "upgrade_hint": permission_result.get("upgrade_hint"),
+                "request_id": request_id
+            }
+            return
+        
         # ========== 策略分流：Agent模式使用独立执行器 ==========
         if strategy == "agent":
             logger.info(f"🤖 [{request_id}] 使用Agent模式执行")
@@ -183,7 +202,14 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 **kwargs
             ):
                 yield event
-            return  # Agent模式执行完毕，直接返回
+            
+            # Agent模式执行完毕，增加用量计数（Requirements 7.4）
+            await self._increment_usage_after_execute(
+                user_id=user_id,
+                strategy=strategy,
+                request_id=request_id
+            )
+            return
         
         # ========== DAG模式：继续原有的11步工作流程 ==========
         logger.info(f"📊 [{request_id}] 使用DAG模式执行")
@@ -464,6 +490,13 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     success=True,
                     total_duration_ms=processing_time * 1000
                 )
+            
+            # ========== 增加用量计数（Requirements 7.4） ==========
+            await self._increment_usage_after_execute(
+                user_id=user_id,
+                strategy=strategy,
+                request_id=request_id
+            )
             
             # 发送完成事件
             yield {
@@ -880,6 +913,132 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         except Exception as e:
             logger.warning(f"获取Qdrant客户端失败: {e}")
             return None
+    
+    # ============ 权限检查方法（Requirements 7.1, 7.4） ============
+    
+    async def _check_permission_before_execute(
+        self,
+        user_id: str,
+        strategy: str,
+        request_id: str
+    ) -> Dict[str, Any]:
+        """
+        执行前检查权限
+        
+        Requirements: 7.1, 7.2, 7.3
+        
+        Args:
+            user_id: 用户ID
+            strategy: 执行策略（dag或agent）
+            request_id: 请求ID
+            
+        Returns:
+            Dict[str, Any]: 权限检查结果
+        """
+        try:
+            # 获取权限检查器
+            from ....framework.auth.permission_checker import get_permission_checker
+            permission_checker = get_permission_checker()
+            
+            # 如果权限检查器没有后端客户端，尝试设置
+            if permission_checker.backend_client is None:
+                backend_client = self._get_backend_client()
+                if backend_client:
+                    permission_checker.backend_client = backend_client
+            
+            # 检查权限
+            result = await permission_checker.check_permission(
+                user_id=int(user_id) if user_id.isdigit() else 0,
+                mode=strategy
+            )
+            
+            if result.allowed:
+                logger.info(
+                    f"✅ [{request_id}] 权限检查通过: "
+                    f"user_id={user_id}, tier={result.tier}, "
+                    f"remaining={result.remaining}"
+                )
+                return {
+                    "allowed": True,
+                    "tier": result.tier,
+                    "remaining": result.remaining,
+                    "message": result.message
+                }
+            else:
+                logger.warning(
+                    f"⚠️ [{request_id}] 权限检查失败: "
+                    f"user_id={user_id}, message={result.message}"
+                )
+                return {
+                    "allowed": False,
+                    "tier": result.tier,
+                    "remaining": result.remaining,
+                    "message": result.message,
+                    "upgrade_hint": result.upgrade_hint
+                }
+                
+        except Exception as e:
+            logger.error(f"❌ [{request_id}] 权限检查异常: {e}")
+            # 权限检查异常时，允许执行（避免阻塞用户）
+            return {
+                "allowed": True,
+                "tier": "unknown",
+                "remaining": -1,
+                "message": f"权限检查异常，暂时允许执行: {e}"
+            }
+    
+    async def _increment_usage_after_execute(
+        self,
+        user_id: str,
+        strategy: str,
+        request_id: str
+    ) -> bool:
+        """
+        执行后增加用量计数
+        
+        Requirements: 7.4
+        
+        Args:
+            user_id: 用户ID
+            strategy: 执行策略（dag或agent）
+            request_id: 请求ID
+            
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            # 获取权限检查器
+            from ....framework.auth.permission_checker import get_permission_checker
+            permission_checker = get_permission_checker()
+            
+            # 如果权限检查器没有后端客户端，尝试设置
+            if permission_checker.backend_client is None:
+                backend_client = self._get_backend_client()
+                if backend_client:
+                    permission_checker.backend_client = backend_client
+            
+            # 增加用量
+            success = await permission_checker.increment_usage(
+                user_id=int(user_id) if user_id.isdigit() else 0,
+                mode=strategy
+            )
+            
+            if success:
+                logger.info(
+                    f"✅ [{request_id}] 用量增加成功: "
+                    f"user_id={user_id}, mode={strategy}"
+                )
+            else:
+                logger.warning(
+                    f"⚠️ [{request_id}] 用量增加失败: "
+                    f"user_id={user_id}, mode={strategy}"
+                )
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"❌ [{request_id}] 用量增加异常: {e}")
+            return False
 
 
 # ============ 便捷函数 ============

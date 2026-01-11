@@ -100,26 +100,26 @@ class CacheManager:
         await cache.invalidate("key")
         
         # 模式失效
-        await cache.invalidate_pattern("muscle_*")
+        await cache.invalidate_pattern("entity_*")
     """
     
-    # 预定义的缓存配置
+    # 预定义的缓存配置（通用示例，具体领域配置由应用层定义）
     CACHE_CONFIG = {
-        "muscle_training_data": {
+        "entity_data": {
             "ttl": 86400,  # 24小时
-            "description": "肌肉训练数据（MEV/MAV/MRV）"
+            "description": "实体数据缓存"
         },
-        "equipment_alias": {
+        "alias_mapping": {
             "ttl": 604800,  # 7天
-            "description": "器械别名映射"
+            "description": "别名映射缓存"
         },
-        "contraindication_rules": {
+        "rule_data": {
             "ttl": 86400,  # 24小时
-            "description": "禁忌症规则"
+            "description": "规则数据缓存"
         },
-        "exercise_metadata": {
+        "metadata": {
             "ttl": 3600,  # 1小时
-            "description": "动作元数据"
+            "description": "元数据缓存"
         },
         "user_profile": {
             "ttl": 1800,  # 30分钟
@@ -453,8 +453,8 @@ def cached(
         key_params: 用于生成缓存键的参数名列表
     
     Example:
-        @cached(prefix="muscle_training_data", ttl=86400, key_params=["muscle_id"])
-        async def get_muscle_training_data(muscle_id: int):
+        @cached(prefix="entity_data", ttl=86400, key_params=["entity_id"])
+        async def get_entity_data(entity_id: int):
             # 查询数据库...
             return data
     """

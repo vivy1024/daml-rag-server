@@ -1,8 +1,58 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.15.0
+**版本**: v9.16.0
 **更新日期**: 2026-01-11
-**状态**: ✅ Agent模式执行逻辑实现
+**状态**: ✅ 框架层领域泄漏修复
+
+---
+
+### v9.16.0 (2026-01-11) - 框架层领域泄漏修复 ✅
+
+**变更类型**: 🔧 重构（框架层领域无关化）
+
+**需求背景**:
+- 框架层（`src/framework/`）包含大量健身领域硬编码数据
+- 违反"框架层应领域无关"的设计原则
+- 影响框架开源和多领域复用
+
+**实现内容**:
+
+1. **TrueThreeLayerEngine 领域无关化** ✅
+   - `_query_neo4j_direct()`: Cypher模板从适配器获取
+   - `_query_neo4j_direct_fallback()`: Cypher模板从适配器获取
+   - `_execute_rule_based_fallback()`: 降级数据从适配器获取
+   - `_extract_muscle_keywords()`: 关键词映射从适配器获取
+   - `_validate_safety()`: 安全规则从适配器获取
+   - 默认domain参数从"fitness"改为"general"
+   - 新增 `_parse_neo4j_record()` 辅助方法
+
+2. **FitnessAdapter 数据方法** ✅
+   - `get_fallback_recommendations()`: 6个肌肉群的降级推荐
+   - `get_keyword_mapping()`: 8个肌肉群关键词映射
+   - `get_safety_contraindications()`: 6种体态问题禁忌
+   - `get_joint_keywords()`: 6个关节关键词映射
+   - `get_default_fallback_items()`: 3个默认动作
+   - `get_high_load_keywords()`: 高负荷动作关键词
+   - `get_cypher_templates()`: 2个Neo4j查询模板
+
+3. **其他文件清理** ✅
+   - `unified_retrieval_interface.py`: 默认domain改为"general"
+   - `cache_manager.py`: 缓存配置改为通用示例
+   - `strategy_selector.py`: 示例代码改为通用
+   - `skill_definition.py`: 技能类别增加通用类别
+
+**文件变更**:
+- 修改: `src/framework/retrieval/true_three_layer_engine.py` (v2.2.0)
+- 修改: `src/framework/retrieval/unified_retrieval_interface.py`
+- 修改: `src/framework/mcp/cache_manager.py`
+- 修改: `src/framework/orchestration/strategy_selector.py`
+- 修改: `src/framework/skills/skill_definition.py`
+- 修改: `src/applications/fitness/fitness_adapter.py` (v1.0.0)
+
+**领域泄漏修复统计**:
+- 严重问题: 4个 → 0个 ✅
+- 中等问题: 4个 → 0个 ✅
+- 轻微问题: 5个 → 0个 ✅
 
 ---
 
