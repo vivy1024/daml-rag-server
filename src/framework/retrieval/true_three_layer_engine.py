@@ -15,9 +15,8 @@
 3. 清晰分层 - 每层职责明确,互不耦合
 4. 完善监控 - 详细日志和性能指标
 5. 统一超时 - 全局超时配置管理 (Requirements 3.6)
-6. 领域无关 - 通过DomainAdapter注入领域数据 (Requirements 6.1, 6.2)
 
-版本: v2.2.0
+版本: v2.1.0
 日期: 2026-01-11
 作者: 薛小川
 """
@@ -25,7 +24,7 @@
 import asyncio
 import logging
 import os
-from typing import Dict, List, Any, Optional, TYPE_CHECKING
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 from dataclasses import dataclass, field
 from contextlib import contextmanager
@@ -33,10 +32,6 @@ import aiohttp
 
 # 导入超时管理器
 from .timeout_manager import TimeoutManager, get_timeout_manager
-
-# 类型检查时导入（避免循环导入）
-if TYPE_CHECKING:
-    from src.framework.adapters.domain_adapter import DomainAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +196,6 @@ class TrueThreeLayerEngine:
     - 优雅降级
     - 并行执行
     - 完善监控
-    - 领域无关（通过DomainAdapter注入领域数据）
     """
 
     def __init__(
@@ -214,7 +208,7 @@ class TrueThreeLayerEngine:
         enable_parallel_execution: bool = False,  # Layer 1和2不能并行,因为2依赖1
         connection_pool_manager=None,  # ✅ 连接池管理器
         timeout_manager: Optional[TimeoutManager] = None,  # ✅ 超时管理器
-        domain_adapter: Optional["DomainAdapter"] = None  # ✅ 新增：领域适配器 (Requirements 6.1, 6.2)
+        domain_adapter=None  # ✅ 新增：领域适配器（框架层领域无关 - Requirements 6.1, 6.2）
     ):
         """初始化三层检索引擎"""
         # API配置
@@ -236,11 +230,9 @@ class TrueThreeLayerEngine:
         # ✅ 超时管理器（Requirements 3.6）
         self.timeout_manager = timeout_manager or get_timeout_manager()
         
-        # ✅ 领域适配器（Requirements 6.1, 6.2）
-        # 如果未提供，尝试从注册表获取默认适配器
+        # ✅ 领域适配器（框架层领域无关 - Requirements 6.1, 6.2）
+        # 如果未提供适配器，框架层使用空数据（不包含任何领域特定数据）
         self.domain_adapter = domain_adapter
-        if self.domain_adapter:
-            logger.info(f"  → 领域适配器: {self.domain_adapter.get_name()}")
 
         # Neo4j连接管理器
         self.neo4j_manager: Optional[Neo4jConnectionManager] = None
@@ -261,20 +253,12 @@ class TrueThreeLayerEngine:
         logger.info(f"  → 超时配置: Layer1={self.timeout_manager.get_timeout_ms('layer1_timeout_ms')}ms, "
                    f"Layer2={self.timeout_manager.get_timeout_ms('layer2_timeout_ms')}ms, "
                    f"Layer3={self.timeout_manager.get_timeout_ms('layer3_timeout_ms')}ms")
+        if self.domain_adapter:
+            logger.info(f"  → 领域适配器: {self.domain_adapter.get_name()}")
 
         # 初始化Neo4j连接
         if self.enable_neo4j_direct:
             self._initialize_neo4j_connection()
-
-    def set_domain_adapter(self, adapter: "DomainAdapter") -> None:
-        """
-        设置领域适配器
-        
-        Args:
-            adapter: 领域适配器实例
-        """
-        self.domain_adapter = adapter
-        logger.info(f"设置领域适配器: {adapter.get_name()}")
 
     def _initialize_neo4j_connection(self):
         """初始化Neo4j直连"""
@@ -300,7 +284,7 @@ class TrueThreeLayerEngine:
     async def execute_three_layer_query(
         self,
         query: str,
-        domain: str = "general",  # ✅ 修改：默认值改为通用领域 (Requirements 6.2)
+        domain: str = None,  # ✅ 修改：默认None，从领域适配器获取（框架层领域无关 - Requirements 6.2）
         user_id: Optional[str] = None,
         user_profile: Optional[Dict[str, Any]] = None,
         filters: Optional[Dict[str, Any]] = None,
@@ -313,7 +297,7 @@ class TrueThreeLayerEngine:
 
         Args:
             query: 用户查询文本
-            domain: 检索领域（默认"general"，具体领域由适配器决定）
+            domain: 检索领域（如果为None，从领域适配器获取）
             user_id: 用户ID
             user_profile: 用户档案
             filters: 过滤条件
@@ -326,6 +310,12 @@ class TrueThreeLayerEngine:
         """
         start_time = datetime.now()
         self.stats["total_queries"] += 1
+        
+        # ✅ 如果domain为None，从领域适配器获取（框架层领域无关 - Requirements 6.2）
+        if domain is None and self.domain_adapter:
+            domain = self.domain_adapter.get_name()
+        elif domain is None:
+            domain = "general"  # 默认通用领域
 
         logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         logger.info(f"🔍 开始三层检索: {query}")
@@ -472,7 +462,7 @@ class TrueThreeLayerEngine:
     async def execute_three_layer_search(
         self,
         query: str,
-        domain: str = "general",  # ✅ 修改：默认值改为通用领域 (Requirements 6.2)
+        domain: str = None,  # ✅ 修改：默认None（框架层领域无关 - Requirements 6.2）
         user_id: str = None,
         context: Dict[str, Any] = None
     ):
@@ -482,6 +472,12 @@ class TrueThreeLayerEngine:
         将framework层的调用转换为内部的execute_three_layer_query调用
         保持向后兼容性
         """
+        # ✅ 如果domain为None，从领域适配器获取
+        if domain is None and self.domain_adapter:
+            domain = self.domain_adapter.get_name()
+        elif domain is None:
+            domain = "general"  # 默认通用领域
+        
         # 提取参数
         user_profile = context.get("user_profile") if context else None
         filters = context.get("filters") if context else None
@@ -668,86 +664,107 @@ class TrueThreeLayerEngine:
         top_k: int,
         filters: Optional[Dict[str, Any]] = None
     ) -> LayerExecutionResult:
-        """
-        通过Neo4j直连查询图谱（使用连接池）
+        """通过Neo4j直连查询图谱（使用连接池）
         
-        Requirements: 6.1, 6.2 (框架层领域无关)
-        Cypher查询模板从领域适配器获取。
+        ✅ 框架层领域无关：Cypher模板从领域适配器获取
         """
         start_time = datetime.now()
 
         try:
-            # 从查询中提取关键词（使用适配器）
+            # 从查询中提取关键词
             keywords = self._extract_muscle_keywords(query)
             graph_results = []
             
             # 从filters中提取过滤条件
-            available_equipment = None
+            filter_values = None
             if filters:
-                available_equipment = filters.get("available_equipment", [])
-
-            # ✅ 从领域适配器获取Cypher模板（领域无关）
-            if self.domain_adapter:
-                cypher_templates = self.domain_adapter.get_cypher_templates()
-            else:
-                # 无适配器时无法执行图谱查询
+                filter_values = filters.get("available_equipment", [])
+            
+            # ✅ 从领域适配器获取Cypher模板（框架层领域无关）
+            if not self.domain_adapter:
                 logger.warning("  ⚠️ 未配置领域适配器，无法执行Neo4j查询")
                 return self._empty_layer_result("Layer2-Graph", error="未配置领域适配器")
             
-            # 选择合适的Cypher模板
-            if available_equipment:
-                template_key = "muscle_exercise_search_with_equipment"
-            else:
-                template_key = "muscle_exercise_search"
+            cypher_templates = self.domain_adapter.get_cypher_templates()
+            result_mapping = self.domain_adapter.get_cypher_result_mapping()
             
-            cypher_query = cypher_templates.get(template_key)
-            if not cypher_query:
-                logger.warning(f"  ⚠️ 未找到Cypher模板: {template_key}")
-                return self._empty_layer_result("Layer2-Graph", error=f"未找到Cypher模板: {template_key}")
+            # 选择合适的Cypher模板
+            if filter_values:
+                cypher_template = cypher_templates.get("entity_search_with_filter")
+            else:
+                cypher_template = cypher_templates.get("entity_search")
+            
+            if not cypher_template:
+                logger.warning("  ⚠️ 领域适配器未提供Cypher模板")
+                return self._empty_layer_result("Layer2-Graph", error="未提供Cypher模板")
 
             # ✅ 优先使用连接池管理器
             if self.connection_pool_manager and self.connection_pool_manager.neo4j_pool:
                 logger.debug("  → 使用Neo4j连接池")
                 async with self.connection_pool_manager.get_neo4j_session() as session:
                     for keyword in keywords[:3]:  # 限制关键词数量
-                        if available_equipment:
+                        # ✅ 使用适配器提供的Cypher模板（框架层领域无关）
+                        if filter_values:
                             result = await session.run(
-                                cypher_query,
-                                muscle=keyword,
-                                equipment=available_equipment,
+                                cypher_template,
+                                keyword=keyword,
+                                filter_values=filter_values,
                                 limit=top_k
                             )
                         else:
                             result = await session.run(
-                                cypher_query,
-                                muscle=keyword,
+                                cypher_template,
+                                keyword=keyword,
                                 limit=top_k
                             )
 
+                        # ✅ 使用适配器提供的字段映射（框架层领域无关）
                         async for record in result:
-                            graph_results.append(self._parse_neo4j_record(record, "neo4j_pool"))
+                            item = {"source": "neo4j_pool", "score": 0.8}
+                            for cypher_field, output_field in result_mapping.items():
+                                value = record.get(cypher_field)
+                                # 处理训练容量等嵌套字段
+                                if cypher_field in ["mev", "mav", "mrv"]:
+                                    if "training_volume" not in item:
+                                        item["training_volume"] = {}
+                                    item["training_volume"][cypher_field] = value
+                                else:
+                                    item[output_field] = value if value is not None else ""
+                            graph_results.append(item)
             
             # ✅ 降级：使用传统Neo4jConnectionManager
             elif keywords and self.neo4j_manager:
                 logger.debug("  → 使用传统Neo4j连接管理器")
                 with self.neo4j_manager.get_session() as session:
                     for keyword in keywords[:3]:  # 限制关键词数量
-                        if available_equipment:
+                        # ✅ 使用适配器提供的Cypher模板（框架层领域无关）
+                        if filter_values:
                             result = session.run(
-                                cypher_query,
-                                muscle=keyword,
-                                equipment=available_equipment,
+                                cypher_template,
+                                keyword=keyword,
+                                filter_values=filter_values,
                                 limit=top_k
                             )
                         else:
                             result = session.run(
-                                cypher_query,
-                                muscle=keyword,
+                                cypher_template,
+                                keyword=keyword,
                                 limit=top_k
                             )
 
+                        # ✅ 使用适配器提供的字段映射（框架层领域无关）
                         for record in result:
-                            graph_results.append(self._parse_neo4j_record(record, "neo4j_direct"))
+                            item = {"source": "neo4j_direct", "score": 0.8}
+                            for cypher_field, output_field in result_mapping.items():
+                                value = record.get(cypher_field)
+                                # 处理训练容量等嵌套字段
+                                if cypher_field in ["mev", "mav", "mrv"]:
+                                    if "training_volume" not in item:
+                                        item["training_volume"] = {}
+                                    item["training_volume"][cypher_field] = value
+                                else:
+                                    item[output_field] = value if value is not None else ""
+                            graph_results.append(item)
 
             execution_time = (datetime.now() - start_time).total_seconds() * 1000
             confidence = 0.9 if graph_results else 0.0
@@ -764,41 +781,13 @@ class TrueThreeLayerEngine:
                     "source": "neo4j_pool" if self.connection_pool_manager else "neo4j_direct",
                     "count": len(graph_results),
                     "keywords": keywords,
-                    "equipment_filtered": bool(available_equipment)
+                    "filter_applied": bool(filter_values)
                 }
             )
 
         except Exception as e:
             logger.error(f"  ✗ Neo4j直连查询失败: {e}")
             return self._empty_layer_result("Layer2-Graph", error=str(e))
-    
-    def _parse_neo4j_record(self, record: Any, source: str, score: float = 0.8) -> Dict[str, Any]:
-        """
-        解析Neo4j查询记录为统一格式
-        
-        Args:
-            record: Neo4j查询记录
-            source: 数据来源标识
-            score: 默认分数
-            
-        Returns:
-            Dict[str, Any]: 统一格式的结果字典
-        """
-        return {
-            "exercise_name_zh": record.get("exercise_zh", ""),
-            "exercise_name_en": record.get("exercise_en", ""),
-            "difficulty": record.get("difficulty", ""),
-            "equipment": record.get("equipment", ""),
-            "target_muscle": record.get("muscle_name", ""),
-            "relationship_type": record.get("relationship_type", ""),
-            "training_volume": {
-                "mev": record.get("mev"),
-                "mav": record.get("mav"),
-                "mrv": record.get("mrv")
-            },
-            "source": source,
-            "score": score
-        }
 
     async def _execute_layer2_graph_reasoning_fallback(
         self,
@@ -839,43 +828,52 @@ class TrueThreeLayerEngine:
         query: str,
         top_k: int
     ) -> LayerExecutionResult:
-        """
-        Neo4j直连降级查询（无向量结果）
+        """Neo4j直连降级查询（无向量结果）
         
-        Requirements: 6.1, 6.2 (框架层领域无关)
-        Cypher查询模板从领域适配器获取。
+        ✅ 框架层领域无关：Cypher模板从领域适配器获取
         """
         start_time = datetime.now()
         
         try:
-            # 从查询中提取关键词（使用适配器）
+            # 从查询中提取关键词
             keywords = self._extract_muscle_keywords(query)
             graph_results = []
             
-            # ✅ 从领域适配器获取Cypher模板（领域无关）
-            if self.domain_adapter:
-                cypher_templates = self.domain_adapter.get_cypher_templates()
-                cypher_query = cypher_templates.get("muscle_exercise_search")
-            else:
-                # 无适配器时无法执行图谱查询
+            # ✅ 从领域适配器获取Cypher模板（框架层领域无关）
+            if not self.domain_adapter:
                 logger.warning("  ⚠️ 未配置领域适配器，无法执行Neo4j降级查询")
                 return self._empty_layer_result("Layer2-Graph-Fallback", error="未配置领域适配器")
             
-            if not cypher_query:
-                logger.warning("  ⚠️ 未找到Cypher模板: muscle_exercise_search")
-                return self._empty_layer_result("Layer2-Graph-Fallback", error="未找到Cypher模板")
+            cypher_templates = self.domain_adapter.get_cypher_templates()
+            result_mapping = self.domain_adapter.get_cypher_result_mapping()
+            cypher_template = cypher_templates.get("entity_search")
+            
+            if not cypher_template:
+                logger.warning("  ⚠️ 领域适配器未提供Cypher模板")
+                return self._empty_layer_result("Layer2-Graph-Fallback", error="未提供Cypher模板")
             
             if keywords and self.neo4j_manager:
                 with self.neo4j_manager.get_session() as session:
                     for keyword in keywords[:3]:  # 限制关键词数量
+                        # ✅ 使用适配器提供的Cypher模板
                         result = session.run(
-                            cypher_query,
-                            muscle=keyword,
+                            cypher_template,
+                            keyword=keyword,
                             limit=top_k
                         )
                         
+                        # ✅ 使用适配器提供的字段映射
                         for record in result:
-                            graph_results.append(self._parse_neo4j_record(record, "neo4j_direct_fallback", 0.7))
+                            item = {"source": "neo4j_direct_fallback", "score": 0.7}
+                            for cypher_field, output_field in result_mapping.items():
+                                value = record.get(cypher_field)
+                                if cypher_field in ["mev", "mav", "mrv"]:
+                                    if "training_volume" not in item:
+                                        item["training_volume"] = {}
+                                    item["training_volume"][cypher_field] = value
+                                else:
+                                    item[output_field] = value if value is not None else ""
+                            graph_results.append(item)
             
             execution_time = (datetime.now() - start_time).total_seconds() * 1000
             confidence = 0.7 if graph_results else 0.0
@@ -983,24 +981,26 @@ class TrueThreeLayerEngine:
         规则匹配降级方案：当Layer1和Layer2都失败时使用
         
         策略：
-        1. 基于关键词匹配推荐通用项目（从领域适配器获取）
+        1. 基于关键词匹配推荐通用项目
         2. 基于用户档案推荐适合的难度
         3. 返回安全的基础项目
         
-        Requirements: 6.1, 6.2 (框架层领域无关)
+        框架层领域无关（Requirements 6.1, 6.2）：
+        - 推荐数据从领域适配器获取
+        - 如果没有适配器，返回空结果
         """
         start_time = datetime.now()
         logger.info("→ 规则匹配降级: 基于关键词的通用推荐")
         
         try:
-            # ✅ 从领域适配器获取降级推荐数据（领域无关）
-            if self.domain_adapter:
-                rule_based_recommendations = self.domain_adapter.get_fallback_recommendations()
-                default_fallback_items = self.domain_adapter.get_default_fallback_items()
-            else:
-                # 无适配器时返回空结果
+            # ✅ 从领域适配器获取推荐数据（框架层领域无关）
+            if not self.domain_adapter:
                 logger.warning("  ⚠️ 未配置领域适配器，无法执行规则匹配降级")
                 return self._empty_layer_result("Layer2-RuleBased-Fallback", error="未配置领域适配器")
+            
+            # 从适配器获取降级推荐数据
+            rule_based_recommendations = self.domain_adapter.get_fallback_recommendations()
+            default_fallback_items = self.domain_adapter.get_default_fallback_items()
             
             # 从查询中提取关键词
             query_lower = query.lower()
@@ -1012,8 +1012,8 @@ class TrueThreeLayerEngine:
                     user_level = user_profile.get("fitness_level", "intermediate") if user_profile else "intermediate"
                     
                     for item in items:
-                        item_difficulty = item.get("difficulty", "intermediate")
                         # 简单的难度匹配
+                        item_difficulty = item.get("difficulty", "intermediate")
                         if user_level == "beginner" and item_difficulty in ["beginner"]:
                             matched_results.append({
                                 **item,
@@ -1312,7 +1312,7 @@ class TrueThreeLayerEngine:
         user_profile: Dict[str, Any]
     ) -> bool:
         """
-        增强版安全性验证 (Requirements 4.3, 4.6, 6.1, 6.2)
+        增强版安全性验证 (Requirements 4.3, 4.6)
         
         检查项目：
         1. 禁忌症匹配（绝对禁忌/相对禁忌/谨慎使用）
@@ -1321,7 +1321,9 @@ class TrueThreeLayerEngine:
         4. 关节损伤检查
         5. 体态问题检查
         
-        领域数据从适配器获取，保持框架层领域无关。
+        框架层领域无关（Requirements 6.1, 6.2）：
+        - 安全规则数据从领域适配器获取
+        - 如果没有适配器，跳过领域特定检查
         """
         if not user_profile:
             return True
@@ -1377,13 +1379,12 @@ class TrueThreeLayerEngine:
                 logger.debug(f"安全过滤: {exercise_name} - 高龄(>{user_age})不适合高难度")
                 return False
         
-        # 青少年用户限制（<16岁）
+        # 青少年用户限制（<16岁）- 使用领域适配器的高负荷关键词
         if user_age < 16:
-            # ✅ 从领域适配器获取高负荷关键词（领域无关）
+            # ✅ 从领域适配器获取高负荷关键词（框架层领域无关）
+            high_load_keywords = []
             if self.domain_adapter and hasattr(self.domain_adapter, 'get_high_load_keywords'):
                 high_load_keywords = self.domain_adapter.get_high_load_keywords()
-            else:
-                high_load_keywords = []  # 无适配器时跳过此检查
             
             if high_load_keywords and any(kw in exercise_name.lower() for kw in high_load_keywords):
                 if "advanced" in difficulty or "高级" in difficulty:
@@ -1412,11 +1413,10 @@ class TrueThreeLayerEngine:
             involved_joints = exercise.get("involved_joints", [])
             target_muscle = (exercise.get("primary_muscle_zh") or exercise.get("target_muscle") or "").lower()
             
-            # ✅ 从领域适配器获取关节关键词映射（领域无关）
+            # ✅ 从领域适配器获取关节关键词映射（框架层领域无关）
+            joint_keywords = {}
             if self.domain_adapter:
                 joint_keywords = self.domain_adapter.get_joint_keywords()
-            else:
-                joint_keywords = {}  # 无适配器时跳过此检查
             
             for injured_part in injured_parts:
                 # 检查是否涉及受伤部位
@@ -1431,11 +1431,10 @@ class TrueThreeLayerEngine:
         # ============ 4. 体态问题检查 ============
         postural_issues = health_profile.get("postural_issues", [])
         
-        # ✅ 从领域适配器获取体态禁忌映射（领域无关）
+        # ✅ 从领域适配器获取体态问题禁忌映射（框架层领域无关）
+        postural_contraindications = {}
         if self.domain_adapter:
             postural_contraindications = self.domain_adapter.get_safety_contraindications()
-        else:
-            postural_contraindications = {}  # 无适配器时跳过此检查
         
         for issue in postural_issues:
             issue_name = issue if isinstance(issue, str) else issue.get("name", "")
@@ -1447,7 +1446,7 @@ class TrueThreeLayerEngine:
                         logger.debug(f"安全过滤: {exercise_name} - 体态问题 {issue_name} 不适合高难度")
                         return False
 
-        # ============ 5. 特殊健康状况检查 ============
+        # ============ 5. 特殊健康状况检查（通用，不依赖领域适配器）============
         # 心血管疾病
         cardiovascular_conditions = ["高血压", "心脏病", "心律不齐", "冠心病", "hypertension", "heart disease"]
         has_cardiovascular = any(
@@ -1544,18 +1543,19 @@ class TrueThreeLayerEngine:
 
     def _extract_muscle_keywords(self, query: str) -> List[str]:
         """
-        从查询中提取领域关键词
+        从查询中提取关键词
         
-        Requirements: 6.1, 6.2 (框架层领域无关)
+        框架层领域无关（Requirements 6.1, 6.2）：
+        - 关键词映射从领域适配器获取
+        - 如果没有适配器，返回空列表
         """
-        # ✅ 从领域适配器获取关键词映射（领域无关）
-        if self.domain_adapter:
-            keyword_mapping = self.domain_adapter.get_keyword_mapping()
-        else:
-            # 无适配器时返回空列表
+        # ✅ 从领域适配器获取关键词映射（框架层领域无关）
+        if not self.domain_adapter:
             logger.debug("未配置领域适配器，无法提取关键词")
             return []
-
+        
+        keyword_mapping = self.domain_adapter.get_keyword_mapping()
+        
         keywords = []
         query_lower = query.lower()
 

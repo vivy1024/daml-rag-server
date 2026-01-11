@@ -37,20 +37,14 @@ class SkillCategory(Enum):
     """
     技能类别
     
-    与DAG模板类别对应。
-    这些是通用类别，具体领域可以通过适配器扩展。
+    与DAG模板类别对应
     """
-    # 通用类别
-    DOMAIN_SPECIFIC = "domain_specific"  # 领域专用（由适配器定义具体含义）
-    ANALYSIS = "analysis"                # 分析评估
-    SAFETY = "safety"                    # 安全检查
-    COMPREHENSIVE = "comprehensive"      # 综合方案
-    QUICK = "quick"                      # 快速咨询
-    CUSTOM = "custom"                    # 自定义
-    
-    # 向后兼容（健身领域使用）
-    TRAINING = "training"                # 训练相关
-    NUTRITION = "nutrition"              # 营养相关
+    TRAINING = "training"           # 训练相关
+    NUTRITION = "nutrition"         # 营养相关
+    SAFETY = "safety"               # 安全评估
+    COMPREHENSIVE = "comprehensive" # 综合方案
+    QUICK = "quick"                 # 快速咨询
+    CUSTOM = "custom"               # 自定义
 
 
 # =============================================================================

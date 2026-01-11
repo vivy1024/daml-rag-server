@@ -91,107 +91,33 @@ class Layer3ExecutionLog:
 
 
 # ============ 肌肉恢复时间配置 ============
+# 注意：此处保留空配置作为默认值
+# 实际数据应通过domain_adapter.get_muscle_recovery_hours()获取
+# 框架层领域无关 - Requirements 6.1, 6.2
 
 MUSCLE_RECOVERY_HOURS = {
-    # 大肌群 - 需要更长恢复时间
-    "胸大肌": 72, "背阔肌": 72, "股四头肌": 72, "腘绳肌": 72, "臀大肌": 72,
-    "Pectoralis Major": 72, "Latissimus Dorsi": 72, "Quadriceps": 72, 
-    "Hamstrings": 72, "Gluteus Maximus": 72,
-    
-    # 中等肌群
-    "三角肌": 48, "斜方肌": 48, "竖脊肌": 48, "腹直肌": 48,
-    "Deltoid": 48, "Trapezius": 48, "Erector Spinae": 48, "Rectus Abdominis": 48,
-    
-    # 小肌群 - 恢复较快
-    "肱二头肌": 36, "肱三头肌": 36, "前臂": 36, "小腿": 36,
-    "Biceps": 36, "Triceps": 36, "Forearm": 36, "Calves": 36,
-    
-    # 默认值
+    # 默认值（当domain_adapter未配置时使用）
     "default": 48
 }
 
 
 # ============ 体态问题与肌肉关联 ============
+# 注意：此处保留空配置作为默认值
+# 实际数据应通过domain_adapter.get_postural_issue_config()获取
+# 框架层领域无关 - Requirements 6.1, 6.2
 
 POSTURAL_ISSUE_MUSCLES = {
-    "骨盆前倾": {
-        "tight_muscles": ["髂腰肌", "股直肌", "竖脊肌"],
-        "weak_muscles": ["臀大肌", "腹直肌", "腘绳肌"],
-        "corrective_keywords": ["臀桥", "死虫", "平板支撑", "腘绳肌拉伸"],
-        "aggravating_keywords": ["深蹲", "硬拉", "弓步蹲"]
-    },
-    "骨盆后倾": {
-        "tight_muscles": ["腘绳肌", "臀大肌", "腹直肌"],
-        "weak_muscles": ["髂腰肌", "竖脊肌", "股直肌"],
-        "corrective_keywords": ["髋屈肌拉伸", "猫牛式", "超人式"],
-        "aggravating_keywords": ["卷腹", "仰卧起坐"]
-    },
-    "圆肩": {
-        "tight_muscles": ["胸大肌", "胸小肌", "前三角肌"],
-        "weak_muscles": ["菱形肌", "中下斜方肌", "后三角肌"],
-        "corrective_keywords": ["面拉", "反向飞鸟", "YTWL", "胸椎伸展"],
-        "aggravating_keywords": ["卧推", "俯卧撑", "前平举"]
-    },
-    "头前伸": {
-        "tight_muscles": ["胸锁乳突肌", "斜角肌", "上斜方肌"],
-        "weak_muscles": ["深层颈屈肌", "中下斜方肌"],
-        "corrective_keywords": ["颈部收缩", "下巴收紧", "颈部拉伸"],
-        "aggravating_keywords": ["耸肩", "颈后推举"]
-    },
-    "驼背": {
-        "tight_muscles": ["胸大肌", "腹直肌", "髂腰肌"],
-        "weak_muscles": ["竖脊肌", "菱形肌", "后三角肌"],
-        "corrective_keywords": ["胸椎伸展", "猫牛式", "眼镜蛇式", "面拉"],
-        "aggravating_keywords": ["卷腹", "仰卧起坐", "俯身划船"]
-    },
-    "脊柱侧弯": {
-        "tight_muscles": [],  # 因人而异
-        "weak_muscles": ["核心肌群"],
-        "corrective_keywords": ["侧平板", "单侧训练", "核心稳定"],
-        "aggravating_keywords": ["大重量深蹲", "大重量硬拉"]
-    }
+    # 默认空配置（当domain_adapter未配置时使用）
 }
 
 
 # ============ 训练目标与动作特征匹配 ============
+# 注意：此处保留空配置作为默认值
+# 实际数据应通过domain_adapter.get_goal_preferences()获取
+# 框架层领域无关 - Requirements 6.1, 6.2
 
 GOAL_EXERCISE_PREFERENCES = {
-    TrainingGoal.MUSCLE_GAIN: {
-        "preferred_mechanics": ["compound", "isolation"],
-        "preferred_force": ["push", "pull"],
-        "rep_range": (8, 12),
-        "intensity_range": (0.65, 0.75),
-        "rest_seconds": (60, 90)
-    },
-    TrainingGoal.FAT_LOSS: {
-        "preferred_mechanics": ["compound"],
-        "preferred_force": ["push", "pull"],
-        "rep_range": (12, 20),
-        "intensity_range": (0.50, 0.65),
-        "rest_seconds": (30, 45)
-    },
-    TrainingGoal.STRENGTH: {
-        "preferred_mechanics": ["compound"],
-        "preferred_force": ["push", "pull"],
-        "rep_range": (1, 5),
-        "intensity_range": (0.85, 1.0),
-        "rest_seconds": (180, 300)
-    },
-    TrainingGoal.ENDURANCE: {
-        "preferred_mechanics": ["compound", "isolation"],
-        "preferred_force": ["push", "pull", "hold"],
-        "rep_range": (15, 25),
-        "intensity_range": (0.40, 0.60),
-        "rest_seconds": (15, 30)
-    },
-    TrainingGoal.REHABILITATION: {
-        "preferred_mechanics": ["isolation"],
-        "preferred_force": ["hold"],
-        "preferred_kinetic_chain": ["closed_chain"],
-        "rep_range": (12, 20),
-        "intensity_range": (0.30, 0.50),
-        "rest_seconds": (60, 90)
-    }
+    # 默认空配置（当domain_adapter未配置时使用）
 }
 
 
@@ -216,6 +142,10 @@ class Layer3RuleEngine:
     - 18.4: goal_alignment_constraint（目标对齐约束）
     - 18.5: progressive_overload_constraint（渐进超负荷约束）
     - 18.6: nutrition_constraint（营养约束）
+    
+    框架层领域无关 - Requirements 6.1, 6.2:
+    - 所有领域特定数据通过domain_adapter获取
+    - 框架层不包含硬编码的健身数据
     """
     
     # 规则列表（按执行顺序）
@@ -240,17 +170,68 @@ class Layer3RuleEngine:
         "nutrition_constraint",
     ]
     
-    def __init__(self, neo4j_client=None):
+    def __init__(self, neo4j_client=None, domain_adapter=None):
         """
         初始化Layer3规则引擎
         
         Args:
             neo4j_client: Neo4j客户端（可选，用于查询关系数据）
+            domain_adapter: 领域适配器（用于获取领域特定配置）
         """
         self.neo4j_client = neo4j_client
+        self.domain_adapter = domain_adapter
         self.execution_logs: List[Layer3ExecutionLog] = []
         
+        # 从domain_adapter加载领域特定配置
+        self._load_domain_config()
+        
         logger.info("Layer3RuleEngine initialized with %d rules", len(self.RULES))
+    
+    def _load_domain_config(self):
+        """从domain_adapter加载领域特定配置"""
+        if self.domain_adapter:
+            # 加载肌肉恢复时间配置
+            if hasattr(self.domain_adapter, 'get_muscle_recovery_hours'):
+                self._muscle_recovery_hours = self.domain_adapter.get_muscle_recovery_hours()
+            else:
+                self._muscle_recovery_hours = MUSCLE_RECOVERY_HOURS
+            
+            # 加载体态问题配置
+            if hasattr(self.domain_adapter, 'get_postural_issue_config'):
+                self._postural_issue_config = self.domain_adapter.get_postural_issue_config()
+            else:
+                self._postural_issue_config = POSTURAL_ISSUE_MUSCLES
+            
+            # 加载目标偏好配置
+            if hasattr(self.domain_adapter, 'get_goal_preferences'):
+                self._goal_preferences = self.domain_adapter.get_goal_preferences()
+            else:
+                self._goal_preferences = GOAL_EXERCISE_PREFERENCES
+            
+            # 加载体型偏好配置
+            if hasattr(self.domain_adapter, 'get_body_type_preferences'):
+                self._body_type_preferences = self.domain_adapter.get_body_type_preferences()
+            else:
+                self._body_type_preferences = {}
+            
+            # 加载关节关键词配置
+            if hasattr(self.domain_adapter, 'get_joint_keywords'):
+                self._joint_keywords = self.domain_adapter.get_joint_keywords()
+            else:
+                self._joint_keywords = {}
+            
+            logger.info(f"从domain_adapter加载领域配置: "
+                       f"recovery_hours={len(self._muscle_recovery_hours)}, "
+                       f"postural_issues={len(self._postural_issue_config)}, "
+                       f"goal_prefs={len(self._goal_preferences)}")
+        else:
+            # 使用默认空配置
+            self._muscle_recovery_hours = MUSCLE_RECOVERY_HOURS
+            self._postural_issue_config = POSTURAL_ISSUE_MUSCLES
+            self._goal_preferences = GOAL_EXERCISE_PREFERENCES
+            self._body_type_preferences = {}
+            self._joint_keywords = {}
+            logger.warning("未配置domain_adapter，使用默认空配置")
     
     async def apply_all_rules(
         self,
@@ -496,6 +477,9 @@ class Layer3RuleEngine:
         3. 绝对禁忌：完全排除
         4. 相对禁忌：降低优先级但不完全排除
         5. 高负荷关节动作优先排除
+        
+        框架层领域无关 - Requirements 6.1, 6.2:
+        - 关节关键词配置通过domain_adapter获取
         """
         health_profile = user_profile.get("health_profile", {})
         injuries = health_profile.get("injuries", [])
@@ -524,18 +508,11 @@ class Layer3RuleEngine:
         if not injured_joints:
             return candidates, {"skipped": True, "reason": "无活跃关节伤病"}
         
-        # 关节关键词映射（扩展版）
-        joint_keywords = {
-            "肩": ["肩", "shoulder", "三角肌", "deltoid", "肩袖", "rotator"],
-            "膝": ["膝", "knee", "股四头肌", "quadriceps", "髌骨", "patella"],
-            "腰": ["腰", "lower back", "竖脊肌", "erector", "腰椎", "lumbar"],
-            "颈": ["颈", "neck", "颈椎", "cervical"],
-            "肘": ["肘", "elbow", "肱", "triceps", "biceps"],
-            "腕": ["腕", "wrist", "前臂", "forearm"],
-            "踝": ["踝", "ankle", "小腿", "calf"],
-            "髋": ["髋", "hip", "臀", "glute", "髋关节"],
-            "脊柱": ["脊柱", "spine", "背", "back"],
-        }
+        # 使用实例变量（从domain_adapter加载）
+        joint_keywords = self._joint_keywords
+        
+        if not joint_keywords:
+            return candidates, {"skipped": True, "reason": "未配置关节关键词数据"}
         
         # 过滤涉及受伤关节的动作
         safe_candidates = []
@@ -631,6 +608,9 @@ class Layer3RuleEngine:
         - 获取用户体态问题
         - 优先推荐矫正动作（CORRECTS关系）
         - 降低或排除加重动作（AGGRAVATES关系）
+        
+        框架层领域无关 - Requirements 6.1, 6.2:
+        - 体态问题配置通过domain_adapter获取
         """
         health_profile = user_profile.get("health_profile", {})
         postural_issues = health_profile.get("postural_issues", [])
@@ -638,14 +618,20 @@ class Layer3RuleEngine:
         if not postural_issues:
             return candidates, {"skipped": True, "reason": "无体态问题"}
         
+        # 使用实例变量（从domain_adapter加载）
+        postural_config = self._postural_issue_config
+        
+        if not postural_config:
+            return candidates, {"skipped": True, "reason": "未配置体态问题数据"}
+        
         corrective_keywords = set()
         aggravating_keywords = set()
         
         # 收集所有体态问题的关键词
         for issue in postural_issues:
             issue_name = issue if isinstance(issue, str) else issue.get("name", "")
-            if issue_name in POSTURAL_ISSUE_MUSCLES:
-                config = POSTURAL_ISSUE_MUSCLES[issue_name]
+            if issue_name in postural_config:
+                config = postural_config[issue_name]
                 corrective_keywords.update(config.get("corrective_keywords", []))
                 aggravating_keywords.update(config.get("aggravating_keywords", []))
         
@@ -701,9 +687,18 @@ class Layer3RuleEngine:
         - 获取最近训练记录
         - 计算各肌群的恢复状态
         - 降低未恢复肌群动作的优先级
+        
+        框架层领域无关 - Requirements 6.1, 6.2:
+        - 恢复时间配置通过domain_adapter获取
         """
         if not recent_training:
             return candidates, {"skipped": True, "reason": "无最近训练记录"}
+        
+        # 使用实例变量（从domain_adapter加载）
+        recovery_hours_config = self._muscle_recovery_hours
+        
+        if not recovery_hours_config:
+            return candidates, {"skipped": True, "reason": "未配置恢复时间数据"}
         
         # 计算各肌群的恢复状态
         now = datetime.now()
@@ -735,9 +730,9 @@ class Layer3RuleEngine:
                     target_muscles = [target_muscles]
                 
                 for muscle in target_muscles:
-                    recovery_hours = MUSCLE_RECOVERY_HOURS.get(
+                    recovery_hours = recovery_hours_config.get(
                         muscle, 
-                        MUSCLE_RECOVERY_HOURS["default"]
+                        recovery_hours_config.get("default", 48)
                     )
                     remaining = recovery_hours - hours_since
                     
@@ -792,6 +787,9 @@ class Layer3RuleEngine:
         - 外胚型（瘦长）：优先复合动作、大重量
         - 中胚型（肌肉）：均衡推荐
         - 内胚型（圆润）：优先高代谢动作、复合动作
+        
+        框架层领域无关 - Requirements 6.1, 6.2:
+        - 体型偏好配置通过domain_adapter获取
         """
         basic_info = user_profile.get("basic_info", {})
         body_type = basic_info.get("body_type", "").lower()
@@ -799,24 +797,11 @@ class Layer3RuleEngine:
         if not body_type or body_type == "unknown":
             return candidates, {"skipped": True, "reason": "未设置体型"}
         
-        # 体型偏好配置
-        body_type_preferences = {
-            "ectomorph": {
-                "preferred_mechanics": ["compound"],
-                "boost_keywords": ["深蹲", "硬拉", "卧推", "划船"],
-                "description": "外胚型优先复合动作"
-            },
-            "mesomorph": {
-                "preferred_mechanics": ["compound", "isolation"],
-                "boost_keywords": [],
-                "description": "中胚型均衡推荐"
-            },
-            "endomorph": {
-                "preferred_mechanics": ["compound"],
-                "boost_keywords": ["深蹲", "硬拉", "波比跳", "登山者"],
-                "description": "内胚型优先高代谢动作"
-            }
-        }
+        # 使用实例变量（从domain_adapter加载）
+        body_type_preferences = self._body_type_preferences
+        
+        if not body_type_preferences:
+            return candidates, {"skipped": True, "reason": "未配置体型偏好数据"}
         
         preferences = body_type_preferences.get(body_type, {})
         if not preferences:
@@ -974,28 +959,38 @@ class Layer3RuleEngine:
         - 减脂：优先高代谢动作
         - 力量：优先大重量复合动作
         - 康复：优先低风险、闭链动作
+        
+        框架层领域无关 - Requirements 6.1, 6.2:
+        - 目标偏好配置通过domain_adapter获取
         """
         fitness_goals = user_profile.get("fitness_goals", {})
         primary_goal = fitness_goals.get("primary_goal", "general_fitness").lower()
         
-        # 目标映射
+        # 目标映射（通用映射，不依赖领域）
         goal_mapping = {
-            "增肌": TrainingGoal.MUSCLE_GAIN,
-            "muscle_gain": TrainingGoal.MUSCLE_GAIN,
-            "减脂": TrainingGoal.FAT_LOSS,
-            "fat_loss": TrainingGoal.FAT_LOSS,
-            "力量": TrainingGoal.STRENGTH,
-            "strength": TrainingGoal.STRENGTH,
-            "耐力": TrainingGoal.ENDURANCE,
-            "endurance": TrainingGoal.ENDURANCE,
-            "塑形": TrainingGoal.BODY_SHAPING,
-            "body_shaping": TrainingGoal.BODY_SHAPING,
-            "康复": TrainingGoal.REHABILITATION,
-            "rehabilitation": TrainingGoal.REHABILITATION,
+            "增肌": "muscle_gain",
+            "muscle_gain": "muscle_gain",
+            "减脂": "fat_loss",
+            "fat_loss": "fat_loss",
+            "力量": "strength",
+            "strength": "strength",
+            "耐力": "endurance",
+            "endurance": "endurance",
+            "塑形": "body_shaping",
+            "body_shaping": "body_shaping",
+            "康复": "rehabilitation",
+            "rehabilitation": "rehabilitation",
         }
         
-        goal = goal_mapping.get(primary_goal, TrainingGoal.GENERAL_FITNESS)
-        preferences = GOAL_EXERCISE_PREFERENCES.get(goal, {})
+        goal_key = goal_mapping.get(primary_goal, "general_fitness")
+        
+        # 使用实例变量（从domain_adapter加载）
+        goal_preferences = self._goal_preferences
+        
+        if not goal_preferences:
+            return candidates, {"skipped": True, "reason": "未配置目标偏好数据"}
+        
+        preferences = goal_preferences.get(goal_key, {})
         
         if not preferences:
             return candidates, {"skipped": True, "reason": f"未知目标: {primary_goal}"}
@@ -1036,7 +1031,7 @@ class Layer3RuleEngine:
         
         return sorted_candidates, {
             "primary_goal": primary_goal,
-            "goal_enum": goal.value,
+            "goal_key": goal_key,
             "preferred_mechanics": preferred_mechanics
         }
 
