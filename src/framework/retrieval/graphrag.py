@@ -7,13 +7,19 @@ MCO统一GraphRAG入口 - 为所有MCP提供Neo4j+Qdrant访问
 1. 语义向量检索 (Qdrant)
 2. 图关系查询 (Neo4j)
 3. 混合检索 (Vector Recall + Graph Filter)
-4. 增强推理生成 (Phase 3.5)
+
+注意：三层检索（three_layer）已委托给 TrueThreeLayerEngine
+- 详见 true_three_layer_engine.py
 
 优势：
 - 复用已有基础设施：DAML-RAG已部署的Neo4j(3,654节点) + Qdrant
 - 避免重复部署：其他TypeScript MCP无需安装数据库依赖
 - 统一入口：所有MCP通过MCP协议调用MCO的GraphRAG
 - 多层次推理：图关系 + 专家知识 + 个性化
+
+版本：v2.4.0
+更新日期：2026-01-11
+重构说明：移除重复的三层检索实现，委托给TrueThreeLayerEngine
 """
 
 import logging
@@ -85,29 +91,36 @@ class GraphRAGQueryTool:
     - KnowledgeGraphFull (kg_full.py)
     - Neo4jManager (neo4j_manager.py)
     - VectorSearchEngine (vector_search_engine.py)
+    
+    注意：三层检索（three_layer）已委托给 TrueThreeLayerEngine
     """
     
-    def __init__(self, kg_full, domain_adapter=None):
+    def __init__(self, kg_full, domain_adapter=None, three_layer_engine=None):
         """
         初始化GraphRAG查询工具
 
         Args:
             kg_full: KnowledgeGraphFull实例（已在DAML-RAG中初始化）
             domain_adapter: 领域适配器实例（用于获取领域特定配置）
+            three_layer_engine: TrueThreeLayerEngine实例（用于三层检索）
         """
         self.kg = kg_full
         self.neo4j = kg_full.neo4j if hasattr(kg_full, 'neo4j') else None
         self.vector_search = kg_full.vector_search if hasattr(kg_full, 'vector_search') else None
         self.domain_adapter = domain_adapter
+        self.three_layer_engine = three_layer_engine  # ✅ 新增：三层检索引擎
 
         logger.info("✅ GraphRAG查询工具已初始化 (复用已有Neo4j+Qdrant)")
+        if three_layer_engine:
+            logger.info("  → 三层检索已委托给 TrueThreeLayerEngine")
 
         # 统计信息
         self.stats = {
             "total_queries": 0,
             "semantic_queries": 0,
             "graph_queries": 0,
-            "hybrid_queries": 0
+            "hybrid_queries": 0,
+            "three_layer_queries": 0  # ✅ 新增：三层检索计数
         }
     
     async def query(self, input: dict) -> dict:
@@ -167,62 +180,56 @@ class GraphRAGQueryTool:
             three_layer_info = None
 
             if query_type == "three_layer":
-                # === 真正的三层检索架构 ===
-                # Layer 1: 向量语义检索 (召回候选集)
-                layer1_results = await self._semantic_search(
-                    query_text, domain, top_k * 3, min_similarity, filters
-                )
-                logger.info(f"✓ Layer 1完成: {len(layer1_results)}个向量结果")
-
-                # Layer 2: 图谱关系推理 (精确筛选)
-                layer2_results = await self._graph_reasoning(
-                    query_text, domain, layer1_results, top_k * 2
-                )
-                logger.info(f"✓ Layer 2完成: {len(layer2_results)}个图谱结果")
-
-                # 选择进入Layer 3的候选
-                if layer2_results:
-                    candidates_for_layer3 = layer2_results
-                    layer2_source = "图谱推理"
+                # === 三层检索委托给 TrueThreeLayerEngine ===
+                # 避免代码重复，使用专门的三层检索引擎
+                if self.three_layer_engine:
+                    logger.info("→ 三层检索委托给 TrueThreeLayerEngine")
+                    three_layer_result = await self.three_layer_engine.execute_three_layer_query(
+                        query=query_text,
+                        domain=domain,
+                        user_profile=user_profile,
+                        filters=filters,
+                        top_k=top_k,
+                        safety_check=True
+                    )
+                    
+                    # 转换结果格式
+                    results = three_layer_result.final_results
+                    three_layer_info = {
+                        "layers_executed": 3,
+                        "layer1": {
+                            "name": "Layer 1: 向量语义检索",
+                            "source": three_layer_result.layer_1_result.metadata.get("source", "qdrant"),
+                            "count": len(three_layer_result.layer_1_result.results),
+                            "confidence": three_layer_result.layer_1_result.confidence
+                        },
+                        "layer2": {
+                            "name": "Layer 2: 图谱关系推理",
+                            "source": three_layer_result.layer_2_result.metadata.get("source", "neo4j"),
+                            "count": len(three_layer_result.layer_2_result.results),
+                            "confidence": three_layer_result.layer_2_result.confidence
+                        },
+                        "layer3": {
+                            "name": "Layer 3: 业务规则验证",
+                            "source": "rule_engine",
+                            "count": len(three_layer_result.layer_3_result.results),
+                            "confidence": three_layer_result.layer_3_result.confidence
+                        },
+                        "pipeline": f"向量({len(three_layer_result.layer_1_result.results)}) → 图谱({len(three_layer_result.layer_2_result.results)}) → 规则({len(three_layer_result.layer_3_result.results)}) → 最终({len(results)})",
+                        "total_execution_time_ms": three_layer_result.total_execution_time_ms
+                    }
+                    self.stats["three_layer_queries"] += 1
                 else:
-                    logger.warning("Layer 2未返回结果，使用Layer 1结果")
-                    candidates_for_layer3 = layer1_results[:top_k * 2]
-                    layer2_source = "向量降级"
-
-                # Layer 3: 业务规则验证 (安全/器械/容量检查)
-                layer3_results = await self._business_rules_validation(
-                    query_text, candidates_for_layer3, user_profile, top_k
-                )
-                logger.info(f"✓ Layer 3完成: {len(layer3_results)}个通过规则验证")
-
-                # 构建最终结果
-                results = layer3_results if layer3_results else (layer2_results or layer1_results)
-
-                # 构建三层检索信息
-                three_layer_info = {
-                    "layers_executed": 3,
-                    "layer1": {
-                        "name": "Layer 1: 向量语义检索",
-                        "source": "Qdrant",
-                        "count": len(layer1_results),
-                        "confidence": 0.8
-                    },
-                    "layer2": {
-                        "name": "Layer 2: 图谱关系推理",
-                        "source": "Neo4j" if layer2_results else "向量降级",
-                        "count": len(layer2_results),
-                        "note": layer2_source
-                    },
-                    "layer3": {
-                        "name": "Layer 3: 业务规则验证",
-                        "source": "规则引擎",
-                        "count": len(layer3_results),
-                        "rules_applied": ["fitness_level", "safety", "equipment", "volume"]
-                    },
-                    "pipeline": f"向量({len(layer1_results)}) → 图谱({len(layer2_results)}) → 规则({len(layer3_results)}) → 最终({len(results)})"
-                }
-
-                self.stats["semantic_queries"] += 1
+                    # 降级：如果没有三层检索引擎，使用混合检索
+                    logger.warning("⚠️ TrueThreeLayerEngine未初始化，降级为混合检索")
+                    results = await self._hybrid_query(
+                        query_text, domain, top_k, min_similarity, filters
+                    )
+                    three_layer_info = {
+                        "layers_executed": 2,
+                        "note": "降级为混合检索（TrueThreeLayerEngine未初始化）"
+                    }
+                    self.stats["hybrid_queries"] += 1
 
             elif query_type == QueryType.SEMANTIC_SEARCH:
                 results = await self._semantic_search(
@@ -463,271 +470,15 @@ class GraphRAGQueryTool:
                 query_text, domain, top_k, min_similarity, filters
             )
 
-    async def _graph_reasoning(
-        self,
-        query_text: str,
-        domain: str,
-        vector_results: List[Dict],
-        top_k: int
-    ) -> List[Dict]:
-        """
-        Layer 2: 图谱关系推理 (Neo4j)
-
-        基于向量检索结果，进行图关系精确筛选和多跳推理
-        """
-        if not self.neo4j:
-            logger.warning("Neo4j未初始化，跳过图推理")
-            return []
-
-        try:
-            # 提取候选节点ID
-            # 注意：Qdrant payload中使用exercise_id，Neo4j中使用id（都是整数）
-            candidate_ids = []
-            failed_extractions = []
-            
-            for i, r in enumerate(vector_results):
-                id_val = None
-                extraction_source = None
-                
-                # 尝试多种方式提取ID
-                if isinstance(r, SearchResult):
-                    if r.payload:
-                        # 优先使用exercise_id（Qdrant标准字段）
-                        if "exercise_id" in r.payload:
-                            id_val = r.payload["exercise_id"]
-                            extraction_source = "payload.exercise_id"
-                        # 然后尝试id字段
-                        elif "id" in r.payload:
-                            id_val = r.payload["id"]
-                            extraction_source = "payload.id"
-                        # 最后尝试node_id
-                        elif "node_id" in r.payload:
-                            id_val = r.payload["node_id"]
-                            extraction_source = "payload.node_id"
-                    
-                    # 如果payload中没有，尝试使用SearchResult的id
-                    if id_val is None:
-                        id_val = r.id
-                        extraction_source = "SearchResult.id"
-                        
-                elif isinstance(r, dict):
-                    # 字典格式，按优先级提取
-                    if "exercise_id" in r:
-                        id_val = r["exercise_id"]
-                        extraction_source = "dict.exercise_id"
-                    elif "id" in r:
-                        id_val = r["id"]
-                        extraction_source = "dict.id"
-                    elif "node_id" in r:
-                        id_val = r["node_id"]
-                        extraction_source = "dict.node_id"
-                else:
-                    # 其他对象类型，尝试属性访问
-                    id_val = getattr(r, "exercise_id", None) or getattr(r, "id", None)
-                    extraction_source = "attribute"
-                
-                # 转换为整数并添加到候选列表
-                if id_val is not None:
-                    try:
-                        int_id = int(id_val)
-                        candidate_ids.append(int_id)
-                        logger.debug(f"  ✓ 提取ID #{i+1}: {int_id} (来源: {extraction_source})")
-                    except (ValueError, TypeError) as e:
-                        failed_extractions.append({
-                            "index": i,
-                            "value": id_val,
-                            "type": type(id_val).__name__,
-                            "source": extraction_source,
-                            "error": str(e)
-                        })
-                        logger.warning(f"  ✗ 无法转换ID为整数 #{i+1}: {id_val} (类型: {type(id_val).__name__}, 来源: {extraction_source})")
-                else:
-                    failed_extractions.append({
-                        "index": i,
-                        "value": None,
-                        "type": type(r).__name__,
-                        "source": "未找到ID字段",
-                        "error": "ID字段不存在"
-                    })
-                    logger.warning(f"  ✗ 未找到ID字段 #{i+1} (结果类型: {type(r).__name__})")
-
-            # 记录提取统计
-            logger.info(f"→ ID提取完成: 成功{len(candidate_ids)}/{len(vector_results)}, 失败{len(failed_extractions)}")
-            
-            if failed_extractions:
-                logger.warning(f"→ ID提取失败详情: {failed_extractions[:3]}...")  # 只显示前3个
-            
-            if not candidate_ids:
-                logger.warning("❌ 向量结果无有效ID，跳过图推理")
-                return []
-            
-            logger.info(f"→ 提取到{len(candidate_ids)}个候选ID: {candidate_ids[:5]}...")
-
-            # 提取肌肉关键词（健身领域）
-            muscle_keywords = self._extract_muscle_keywords(query_text)
-            logger.info(f"→ 提取到{len(muscle_keywords)}个肌肉关键词: {muscle_keywords[:3]}...")
-            
-            graph_results = []
-
-            # 构建Cypher查询
-            cypher_query = self._build_three_layer_cypher_query(
-                candidate_ids, muscle_keywords, domain, top_k
-            )
-            logger.debug(f"→ Cypher查询: {cypher_query[:200]}...")
-
-            # 执行图查询（需要传递参数）
-            query_params = {
-                "candidate_ids": candidate_ids,
-                "muscle_keywords": muscle_keywords,
-                "limit": top_k
-            }
-            logger.info(f"→ 执行Neo4j图查询 (候选ID数: {len(candidate_ids)}, 肌肉关键词数: {len(muscle_keywords)})")
-            
-            try:
-                results = self.neo4j.execute_query(cypher_query, query_params)
-                logger.info(f"→ Neo4j返回{len(results)}条记录")
-            except Exception as neo4j_error:
-                logger.error(f"❌ Neo4j查询失败: {neo4j_error}", exc_info=True)
-                logger.error(f"   查询参数: candidate_ids={candidate_ids[:5]}..., muscle_keywords={muscle_keywords[:3]}...")
-                return []
-
-            # 转换为统一格式
-            for i, record in enumerate(results):
-                try:
-                    graph_result = {
-                        "id": record.get("id"),
-                        "name_zh": record.get("name_zh", ""),
-                        "name_en": record.get("name_en", ""),
-                        "equipment": record.get("equipment", ""),
-                        "difficulty": record.get("difficulty", ""),
-                        "target_muscle": record.get("target_muscle", ""),
-                        "relationship_type": record.get("relationship_type", ""),
-                        "training_volume": {
-                            "mev": record.get("mev"),
-                            "mav": record.get("mav"),
-                            "mrv": record.get("mrv")
-                        },
-                        "source": "neo4j_graph_reasoning",
-                        "score": 0.9  # 图查询结果默认高分
-                    }
-                    graph_results.append(graph_result)
-                    logger.debug(f"  ✓ 转换记录 #{i+1}: ID={graph_result['id']}, 名称={graph_result['name_zh']}")
-                except Exception as convert_error:
-                    logger.warning(f"  ✗ 转换记录 #{i+1} 失败: {convert_error}, 记录内容: {record}")
-                    continue
-
-            logger.info(f"✓ Layer 2图谱推理完成: {len(graph_results)}个结果")
-            return graph_results
-
-        except Exception as e:
-            logger.error(f"❌ Layer 2图谱推理失败: {e}", exc_info=True)
-            return []
-
-    async def _business_rules_validation(
-        self,
-        query_text: str,
-        candidates: List[Union[Dict, SearchResult]],
-        user_profile: Optional[Dict],
-        top_k: int
-    ) -> List[Union[Dict, SearchResult]]:
-        """
-        Layer 3: 业务规则验证
-
-        应用安全、器械、训练容量等业务规则进行最终筛选
-        """
-        validated_results = []
-        user_profile = user_profile or {}
-
-        logger.info(f"→ Layer 3: 业务规则验证 (候选: {len(candidates)})")
-        logger.info(f"→ 用户档案: fitness_level={user_profile.get('fitness_level')}, equipment={user_profile.get('available_equipment')}, health={user_profile.get('health_conditions')}")
-
-        for i, candidate in enumerate(candidates):
-            try:
-                # 将SearchResult转换为Dict格式以支持.get()方法
-                candidate_dict = self._normalize_candidate(candidate)
-                
-                exercise_name = candidate_dict.get('name_zh') or candidate_dict.get('name', '未知')
-                logger.debug(f"→ 验证候选 {i+1}/{len(candidates)}: {exercise_name}")
-                logger.debug(f"  - 字段: equipment={candidate_dict.get('equipment')}, difficulty={candidate_dict.get('difficulty')}")
-
-                # 规则1: 经验等级匹配
-                if not self._match_fitness_level(candidate_dict, user_profile):
-                    logger.debug(f"  ✗ 规则1失败: 经验等级不匹配")
-                    continue
-
-                # 规则2: 安全性检查
-                if not self._validate_safety(candidate_dict, user_profile):
-                    logger.debug(f"  ✗ 规则2失败: 安全性检查未通过")
-                    continue
-
-                # 规则3: 器械可用性
-                if not self._check_equipment_availability(candidate_dict, user_profile):
-                    logger.debug(f"  ✗ 规则3失败: 器械不可用")
-                    continue
-
-                # 规则4: 训练容量评估
-                volume_score = self._assess_training_volume(candidate_dict, user_profile)
-                logger.debug(f"  ✓ 所有规则通过, 容量评分: {volume_score}")
-
-                # 添加规则评分
-                candidate_dict["rule_validation_score"] = volume_score
-                candidate_dict["validation_passed"] = True
-                candidate_dict["three_layer_validated"] = True
-
-                validated_results.append(candidate)
-
-                if len(validated_results) >= top_k:
-                    break
-
-            except Exception as e:
-                logger.warning(f"规则验证异常: {e}", exc_info=True)
-                continue
-
-        logger.info(f"✓ Layer 3完成: {len(validated_results)}/{len(candidates)}通过验证")
-        return validated_results
-
-    def _normalize_candidate(self, candidate: Union[Dict, SearchResult]) -> Dict:
-        """
-        将SearchResult对象转换为Dict格式以支持.get()方法
-        同时统一字段名（Qdrant使用_zh后缀，业务规则不使用）
-
-        Args:
-            candidate: 可能是Dict或SearchResult对象
-
-        Returns:
-            Dict格式的候选对象，字段名已统一
-        """
-        result = {}
-        
-        # 提取原始数据
-        if isinstance(candidate, dict):
-            result = candidate.copy()
-        elif isinstance(candidate, SearchResult):
-            result = candidate.payload.copy() if candidate.payload else {}
-            result["id"] = result.get("id") or result.get("exercise_id") or candidate.id
-            result["score"] = candidate.score
-        else:
-            # 未知类型，尝试转换为Dict
-            try:
-                result = dict(candidate)
-            except Exception:
-                logger.warning(f"无法转换候选对象为Dict: {type(candidate)}")
-                return {}
-        
-        # 统一字段名：将_zh后缀的字段映射到无后缀版本
-        # Qdrant: equipment_zh, name_zh, primary_muscle_zh
-        # 业务规则: equipment, name, primary_muscle
-        field_mappings = {
-            "equipment_zh": "equipment",
-            "name_zh": "name",
-            "primary_muscle_zh": "primary_muscle"
-        }
-        
-        for qdrant_field, standard_field in field_mappings.items():
-            if qdrant_field in result and standard_field not in result:
-                result[standard_field] = result[qdrant_field]
-        
-        return result
+    # ============================================================
+    # 注意：以下三层检索方法已移至 TrueThreeLayerEngine
+    # - _graph_reasoning → TrueThreeLayerEngine._execute_layer2_graph_reasoning
+    # - _business_rules_validation → TrueThreeLayerEngine._execute_layer3_business_rules
+    # - _normalize_candidate → 保留在TrueThreeLayerEngine中
+    # - _build_three_layer_cypher_query → 通过domain_adapter提供
+    # 
+    # 如需使用三层检索，请通过 three_layer_engine 参数传入 TrueThreeLayerEngine 实例
+    # ============================================================
 
     def _extract_muscle_keywords(self, query: str) -> List[str]:
         """从查询中提取肌肉关键词
@@ -751,136 +502,10 @@ class GraphRAGQueryTool:
 
         return list(set(keywords))  # 去重
 
-    def _build_three_layer_cypher_query(
-        self,
-        candidate_ids: List[str],
-        muscle_keywords: List[str],
-        domain: str,
-        top_k: int
-    ) -> str:
-        """为三层检索构建Cypher查询
-        
-        框架层领域无关 - Requirements 6.1, 6.2:
-        - 使用domain_adapter提供的Cypher模板
-        """
-        # 优先使用domain_adapter的Cypher模板
-        if self.domain_adapter and hasattr(self.domain_adapter, 'get_cypher_templates'):
-            cypher_templates = self.domain_adapter.get_cypher_templates()
-            
-            # 根据是否有关键词选择不同模板
-            if muscle_keywords and "three_layer_with_keywords" in cypher_templates:
-                return cypher_templates["three_layer_with_keywords"]
-            elif "three_layer_basic" in cypher_templates:
-                return cypher_templates["three_layer_basic"]
-            elif "entity_search" in cypher_templates:
-                # 降级到基础实体搜索
-                return cypher_templates["entity_search"]
-        
-        # 降级：使用通用查询（不指定标签）
-        cypher = """
-        MATCH (n)
-        WHERE n.id IN $candidate_ids
-        RETURN
-            n.id AS id,
-            n.name AS name,
-            n.name_zh AS name_zh
-        LIMIT $limit
-        """
-        
-        logger.warning("未配置domain_adapter，使用通用Cypher查询")
-        return cypher
-
-    def _match_fitness_level(self, exercise: Dict, user_profile: Dict) -> bool:
-        """匹配健身经验等级"""
-        if not user_profile:
-            return True
-
-        user_level = user_profile.get("fitness_level", "intermediate").lower()
-        # 使用统一字段名：difficulty_zh / difficulty_en
-        exercise_difficulty = (exercise.get("difficulty_zh") or exercise.get("difficulty_en") or "intermediate").lower()
-
-        # 等级映射
-        level_hierarchy = {
-            "beginner": ["beginner", "easy", "novice", "初学者", "简单"],
-            "intermediate": ["beginner", "intermediate", "moderate", "novice", "初学者", "中级", "中等"],
-            "advanced": ["intermediate", "advanced", "hard", "elite", "中级", "高级", "困难"]
-        }
-
-        allowed_difficulties = level_hierarchy.get(user_level, ["intermediate"])
-        result = any(diff in exercise_difficulty for diff in allowed_difficulties)
-        
-        if not result:
-            logger.debug(f"    经验等级不匹配: user={user_level}, exercise={exercise_difficulty}, allowed={allowed_difficulties}")
-        
-        return result
-
-    def _validate_safety(self, exercise: Dict, user_profile: Dict) -> bool:
-        """安全性验证"""
-        if not user_profile:
-            return True
-
-        # 检查禁忌症
-        contraindications = exercise.get("contraindications", [])
-        user_conditions = user_profile.get("medical_conditions", [])
-
-        for condition in user_conditions:
-            if condition in contraindications:
-                logger.debug(f"安全过滤: {exercise.get('name_zh')} - 禁忌症 {condition}")
-                return False
-
-        # 年龄限制
-        user_age = user_profile.get("age", 30)
-        if user_age > 60:
-            # 使用统一字段名：difficulty_zh / difficulty_en
-            difficulty = (exercise.get("difficulty_zh") or exercise.get("difficulty_en") or "").lower()
-            if "advanced" in difficulty or "elite" in difficulty or "高级" in difficulty:
-                logger.debug(f"安全过滤: {exercise.get('name_zh')} - 高龄不适合高难度")
-                return False
-
-        return True
-
-    def _check_equipment_availability(self, exercise: Dict, user_profile: Dict) -> bool:
-        """检查器械可用性"""
-        if not user_profile:
-            return True
-
-        available_equipment = user_profile.get("available_equipment", [])
-        if not available_equipment:
-            return True  # 未指定器械限制
-
-        required_equipment = exercise.get("equipment", "")
-        
-        # 处理None值：Neo4j中equipment字段可能是字符串"None"或Python None
-        if not required_equipment or required_equipment == "None" or required_equipment is None:
-            return True  # 无器械要求，通过验证
-
-        # 检查器械是否可用
-        if required_equipment not in available_equipment and "全部" not in available_equipment:
-            logger.debug(f"    器械不可用: 需要={required_equipment}, 可用={available_equipment}")
-            return False
-
-        return True
-
-    def _assess_training_volume(self, exercise: Dict, user_profile: Dict) -> float:
-        """评估训练容量合理性"""
-        volume_data = exercise.get("training_volume", {})
-        if not volume_data:
-            return 0.8  # 无训练容量数据,给默认分
-
-        mev = volume_data.get("mev", 0)
-        mav = volume_data.get("mav", 0)
-        mrv = volume_data.get("mrv", 0)
-
-        # 基于MEV/MAV/MRV评分
-        if mev and mav and mrv:
-            # 完整数据,高分
-            return 1.0
-        elif mev or mav:
-            # 部分数据,中分
-            return 0.9
-        else:
-            # 无数据,低分
-            return 0.7
+    # ============================================================
+    # 以下业务规则方法已移至 Layer3RuleEngine (layer3_rule_engine.py)
+    # 保留空实现以保持向后兼容性，实际逻辑由 TrueThreeLayerEngine 调用 Layer3RuleEngine
+    # ============================================================
 
     def _build_qdrant_filters(self, domain: str, filters: Dict, query_text: str = "") -> Optional[Dict]:
         """构建Qdrant过滤条件
@@ -1115,12 +740,15 @@ class GraphRAGQueryTool:
             "hybrid_rate": (
                 f"{self.stats['hybrid_queries'] / self.stats['total_queries'] * 100:.1f}%"
                 if self.stats['total_queries'] > 0 else "0.0%"
+            ),
+            "three_layer_rate": (
+                f"{self.stats['three_layer_queries'] / self.stats['total_queries'] * 100:.1f}%"
+                if self.stats['total_queries'] > 0 else "0.0%"
             )
         }
 
-        # BGE-M3增强器在v2.3.0架构简化中已移除
-        # 保留标识以保持API兼容性
-        stats["bge_m3_enabled"] = False
+        # 三层检索已委托给 TrueThreeLayerEngine
+        stats["three_layer_delegated"] = self.three_layer_engine is not None
 
         return stats
 

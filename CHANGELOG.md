@@ -1,8 +1,55 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.19.0
+**版本**: v9.20.0
 **更新日期**: 2026-01-11
-**状态**: ✅ 框架层领域泄漏修复完成（任务11全部完成）
+**状态**: ✅ 三层检索代码整合完成
+
+---
+
+### v9.20.0 (2026-01-11) - 三层检索代码整合 ✅
+
+**变更类型**: 🔧 重构（代码整合）
+
+**需求背景**:
+- `graphrag.py` 和 `true_three_layer_engine.py` 存在重复的三层检索实现
+- 需要整合为单一实现，减少代码重复和维护成本
+
+**实现内容**:
+
+1. **简化 `graphrag.py`** ✅
+   - 移除重复的三层检索实现（`query_type="three_layer"` 分支）
+   - 移除 `_graph_reasoning` 方法（约160行）
+   - 移除 `_business_rules_validation` 方法（约60行）
+   - 移除 `_normalize_candidate` 方法（约40行）
+   - 移除 `_build_three_layer_cypher_query` 方法（约30行）
+   - 移除业务规则方法（`_match_fitness_level`, `_validate_safety`, `_check_equipment_availability`, `_assess_training_volume`）
+   - 三层检索委托给 `TrueThreeLayerEngine`
+
+2. **更新 `GraphRAGQueryTool` 构造函数** ✅
+   - 新增 `three_layer_engine` 参数
+   - 支持注入 `TrueThreeLayerEngine` 实例
+
+3. **更新 API 路由** ✅
+   - `api/routes/graphrag.py`: 初始化时创建并注入 `TrueThreeLayerEngine`
+   - 保持向后兼容性
+
+4. **代码减少统计**:
+   - `graphrag.py`: 从 1127 行减少到约 750 行（减少约 33%）
+   - 移除约 400 行重复代码
+
+**整合后的调用关系**:
+```
+GraphRAGQueryTool.query(query_type="three_layer")
+    ↓
+TrueThreeLayerEngine.execute_three_layer_query()
+    ├─ Layer 1: 向量语义检索 (Qdrant)
+    ├─ Layer 2: 图谱关系推理 (Neo4j)
+    └─ Layer 3: 业务规则验证 (Layer3RuleEngine)
+```
+
+**影响范围**:
+- `src/framework/retrieval/graphrag.py` - 简化
+- `src/api/routes/graphrag.py` - 更新初始化逻辑
 
 ---
 

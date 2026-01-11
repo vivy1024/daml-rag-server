@@ -117,12 +117,33 @@ def _get_graphrag_tool():
             logger.info("初始化GraphRAG查询工具...")
 
             from ...framework.core.simple_framework_initializer import get_framework_initializer
+            from ...framework.retrieval.true_three_layer_engine import TrueThreeLayerEngine
+            
             initializer = get_framework_initializer()
+            three_layer_engine = None
 
             if initializer and "kg_full" in initializer.components:
                 kg_full = initializer.components["kg_full"]
-                _graphrag_query_tool = GraphRAGQueryTool(kg_full)
-                logger.info("✅ GraphRAG查询工具初始化完成（使用框架kg_full）")
+                
+                # 尝试获取或创建 TrueThreeLayerEngine
+                if "three_layer_engine" in initializer.components:
+                    three_layer_engine = initializer.components["three_layer_engine"]
+                    logger.info("  → 使用框架已初始化的 TrueThreeLayerEngine")
+                else:
+                    # 创建新的 TrueThreeLayerEngine
+                    three_layer_engine = TrueThreeLayerEngine(
+                        graphrag_api_port=os.getenv('API_PORT', '8001'),
+                        neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
+                        neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
+                        neo4j_password=os.getenv('NEO4J_PASSWORD', 'build_body_2024')
+                    )
+                    logger.info("  → 创建新的 TrueThreeLayerEngine")
+                
+                _graphrag_query_tool = GraphRAGQueryTool(
+                    kg_full, 
+                    three_layer_engine=three_layer_engine
+                )
+                logger.info("✅ GraphRAG查询工具初始化完成（使用框架kg_full + TrueThreeLayerEngine）")
             else:
                 from ...framework.retrieval.graph.kg_full import KnowledgeGraphFull
                 kg_full = KnowledgeGraphFull(
@@ -131,12 +152,23 @@ def _get_graphrag_tool():
                     neo4j_password=os.getenv('NEO4J_PASSWORD', 'build_body_2024'),
                     qdrant_host=os.getenv('QDRANT_HOST', 'qdrant'),
                     qdrant_port=int(os.getenv('QDRANT_PORT', '6333')),
-                    qdrant_collection=os.getenv('QDRANT_COLLECTION', 'fitness_exercises_v2'),  # 使用正确的collection名称
-                    # ✅ 修复：使用GTE-Large-zh模型（与Qdrant中存储的向量一致）
+                    qdrant_collection=os.getenv('QDRANT_COLLECTION', 'fitness_exercises_v2'),
                     embedding_model='thenlper/gte-large-zh'
                 )
-                _graphrag_query_tool = GraphRAGQueryTool(kg_full)
-                logger.info("✅ GraphRAG查询工具初始化完成（直接创建kg_full）")
+                
+                # 创建 TrueThreeLayerEngine
+                three_layer_engine = TrueThreeLayerEngine(
+                    graphrag_api_port=os.getenv('API_PORT', '8001'),
+                    neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
+                    neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
+                    neo4j_password=os.getenv('NEO4J_PASSWORD', 'build_body_2024')
+                )
+                
+                _graphrag_query_tool = GraphRAGQueryTool(
+                    kg_full,
+                    three_layer_engine=three_layer_engine
+                )
+                logger.info("✅ GraphRAG查询工具初始化完成（直接创建kg_full + TrueThreeLayerEngine）")
 
         except Exception as e:
             logger.error(f"❌ GraphRAG查询工具初始化失败: {e}", exc_info=True)
