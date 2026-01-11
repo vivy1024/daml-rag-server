@@ -607,7 +607,7 @@ class EnhancedFewShotRetriever:
         self,
         query: str,
         user_profile: Optional[Dict[str, Any]] = None,
-        domain: str = "fitness",
+        domain: str = "general",
         top_k: int = 3
     ) -> List[BestPracticeMatch]:
         """
@@ -616,7 +616,7 @@ class EnhancedFewShotRetriever:
         Args:
             query: 用户查询
             user_profile: 用户档案
-            domain: 领域
+            domain: 领域（框架层默认为general，由应用层传入具体领域）
             top_k: 返回数量
 
         Returns:

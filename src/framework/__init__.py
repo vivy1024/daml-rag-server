@@ -239,10 +239,14 @@ async def _fallback_query(
     """
     try:
         # 直接调用GraphRAG API
+        # 框架层领域无关 - Requirements 6.1, 6.2
+        # 服务URL从环境变量读取，默认为localhost
+        import os
         import aiohttp
+        graphrag_url = os.getenv("GRAPHRAG_API_URL", "http://localhost:8001/api/graphrag/query")
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                "http://fitness_daml_rag:8001/api/graphrag/query",
+                graphrag_url,
                 json={
                     "query_text": query,
                     "domain": domain,

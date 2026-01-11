@@ -64,12 +64,14 @@ class KnowledgeGraphFull:
         logger.info("=" * 80)
 
         # 从环境变量读取配置（Docker环境）
+        # 框架层领域无关 - Requirements 6.1, 6.2
+        # 所有领域特定配置应通过环境变量传入
         neo4j_uri = neo4j_uri or os.getenv("NEO4J_URI", "bolt://neo4j:7687")
         neo4j_user = neo4j_user or os.getenv("NEO4J_USER", "neo4j")
-        neo4j_password = neo4j_password or os.getenv("NEO4J_PASSWORD", "build_body_2024")
+        neo4j_password = neo4j_password or os.getenv("NEO4J_PASSWORD", "")
         qdrant_host = qdrant_host or os.getenv("QDRANT_HOST", "qdrant")
-        # 使用正确的集合名称：fitness_exercises_v2
-        qdrant_collection = qdrant_collection or os.getenv("QDRANT_COLLECTION", "fitness_exercises_v2")
+        # 集合名称从环境变量读取，默认为通用名称
+        qdrant_collection = qdrant_collection or os.getenv("QDRANT_COLLECTION", "default_collection")
 
         logger.info(f"Neo4j URI: {neo4j_uri}")
         logger.info(f"Qdrant Host: {qdrant_host}")

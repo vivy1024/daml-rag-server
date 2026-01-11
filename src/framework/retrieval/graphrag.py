@@ -65,12 +65,16 @@ class QueryType(str, Enum):
 
 
 class Domain(str, Enum):
-    """领域枚举"""
-    FITNESS_EXERCISES = "fitness_exercises"  # 健身动作库
-    NUTRITION = "nutrition"                  # 营养食物
-    REHABILITATION = "rehabilitation"        # 康复训练
-    TRAINING = "training"                    # 训练计划
-    GENERAL = "general"                      # 通用
+    """领域枚举
+    
+    框架层领域无关 - Requirements 6.1, 6.2
+    这些是通用领域类型，具体领域由应用层定义
+    """
+    GENERAL = "general"                      # 通用领域（默认）
+    KNOWLEDGE = "knowledge"                  # 知识库
+    NUTRITION = "nutrition"                  # 营养
+    REHABILITATION = "rehabilitation"        # 康复
+    CUSTOM = "custom"                        # 自定义领域
 
 
 class GraphRAGQueryTool:
@@ -754,41 +758,36 @@ class GraphRAGQueryTool:
         domain: str,
         top_k: int
     ) -> str:
-        """为三层检索构建Cypher查询"""
-        # 基础查询 - 限制候选ID
+        """为三层检索构建Cypher查询
+        
+        框架层领域无关 - Requirements 6.1, 6.2:
+        - 使用domain_adapter提供的Cypher模板
+        """
+        # 优先使用domain_adapter的Cypher模板
+        if self.domain_adapter and hasattr(self.domain_adapter, 'get_cypher_templates'):
+            cypher_templates = self.domain_adapter.get_cypher_templates()
+            
+            # 根据是否有关键词选择不同模板
+            if muscle_keywords and "three_layer_with_keywords" in cypher_templates:
+                return cypher_templates["three_layer_with_keywords"]
+            elif "three_layer_basic" in cypher_templates:
+                return cypher_templates["three_layer_basic"]
+            elif "entity_search" in cypher_templates:
+                # 降级到基础实体搜索
+                return cypher_templates["entity_search"]
+        
+        # 降级：使用通用查询（不指定标签）
         cypher = """
-        MATCH (e:Exercise)
-        WHERE e.id IN $candidate_ids
-        """
-
-        # 如果有肌肉关键词，添加关系查询
-        if muscle_keywords:
-            cypher += """
-        MATCH (e)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m:Muscle)
-        WHERE ANY(muscle IN $muscle_keywords
-                  WHERE m.name_zh CONTAINS muscle
-                     OR m.name_en CONTAINS muscle
-                     OR m.name CONTAINS muscle)
-        """
-
-        cypher += """
+        MATCH (n)
+        WHERE n.id IN $candidate_ids
         RETURN
-            e.id AS id,
-            e.name_zh AS name_zh,
-            e.name_en AS name_en,
-            e.equipment AS equipment,
-            e.difficulty AS difficulty,
-            m.name_zh AS target_muscle,
-            type(r) AS relationship_type,
-            m.mev AS mev,
-            m.mav AS mav,
-            m.mrv AS mrv
-        ORDER BY
-            CASE WHEN m.mev IS NOT NULL THEN 1 ELSE 0 END DESC,
-            CASE WHEN type(r) = 'TARGETS_PRIMARY' THEN 1 ELSE 0 END DESC
+            n.id AS id,
+            n.name AS name,
+            n.name_zh AS name_zh
         LIMIT $limit
         """
-
+        
+        logger.warning("未配置domain_adapter，使用通用Cypher查询")
         return cypher
 
     def _match_fitness_level(self, exercise: Dict, user_profile: Dict) -> bool:
@@ -886,20 +885,11 @@ class GraphRAGQueryTool:
     def _build_qdrant_filters(self, domain: str, filters: Dict, query_text: str = "") -> Optional[Dict]:
         """构建Qdrant过滤条件
         
-        注意：Qdrant集合的payload结构与Neo4j不完全一致
-        - fitness_exercises_v2: 没有label字段，使用collection名称区分
+        框架层领域无关 - Requirements 6.1, 6.2
+        
+        注意：Qdrant集合的payload结构由应用层定义
         - 不应该添加label过滤，会导致0结果
-        
-        Qdrant payload字段（fitness_exercises_v2）：
-        - exercise_id, name_zh, name_en, primary_muscle_zh, equipment_zh, difficulty, search_text
-        
-        difficulty值映射（中文）：
-        - beginner/新手 → "新手"
-        - intermediate/中级 → "中级"  
-        - advanced/高级 → "高级"
-        
-        智能过滤：
-        - 查询包含"训练"/"力量"时，自动排除瑜伽、拉伸类动作
+        - 字段映射和智能过滤通过domain_adapter配置
         
         返回格式：
         - 普通字段: {"field": "value"}
@@ -911,13 +901,9 @@ class GraphRAGQueryTool:
         qdrant_filters = {}
         
         # 字段名映射：业务字段 → Qdrant payload字段
+        # 框架层提供通用映射，领域特定映射由domain_adapter提供
         field_mapping = {
-            "muscle_group": "primary_muscle_zh",
-            "difficulty_level": "difficulty",
-            "available_equipment": "equipment_zh",
-            # 以下字段不在Qdrant payload中，跳过
-            "injury_history": None,
-            "label": None,  # Qdrant没有label字段
+            "label": None,  # Qdrant通常没有label字段
         }
         
         # difficulty值映射：英文 → 中文
@@ -987,17 +973,22 @@ class GraphRAGQueryTool:
         构建Cypher查询
         
         根据domain和filters动态生成Cypher
-        """
-        # 基础查询模板
-        cypher = "MATCH (n)"
         
-        # 添加领域标签过滤
-        if domain == Domain.FITNESS_EXERCISES:
-            cypher = "MATCH (n:Exercise)"
-        elif domain == Domain.NUTRITION:
-            cypher = "MATCH (n:Food)"
-        elif domain == Domain.REHABILITATION:
-            cypher = "MATCH (n:RehabAction)"
+        框架层领域无关 - Requirements 6.1, 6.2:
+        - 使用domain_adapter提供的Cypher模板
+        """
+        # 优先使用domain_adapter的Cypher模板
+        if self.domain_adapter and hasattr(self.domain_adapter, 'get_cypher_templates'):
+            cypher_templates = self.domain_adapter.get_cypher_templates()
+            if "basic_search" in cypher_templates:
+                # 使用适配器提供的基础搜索模板
+                cypher = cypher_templates["basic_search"]
+                # 替换参数
+                cypher = cypher.replace("$limit", str(top_k))
+                return cypher
+        
+        # 降级：使用通用查询（不指定标签）
+        cypher = "MATCH (n)"
         
         # 添加属性过滤
         where_clauses = []

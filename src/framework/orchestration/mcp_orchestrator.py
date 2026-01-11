@@ -869,9 +869,11 @@ class MCPOrchestrator:
                     graphrag_tool = GraphRAGQueryTool(kg_full)
 
                     # 执行查询
+                    # 框架层领域无关 - Requirements 6.1, 6.2
+                    # domain参数默认为"general"，由应用层传入具体领域
                     query_args = {
                         "query_type": params.get("query_type", "hybrid"),
-                        "domain": params.get("domain", "fitness_exercises"),
+                        "domain": params.get("domain", "general"),
                         "query_text": params.get("query_text", ""),
                         "filters": params.get("filters", {}),
                         "top_k": params.get("top_k", 10),
