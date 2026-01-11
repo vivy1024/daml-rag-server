@@ -453,8 +453,8 @@ def cached(
         key_params: 用于生成缓存键的参数名列表
     
     Example:
-        @cached(prefix="entity_data", ttl=86400, key_params=["entity_id"])
-        async def get_entity_data(entity_id: int):
+        @cached(prefix="muscle_training_data", ttl=86400, key_params=["muscle_id"])
+        async def get_muscle_training_data(muscle_id: int):
             # 查询数据库...
             return data
     """

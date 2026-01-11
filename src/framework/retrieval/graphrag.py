@@ -83,16 +83,18 @@ class GraphRAGQueryTool:
     - VectorSearchEngine (vector_search_engine.py)
     """
     
-    def __init__(self, kg_full):
+    def __init__(self, kg_full, domain_adapter=None):
         """
         初始化GraphRAG查询工具
 
         Args:
             kg_full: KnowledgeGraphFull实例（已在DAML-RAG中初始化）
+            domain_adapter: 领域适配器实例（用于获取领域特定配置）
         """
         self.kg = kg_full
         self.neo4j = kg_full.neo4j if hasattr(kg_full, 'neo4j') else None
         self.vector_search = kg_full.vector_search if hasattr(kg_full, 'vector_search') else None
+        self.domain_adapter = domain_adapter
 
         logger.info("✅ GraphRAG查询工具已初始化 (复用已有Neo4j+Qdrant)")
 
@@ -724,24 +726,24 @@ class GraphRAGQueryTool:
         return result
 
     def _extract_muscle_keywords(self, query: str) -> List[str]:
-        """从查询中提取肌肉关键词"""
-        muscle_mapping = {
-            "胸": ["胸大肌", "胸部", "Chest", "Pectoralis"],
-            "背": ["背阔肌", "背部", "Back", "Latissimus"],
-            "肩": ["三角肌", "肩部", "Shoulder", "Deltoid"],
-            "臂": ["肱二头肌", "肱三头肌", "手臂", "Biceps", "Triceps"],
-            "腿": ["股四头肌", "腘绳肌", "腿部", "Quadriceps", "Hamstrings"],
-            "臀": ["臀大肌", "臀部", "Glutes"],
-            "腹": ["腹直肌", "腹肌", "腹部", "Abs", "Rectus Abdominis"],
-            "核心": ["核心", "Core"]
-        }
+        """从查询中提取肌肉关键词
+        
+        使用domain_adapter获取领域特定的关键词映射，实现框架层领域无关。
+        """
+        # 优先使用domain_adapter的关键词映射
+        if self.domain_adapter and hasattr(self.domain_adapter, 'get_keyword_mapping'):
+            keyword_mapping = self.domain_adapter.get_keyword_mapping()
+        else:
+            # 降级：使用空映射（框架层不包含领域数据）
+            keyword_mapping = {}
+            logger.debug("未配置domain_adapter，跳过关键词提取")
 
         keywords = []
         query_lower = query.lower()
 
-        for key, muscles in muscle_mapping.items():
-            if key in query or any(m.lower() in query_lower for m in muscles):
-                keywords.extend(muscles)
+        for key, synonyms in keyword_mapping.items():
+            if key in query or any(s.lower() in query_lower for s in synonyms):
+                keywords.extend(synonyms)
 
         return list(set(keywords))  # 去重
 
@@ -932,13 +934,19 @@ class GraphRAGQueryTool:
         }
         
         # ✅ 智能过滤：根据查询文本自动添加过滤条件
-        strength_keywords = ["训练", "力量", "增肌", "肌肉", "卧推", "深蹲", "硬拉", "推举", "胸部", "背部", "腿部", "肩部"]
-        if any(keyword in query_text for keyword in strength_keywords):
-            # 排除瑜伽、拉伸、泡沫轴等非力量训练动作
-            exclude_equipment = ["瑜伽", "拉伸", "泡沫轴", "按摩球"]
-            # 使用特殊标记，由VectorSearchEngine的_build_filter方法处理
-            qdrant_filters["_exclude_equipment_zh"] = exclude_equipment
-            logger.debug(f"智能过滤：排除非力量训练器械 {exclude_equipment}")
+        # 使用domain_adapter获取智能过滤配置，实现框架层领域无关
+        if self.domain_adapter and hasattr(self.domain_adapter, 'get_smart_filter_keywords'):
+            smart_filter_config = self.domain_adapter.get_smart_filter_keywords()
+            include_keywords = smart_filter_config.get("include_keywords", [])
+            exclude_values = smart_filter_config.get("exclude_values", [])
+            exclude_field = smart_filter_config.get("exclude_field", "_exclude_equipment_zh")
+            
+            if any(keyword in query_text for keyword in include_keywords):
+                # 使用特殊标记，由VectorSearchEngine的_build_filter方法处理
+                qdrant_filters[exclude_field] = exclude_values
+                logger.debug(f"智能过滤：排除 {exclude_values}")
+        else:
+            logger.debug("未配置domain_adapter，跳过智能过滤")
         
         for key, value in filters.items():
             # 跳过空值

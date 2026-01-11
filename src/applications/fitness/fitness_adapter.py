@@ -935,17 +935,17 @@ class FitnessAdapter(DomainAdapter):
         return self.get_tools_by_priority("P1")
     
     # =========================================================================
-    # 领域数据方法（框架层领域无关支持）- Requirements 6.1, 6.2
+    # 领域数据方法（框架层领域无关 - Requirements 6.1, 6.2）
     # =========================================================================
     
     def get_fallback_recommendations(self) -> Dict[str, List[Dict[str, Any]]]:
         """
-        返回健身领域降级推荐数据
+        返回降级推荐数据
         
         当Layer1和Layer2都失败时，使用此数据进行规则匹配降级。
         
         Returns:
-            Dict[str, List[Dict[str, Any]]]: 肌肉群关键词 -> 推荐动作列表
+            Dict[str, List[Dict[str, Any]]]: 肌肉关键词 -> 推荐动作列表
         """
         return {
             "胸": [
@@ -982,9 +982,9 @@ class FitnessAdapter(DomainAdapter):
     
     def get_keyword_mapping(self) -> Dict[str, List[str]]:
         """
-        返回健身领域关键词映射表
+        返回肌肉关键词映射表
         
-        用于从查询中提取肌肉群相关关键词。
+        用于从查询中提取肌肉相关关键词。
         
         Returns:
             Dict[str, List[str]]: 主关键词 -> 同义词列表
@@ -1002,7 +1002,7 @@ class FitnessAdapter(DomainAdapter):
     
     def get_safety_contraindications(self) -> Dict[str, List[str]]:
         """
-        返回健身领域安全禁忌映射
+        返回体态问题禁忌映射
         
         用于安全检查时过滤不适合的动作。
         
@@ -1020,7 +1020,7 @@ class FitnessAdapter(DomainAdapter):
     
     def get_joint_keywords(self) -> Dict[str, List[str]]:
         """
-        返回健身领域关节关键词映射
+        返回关节关键词映射
         
         用于关节损伤检查时匹配相关动作。
         
@@ -1028,17 +1028,17 @@ class FitnessAdapter(DomainAdapter):
             Dict[str, List[str]]: 关节名称 -> 关键词列表
         """
         return {
-            "肩": ["肩", "shoulder", "三角肌", "deltoid"],
-            "膝": ["膝", "knee", "股四头肌", "quadriceps"],
-            "腰": ["腰", "lower back", "竖脊肌", "erector"],
-            "肘": ["肘", "elbow", "肱二头肌", "肱三头肌"],
-            "腕": ["腕", "wrist", "前臂"],
-            "踝": ["踝", "ankle", "小腿"],
+            "肩": ["肩", "shoulder", "三角肌", "deltoid", "推举", "press"],
+            "膝": ["膝", "knee", "股四头肌", "quadriceps", "深蹲", "squat"],
+            "腰": ["腰", "lower back", "竖脊肌", "erector", "硬拉", "deadlift"],
+            "肘": ["肘", "elbow", "肱", "triceps", "biceps"],
+            "腕": ["腕", "wrist", "前臂", "forearm"],
+            "踝": ["踝", "ankle", "小腿", "calf"],
         }
     
     def get_default_fallback_items(self) -> List[Dict[str, Any]]:
         """
-        返回健身领域默认降级项目
+        返回默认降级项目
         
         当没有匹配到任何关键词时返回的通用动作。
         
@@ -1064,19 +1064,23 @@ class FitnessAdapter(DomainAdapter):
     
     def get_cypher_templates(self) -> Dict[str, str]:
         """
-        返回健身领域Cypher查询模板
-        
-        用于Neo4j图谱查询。
+        返回健身领域的Cypher查询模板
         
         Returns:
-            Dict[str, str]: 模板名称 -> Cypher查询
+            Dict[str, str]: 模板名称 -> Cypher查询字符串
+            
+        参数约定:
+        - $keyword: 搜索关键词
+        - $filter_values: 过滤值列表（如器械列表）
+        - $limit: 结果数量限制
         """
         return {
-            "muscle_exercise_search": """
+            # 基于关键词搜索动作（无过滤条件）
+            "entity_search": """
                 MATCH (m:Muscle)
-                WHERE m.name_zh CONTAINS $muscle
-                   OR m.name_en CONTAINS $muscle
-                   OR m.name CONTAINS $muscle
+                WHERE m.name_zh CONTAINS $keyword
+                   OR m.name_en CONTAINS $keyword
+                   OR m.name CONTAINS $keyword
                 MATCH (e:Exercise)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m)
                 RETURN
                     e.name_zh AS exercise_zh,
@@ -1090,13 +1094,15 @@ class FitnessAdapter(DomainAdapter):
                     m.mrv AS mrv
                 LIMIT $limit
             """,
-            "muscle_exercise_search_with_equipment": """
+            
+            # 带器械过滤条件的动作搜索
+            "entity_search_with_filter": """
                 MATCH (m:Muscle)
-                WHERE m.name_zh CONTAINS $muscle
-                   OR m.name_en CONTAINS $muscle
-                   OR m.name CONTAINS $muscle
+                WHERE m.name_zh CONTAINS $keyword
+                   OR m.name_en CONTAINS $keyword
+                   OR m.name CONTAINS $keyword
                 MATCH (e:Exercise)-[r:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m)
-                WHERE ANY(equip IN e.equipment_zh WHERE equip IN $equipment)
+                WHERE ANY(equip IN e.equipment_zh WHERE equip IN $filter_values)
                 RETURN
                     e.name_zh AS exercise_zh,
                     e.name AS exercise_en,
@@ -1109,6 +1115,196 @@ class FitnessAdapter(DomainAdapter):
                     m.mrv AS mrv
                 LIMIT $limit
             """,
+        }
+    
+    def get_cypher_result_mapping(self) -> Dict[str, str]:
+        """
+        返回Cypher结果字段映射
+        
+        Returns:
+            Dict[str, str]: Cypher字段名 -> 标准输出字段名
+        """
+        return {
+            "exercise_zh": "exercise_name_zh",
+            "exercise_en": "exercise_name_en",
+            "difficulty": "difficulty",
+            "equipment": "equipment",
+            "muscle_name": "target_muscle",
+            "relationship_type": "relationship_type",
+            "mev": "mev",
+            "mav": "mav",
+            "mrv": "mrv",
+        }
+    
+    def get_high_load_keywords(self) -> List[str]:
+        """
+        返回高负荷动作关键词
+        
+        用于安全检查时识别高负荷动作。
+        
+        Returns:
+            List[str]: 高负荷动作关键词列表
+        """
+        return ["硬拉", "深蹲", "卧推", "推举", "deadlift", "squat", "bench press"]
+    
+    def get_smart_filter_keywords(self) -> Dict[str, Any]:
+        """
+        返回智能过滤关键词配置
+        
+        用于向量检索时的智能过滤。
+        
+        Returns:
+            Dict[str, Any]: 智能过滤配置
+        """
+        return {
+            "include_keywords": [
+                "训练", "力量", "增肌", "肌肉", "卧推", "深蹲", "硬拉", "推举",
+                "胸部", "背部", "腿部", "肩部"
+            ],
+            "exclude_values": ["瑜伽", "拉伸", "泡沫轴", "按摩球"],
+            "exclude_field": "_exclude_equipment_zh"
+        }
+    
+    def get_muscle_recovery_hours(self) -> Dict[str, int]:
+        """
+        返回肌肉恢复时间配置（小时）
+        
+        Returns:
+            Dict[str, int]: 肌肉名称 -> 恢复小时数
+        """
+        return {
+            # 大肌群 - 需要更长恢复时间
+            "胸大肌": 72, "背阔肌": 72, "股四头肌": 72, "腘绳肌": 72, "臀大肌": 72,
+            "Pectoralis Major": 72, "Latissimus Dorsi": 72, "Quadriceps": 72, 
+            "Hamstrings": 72, "Gluteus Maximus": 72,
+            
+            # 中等肌群
+            "三角肌": 48, "斜方肌": 48, "竖脊肌": 48, "腹直肌": 48,
+            "Deltoid": 48, "Trapezius": 48, "Erector Spinae": 48, "Rectus Abdominis": 48,
+            
+            # 小肌群 - 恢复较快
+            "肱二头肌": 36, "肱三头肌": 36, "前臂": 36, "小腿": 36,
+            "Biceps": 36, "Triceps": 36, "Forearm": 36, "Calves": 36,
+            
+            # 默认值
+            "default": 48
+        }
+    
+    def get_postural_issue_config(self) -> Dict[str, Dict[str, Any]]:
+        """
+        返回体态问题配置
+        
+        Returns:
+            Dict[str, Dict[str, Any]]: 体态问题 -> 配置
+        """
+        return {
+            "骨盆前倾": {
+                "tight_muscles": ["髂腰肌", "股直肌", "竖脊肌"],
+                "weak_muscles": ["臀大肌", "腹直肌", "腘绳肌"],
+                "corrective_keywords": ["臀桥", "死虫", "平板支撑", "腘绳肌拉伸"],
+                "aggravating_keywords": ["深蹲", "硬拉", "弓步蹲"]
+            },
+            "骨盆后倾": {
+                "tight_muscles": ["腘绳肌", "臀大肌", "腹直肌"],
+                "weak_muscles": ["髂腰肌", "竖脊肌", "股直肌"],
+                "corrective_keywords": ["髋屈肌拉伸", "猫牛式", "超人式"],
+                "aggravating_keywords": ["卷腹", "仰卧起坐"]
+            },
+            "圆肩": {
+                "tight_muscles": ["胸大肌", "胸小肌", "前三角肌"],
+                "weak_muscles": ["菱形肌", "中下斜方肌", "后三角肌"],
+                "corrective_keywords": ["面拉", "反向飞鸟", "YTWL", "胸椎伸展"],
+                "aggravating_keywords": ["卧推", "俯卧撑", "前平举"]
+            },
+            "头前伸": {
+                "tight_muscles": ["胸锁乳突肌", "斜角肌", "上斜方肌"],
+                "weak_muscles": ["深层颈屈肌", "中下斜方肌"],
+                "corrective_keywords": ["颈部收缩", "下巴收紧", "颈部拉伸"],
+                "aggravating_keywords": ["耸肩", "颈后推举"]
+            },
+            "驼背": {
+                "tight_muscles": ["胸大肌", "腹直肌", "髂腰肌"],
+                "weak_muscles": ["竖脊肌", "菱形肌", "后三角肌"],
+                "corrective_keywords": ["胸椎伸展", "猫牛式", "眼镜蛇式", "面拉"],
+                "aggravating_keywords": ["卷腹", "仰卧起坐", "俯身划船"]
+            },
+            "脊柱侧弯": {
+                "tight_muscles": [],  # 因人而异
+                "weak_muscles": ["核心肌群"],
+                "corrective_keywords": ["侧平板", "单侧训练", "核心稳定"],
+                "aggravating_keywords": ["大重量深蹲", "大重量硬拉"]
+            }
+        }
+    
+    def get_goal_preferences(self) -> Dict[str, Dict[str, Any]]:
+        """
+        返回训练目标偏好配置
+        
+        Returns:
+            Dict[str, Dict[str, Any]]: 目标名称 -> 偏好配置
+        """
+        return {
+            "muscle_gain": {
+                "preferred_mechanics": ["compound", "isolation"],
+                "preferred_force": ["push", "pull"],
+                "rep_range": (8, 12),
+                "intensity_range": (0.65, 0.75),
+                "rest_seconds": (60, 90)
+            },
+            "fat_loss": {
+                "preferred_mechanics": ["compound"],
+                "preferred_force": ["push", "pull"],
+                "rep_range": (12, 20),
+                "intensity_range": (0.50, 0.65),
+                "rest_seconds": (30, 45)
+            },
+            "strength": {
+                "preferred_mechanics": ["compound"],
+                "preferred_force": ["push", "pull"],
+                "rep_range": (1, 5),
+                "intensity_range": (0.85, 1.0),
+                "rest_seconds": (180, 300)
+            },
+            "endurance": {
+                "preferred_mechanics": ["compound", "isolation"],
+                "preferred_force": ["push", "pull", "hold"],
+                "rep_range": (15, 25),
+                "intensity_range": (0.40, 0.60),
+                "rest_seconds": (15, 30)
+            },
+            "rehabilitation": {
+                "preferred_mechanics": ["isolation"],
+                "preferred_force": ["hold"],
+                "preferred_kinetic_chain": ["closed_chain"],
+                "rep_range": (12, 20),
+                "intensity_range": (0.30, 0.50),
+                "rest_seconds": (60, 90)
+            }
+        }
+    
+    def get_body_type_preferences(self) -> Dict[str, Dict[str, Any]]:
+        """
+        返回体型偏好配置
+        
+        Returns:
+            Dict[str, Dict[str, Any]]: 体型名称 -> 偏好配置
+        """
+        return {
+            "ectomorph": {
+                "preferred_mechanics": ["compound"],
+                "boost_keywords": ["深蹲", "硬拉", "卧推", "划船"],
+                "description": "外胚型优先复合动作"
+            },
+            "mesomorph": {
+                "preferred_mechanics": ["compound", "isolation"],
+                "boost_keywords": [],
+                "description": "中胚型均衡推荐"
+            },
+            "endomorph": {
+                "preferred_mechanics": ["compound"],
+                "boost_keywords": ["深蹲", "硬拉", "波比跳", "登山者"],
+                "description": "内胚型优先高代谢动作"
+            }
         }
 
 

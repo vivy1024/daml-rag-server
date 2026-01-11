@@ -489,6 +489,151 @@ class DomainAdapter(ABC):
         """
         pass
     
+    @abstractmethod
+    def get_cypher_templates(self) -> Dict[str, str]:
+        """
+        返回Cypher查询模板
+        
+        用于Neo4j图谱查询的Cypher模板。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, str]: 模板名称 -> Cypher查询字符串
+            
+        必须包含的模板:
+        - "entity_search": 基于关键词搜索实体
+        - "entity_search_with_filter": 带过滤条件的实体搜索
+        
+        模板参数约定:
+        - $keyword: 搜索关键词
+        - $filter_values: 过滤值列表
+        - $limit: 结果数量限制
+        """
+        pass
+    
+    @abstractmethod
+    def get_cypher_result_mapping(self) -> Dict[str, str]:
+        """
+        返回Cypher结果字段映射
+        
+        将Cypher查询结果字段映射到标准化的输出字段。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, str]: Cypher字段名 -> 标准输出字段名
+            
+        示例:
+        ```python
+        {
+            "exercise_zh": "name_zh",
+            "exercise_en": "name_en",
+            "difficulty": "difficulty",
+            "equipment": "equipment",
+            "muscle_name": "target",
+        }
+        ```
+        """
+        pass
+    
+    @abstractmethod
+    def get_high_load_keywords(self) -> List[str]:
+        """
+        返回高负荷项目关键词
+        
+        用于安全检查时识别高负荷项目（如青少年限制）。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            List[str]: 高负荷项目关键词列表
+        """
+        pass
+    
+    @abstractmethod
+    def get_smart_filter_keywords(self) -> Dict[str, Any]:
+        """
+        返回智能过滤关键词配置
+        
+        用于向量检索时的智能过滤。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, Any]: 智能过滤配置
+            {
+                "include_keywords": ["关键词1", "关键词2"],  # 触发过滤的关键词
+                "exclude_values": ["排除值1", "排除值2"],    # 要排除的值
+                "exclude_field": "field_name"                # 排除字段名
+            }
+        """
+        pass
+    
+    @abstractmethod
+    def get_muscle_recovery_hours(self) -> Dict[str, int]:
+        """
+        返回恢复时间配置（小时）
+        
+        用于恢复时间规则计算。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, int]: 项目/部位名称 -> 恢复小时数
+        """
+        pass
+    
+    @abstractmethod
+    def get_postural_issue_config(self) -> Dict[str, Dict[str, Any]]:
+        """
+        返回体态/状况问题配置
+        
+        用于体态矫正规则。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, Dict[str, Any]]: 问题名称 -> 配置
+            {
+                "问题名称": {
+                    "tight_muscles": ["紧张部位1"],
+                    "weak_muscles": ["薄弱部位1"],
+                    "corrective_keywords": ["矫正项目关键词"],
+                    "aggravating_keywords": ["加重项目关键词"]
+                }
+            }
+        """
+        pass
+    
+    @abstractmethod
+    def get_goal_preferences(self) -> Dict[str, Dict[str, Any]]:
+        """
+        返回目标偏好配置
+        
+        用于目标对齐规则。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, Dict[str, Any]]: 目标名称 -> 偏好配置
+        """
+        pass
+    
+    @abstractmethod
+    def get_body_type_preferences(self) -> Dict[str, Dict[str, Any]]:
+        """
+        返回体型偏好配置
+        
+        用于体型约束规则。
+        
+        Requirements: 6.1, 6.2 (框架层领域无关)
+        
+        Returns:
+            Dict[str, Dict[str, Any]]: 体型名称 -> 偏好配置
+        """
+        pass
+    
     # =========================================================================
     # 可选方法（子类可覆盖）
     # =========================================================================

@@ -113,6 +113,9 @@ class DynamicContextBuilder:
     - 13.3: 相关性评分计算
     - 13.4: 二跳邻居扩展
     - 13.5: 查询类型支持（local, hybrid）
+    
+    框架层领域无关 - Requirements 6.1, 6.2:
+    - 关键词配置通过domain_adapter获取
     """
     
     # 关系权重配置（用于相关性评分）
@@ -151,6 +154,7 @@ class DynamicContextBuilder:
         self,
         neo4j_manager=None,
         vector_search_engine=None,
+        domain_adapter=None,
         max_hops: int = 2,
         max_entities_per_hop: int = 20
     ):
@@ -160,18 +164,37 @@ class DynamicContextBuilder:
         Args:
             neo4j_manager: Neo4j管理器
             vector_search_engine: 向量搜索引擎
+            domain_adapter: 领域适配器（用于获取领域特定配置）
             max_hops: 最大跳数（默认2跳）
             max_entities_per_hop: 每跳最大实体数
         """
         self.neo4j_manager = neo4j_manager
         self.vector_search_engine = vector_search_engine
+        self.domain_adapter = domain_adapter
         self.max_hops = max_hops
         self.max_entities_per_hop = max_entities_per_hop
+        
+        # 从domain_adapter加载关键词配置
+        self._load_domain_keywords()
         
         logger.info(
             f"DynamicContextBuilder initialized: max_hops={max_hops}, "
             f"max_entities_per_hop={max_entities_per_hop}"
         )
+    
+    def _load_domain_keywords(self):
+        """从domain_adapter加载领域特定关键词"""
+        if self.domain_adapter and hasattr(self.domain_adapter, 'get_keyword_mapping'):
+            keyword_mapping = self.domain_adapter.get_keyword_mapping()
+            # 展开关键词映射为列表
+            self._domain_keywords = []
+            for key, synonyms in keyword_mapping.items():
+                self._domain_keywords.append(key)
+                self._domain_keywords.extend(synonyms)
+            logger.info(f"从domain_adapter加载 {len(self._domain_keywords)} 个领域关键词")
+        else:
+            self._domain_keywords = []
+            logger.debug("未配置domain_adapter，使用空关键词列表")
     
     async def build_context(
         self,
@@ -568,31 +591,16 @@ class DynamicContextBuilder:
         return entities
     
     def _extract_keywords(self, query: str) -> List[str]:
-        """从查询中提取关键词"""
-        # 肌肉关键词
-        muscle_keywords = [
-            "胸", "背", "肩", "臂", "腿", "臀", "腹", "核心",
-            "胸大肌", "背阔肌", "三角肌", "肱二头肌", "肱三头肌",
-            "股四头肌", "腘绳肌", "臀大肌", "腹直肌",
-            "chest", "back", "shoulder", "arm", "leg", "glute", "abs", "core"
-        ]
+        """从查询中提取关键词
         
-        # 动作关键词
-        exercise_keywords = [
-            "深蹲", "硬拉", "卧推", "划船", "推举", "弯举",
-            "squat", "deadlift", "bench press", "row", "press", "curl"
-        ]
-        
-        # 目标关键词
-        goal_keywords = [
-            "增肌", "减脂", "力量", "耐力", "康复", "矫正",
-            "muscle", "fat loss", "strength", "endurance", "rehab"
-        ]
-        
+        框架层领域无关 - Requirements 6.1, 6.2:
+        - 使用domain_adapter提供的关键词列表
+        """
         keywords = []
         query_lower = query.lower()
         
-        for kw in muscle_keywords + exercise_keywords + goal_keywords:
+        # 使用实例变量（从domain_adapter加载）
+        for kw in self._domain_keywords:
             if kw.lower() in query_lower or kw in query:
                 keywords.append(kw)
         

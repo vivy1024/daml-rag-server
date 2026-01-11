@@ -1,58 +1,108 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.16.0
+**版本**: v9.17.0
 **更新日期**: 2026-01-11
-**状态**: ✅ 框架层领域泄漏修复
+**状态**: ✅ 框架层领域泄漏修复（子任务11.1完成）
+
+---
+
+### v9.17.0 (2026-01-11) - 框架层领域泄漏修复（子任务11.1） ✅
+
+**变更类型**: 🔧 重构（框架层领域无关）
+
+**需求背景**:
+- 继续修复框架层的领域泄漏问题
+- 将graphrag.py、layer3_rule_engine.py、dynamic_context_builder.py中的硬编码数据移到domain_adapter
+
+**实现内容**:
+
+1. **DomainAdapter接口扩展** ✅
+   - 新增 `get_high_load_keywords()` - 高负荷项目关键词
+   - 新增 `get_smart_filter_keywords()` - 智能过滤配置
+   - 新增 `get_muscle_recovery_hours()` - 恢复时间配置
+   - 新增 `get_postural_issue_config()` - 体态问题配置
+   - 新增 `get_goal_preferences()` - 目标偏好配置
+   - 新增 `get_body_type_preferences()` - 体型偏好配置
+
+2. **FitnessAdapter实现** ✅
+   - 实现所有新增的抽象方法
+   - 将健身领域特定数据从框架层移到应用层
+
+3. **GraphRAGQueryTool重构** ✅
+   - 构造函数新增 `domain_adapter` 参数
+   - `_extract_muscle_keywords()` 使用 `domain_adapter.get_keyword_mapping()`
+   - `_build_qdrant_filters()` 使用 `domain_adapter.get_smart_filter_keywords()`
+   - 移除硬编码的 `muscle_mapping` 和 `strength_keywords`
+
+4. **Layer3RuleEngine重构** ✅
+   - 构造函数新增 `domain_adapter` 参数
+   - 新增 `_load_domain_config()` 方法加载领域配置
+   - `_apply_postural_correction_rule()` 使用实例变量
+   - `_apply_recovery_time_rule()` 使用实例变量
+   - `_apply_body_type_constraint()` 使用实例变量
+   - `_apply_goal_alignment_constraint()` 使用实例变量
+   - `_apply_joint_load_rule()` 使用实例变量
+   - 移除硬编码的 `MUSCLE_RECOVERY_HOURS`、`POSTURAL_ISSUE_MUSCLES`、`GOAL_EXERCISE_PREFERENCES`
+
+5. **DynamicContextBuilder重构** ✅
+   - 构造函数新增 `domain_adapter` 参数
+   - 新增 `_load_domain_keywords()` 方法加载领域关键词
+   - `_extract_keywords()` 使用实例变量
+   - 移除硬编码的 `muscle_keywords`、`exercise_keywords`、`goal_keywords`
+
+**文件变更**:
+- 修改: `daml-rag-server/src/framework/adapters/domain_adapter.py`
+- 修改: `daml-rag-server/src/applications/fitness/fitness_adapter.py`
+- 修改: `daml-rag-server/src/framework/retrieval/graphrag.py`
+- 修改: `daml-rag-server/src/framework/retrieval/layer3_rule_engine.py`
+- 修改: `daml-rag-server/src/framework/retrieval/dynamic_context_builder.py`
+
+**修复状态**:
+- ✅ 子任务11.1：移除硬编码健身数据 - 已完成
+- 🔄 子任务11.2：抽象Cypher查询模板 - 待实施
+- 🔄 子任务11.3：修改默认参数 - 待实施
+- 🔄 子任务11.4：清理示例代码 - 待实施
+- 🔄 子任务11.5：验证领域无关性 - 待实施
 
 ---
 
 ### v9.16.0 (2026-01-11) - 框架层领域泄漏修复 ✅
 
-**变更类型**: 🔧 重构（框架层领域无关化）
+**变更类型**: 🔧 重构（框架层领域无关）
 
 **需求背景**:
-- 框架层（`src/framework/`）包含大量健身领域硬编码数据
-- 违反"框架层应领域无关"的设计原则
-- 影响框架开源和多领域复用
+- 框架层包含大量健身领域硬编码数据，无法复用到其他领域
+- 开源前必须将领域特定代码移到应用层
+- 实现真正的领域无关框架
 
 **实现内容**:
 
-1. **TrueThreeLayerEngine 领域无关化** ✅
-   - `_query_neo4j_direct()`: Cypher模板从适配器获取
-   - `_query_neo4j_direct_fallback()`: Cypher模板从适配器获取
-   - `_execute_rule_based_fallback()`: 降级数据从适配器获取
-   - `_extract_muscle_keywords()`: 关键词映射从适配器获取
-   - `_validate_safety()`: 安全规则从适配器获取
-   - 默认domain参数从"fitness"改为"general"
-   - 新增 `_parse_neo4j_record()` 辅助方法
+1. **DomainAdapter接口扩展** ✅
+   - 新增 `get_cypher_templates()` 抽象方法
+   - 新增 `get_cypher_result_mapping()` 抽象方法
+   - 框架层通过适配器获取所有领域特定数据
 
-2. **FitnessAdapter 数据方法** ✅
-   - `get_fallback_recommendations()`: 6个肌肉群的降级推荐
-   - `get_keyword_mapping()`: 8个肌肉群关键词映射
-   - `get_safety_contraindications()`: 6种体态问题禁忌
-   - `get_joint_keywords()`: 6个关节关键词映射
-   - `get_default_fallback_items()`: 3个默认动作
-   - `get_high_load_keywords()`: 高负荷动作关键词
-   - `get_cypher_templates()`: 2个Neo4j查询模板
+2. **FitnessAdapter实现** ✅
+   - 实现 `get_cypher_templates()` - 健身领域Cypher模板
+   - 实现 `get_cypher_result_mapping()` - 结果字段映射
+   - 之前已实现: `get_fallback_recommendations()`, `get_keyword_mapping()`, `get_safety_contraindications()`, `get_joint_keywords()`, `get_high_load_keywords()`
 
-3. **其他文件清理** ✅
-   - `unified_retrieval_interface.py`: 默认domain改为"general"
-   - `cache_manager.py`: 缓存配置改为通用示例
-   - `strategy_selector.py`: 示例代码改为通用
-   - `skill_definition.py`: 技能类别增加通用类别
+3. **TrueThreeLayerEngine重构** ✅
+   - `_query_neo4j_direct()` 使用适配器Cypher模板
+   - `_query_neo4j_direct_fallback()` 使用适配器Cypher模板
+   - 移除所有硬编码的健身Cypher查询
+   - 使用适配器的字段映射处理查询结果
 
 **文件变更**:
-- 修改: `src/framework/retrieval/true_three_layer_engine.py` (v2.2.0)
-- 修改: `src/framework/retrieval/unified_retrieval_interface.py`
-- 修改: `src/framework/mcp/cache_manager.py`
-- 修改: `src/framework/orchestration/strategy_selector.py`
-- 修改: `src/framework/skills/skill_definition.py`
-- 修改: `src/applications/fitness/fitness_adapter.py` (v1.0.0)
+- 修改: `daml-rag-server/src/framework/adapters/domain_adapter.py`
+- 修改: `daml-rag-server/src/applications/fitness/fitness_adapter.py`
+- 修改: `daml-rag-server/src/framework/retrieval/true_three_layer_engine.py`
+- 更新: `daml-rag-server/docs/04-开发指南/61-框架层领域泄漏分析报告.md`
 
-**领域泄漏修复统计**:
-- 严重问题: 4个 → 0个 ✅
-- 中等问题: 4个 → 0个 ✅
-- 轻微问题: 5个 → 0个 ✅
+**修复状态**:
+- ✅ P0严重问题：硬编码数据、Cypher查询 - 已修复
+- ✅ P1中等问题：默认domain参数 - 已修复
+- 🔄 P2轻微问题：示例代码 - 待修复
 
 ---
 
