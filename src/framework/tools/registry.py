@@ -7,8 +7,10 @@ MCP tools and their configurations. It supports:
 - YAML/JSON configuration file loading
 - Runtime tool registration and lookup
 - Tool metadata management with indexing
+- Task priority and parallel execution support (merged from orchestration/tool_registry.py)
 
 Requirements: 1.1, 1.2, 1.3, 1.4, 1.6
+Merged from: orchestration/tool_registry.py (v1.0.0)
 """
 
 import logging
@@ -19,6 +21,18 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+
+class TaskPriority(Enum):
+    """
+    任务优先级枚举（从orchestration/tool_registry.py合并）
+    
+    用于定义工具执行的优先级顺序。
+    """
+    CRITICAL = 1     # 关键任务，最高优先级
+    HIGH = 2         # 高优先级
+    NORMAL = 3       # 普通优先级（默认）
+    LOW = 4          # 低优先级
 
 
 # Define exception classes locally to avoid circular imports
@@ -101,15 +115,33 @@ class ToolConfig:
     
     This class holds all metadata and configuration for a registered tool.
     It is domain-agnostic and can be used for any type of MCP tool.
+    
+    扩展字段（从orchestration/tool_registry.py合并）：
+    - priority: 任务优先级（支持TaskPriority枚举或整数）
+    - parallel_safe: 是否并行安全
+    - execution_time: 预估执行时间（秒）
+    - supports_concurrent: 是否支持并发执行
+    - dependencies: 工具依赖列表
+    - resource_requirements: 资源需求配置
     """
     name: str
-    description: str
-    server_name: str
+    description: str = ""
+    # 新字段名：server_name；旧字段名：mcp_server（兼容）
+    server_name: str = ""
+    mcp_server: Optional[str] = None
     required_params: List[str] = field(default_factory=list)
     optional_params: List[str] = field(default_factory=list)
     param_schema: Dict[str, str] = field(default_factory=dict)
     category: Union[ToolCategory, str] = ToolCategory.CUSTOM
-    priority: int = 5
+    # 扩展字段：支持TaskPriority枚举或整数（向后兼容）
+    priority: Union[TaskPriority, int] = TaskPriority.NORMAL
+    # 新增字段（从orchestration/tool_registry.py合并）
+    parallel_safe: bool = True  # 是否并行安全
+    execution_time: float = 1.0  # 预估执行时间(秒)
+    supports_concurrent: bool = False  # 是否支持并发执行
+    dependencies: List[str] = field(default_factory=list)  # 工具依赖
+    resource_requirements: Dict[str, Any] = field(default_factory=dict)  # 资源需求
+    # 原有字段
     timeout: float = 30.0
     cacheable: bool = True
     cache_ttl: int = 300
@@ -119,11 +151,30 @@ class ToolConfig:
     
     def __post_init__(self):
         """Validate and normalize the configuration after initialization."""
+        # 兼容旧字段名：mcp_server -> server_name
+        if not self.server_name and self.mcp_server:
+            self.server_name = self.mcp_server
+
+        if not self.server_name:
+            raise ValidationError(
+                "Missing required field: server_name",
+                field="server_name",
+                suggestion="Provide 'server_name' (or legacy 'mcp_server') in the tool configuration",
+            )
+
         if isinstance(self.category, str):
+            # 允许领域自定义分类（例如 "training" / "nutrition"），仅在匹配到枚举时才转换
             try:
                 self.category = ToolCategory(self.category)
             except ValueError:
-                self.category = ToolCategory.CUSTOM
+                pass
+        
+        # 处理priority：支持整数或TaskPriority枚举
+        if isinstance(self.priority, int) and not isinstance(self.priority, TaskPriority):
+            # 将整数映射到TaskPriority（1-4映射到枚举，其他保持整数）
+            priority_map = {1: TaskPriority.CRITICAL, 2: TaskPriority.HIGH, 
+                          3: TaskPriority.NORMAL, 4: TaskPriority.LOW}
+            self.priority = priority_map.get(self.priority, TaskPriority.NORMAL)
         
         if self.required_params is None:
             self.required_params = []
@@ -133,9 +184,20 @@ class ToolConfig:
             self.param_schema = {}
         if self.metadata is None:
             self.metadata = {}
+        if self.dependencies is None:
+            self.dependencies = []
+        if self.resource_requirements is None:
+            self.resource_requirements = {}
+    
+    def get_priority_value(self) -> int:
+        """获取优先级数值（用于排序）"""
+        if isinstance(self.priority, TaskPriority):
+            return self.priority.value
+        return int(self.priority) if isinstance(self.priority, int) else 3
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert the configuration to a dictionary."""
+        priority_value = self.priority.value if isinstance(self.priority, TaskPriority) else self.priority
         return {
             "name": self.name,
             "description": self.description,
@@ -144,7 +206,12 @@ class ToolConfig:
             "optional_params": self.optional_params,
             "param_schema": self.param_schema,
             "category": self.category.value if isinstance(self.category, ToolCategory) else self.category,
-            "priority": self.priority,
+            "priority": priority_value,
+            "parallel_safe": self.parallel_safe,
+            "execution_time": self.execution_time,
+            "supports_concurrent": self.supports_concurrent,
+            "dependencies": self.dependencies,
+            "resource_requirements": self.resource_requirements,
             "timeout": self.timeout,
             "cacheable": self.cacheable,
             "cache_ttl": self.cache_ttl,
@@ -155,14 +222,24 @@ class ToolConfig:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ToolConfig":
         """Create a ToolConfig from a dictionary."""
-        required_fields = ["name", "server_name"]
-        for field_name in required_fields:
-            if field_name not in data:
-                raise ValidationError(
-                    f"Missing required field: {field_name}",
-                    field=field_name,
-                    suggestion=f"Add '{field_name}' to the tool configuration"
-                )
+        if "name" not in data:
+            raise ValidationError(
+                "Missing required field: name",
+                field="name",
+                suggestion="Add 'name' to the tool configuration",
+            )
+
+        # 兼容旧字段名：mcp_server
+        if "server_name" not in data and "mcp_server" in data:
+            data = dict(data)
+            data["server_name"] = data.get("mcp_server")
+
+        if "server_name" not in data or not data.get("server_name"):
+            raise ValidationError(
+                "Missing required field: server_name",
+                field="server_name",
+                suggestion="Add 'server_name' (or legacy 'mcp_server') to the tool configuration",
+            )
         
         return cls(
             name=data["name"],
@@ -172,7 +249,12 @@ class ToolConfig:
             optional_params=data.get("optional_params", []),
             param_schema=data.get("param_schema", {}),
             category=data.get("category", "custom"),
-            priority=data.get("priority", 5),
+            priority=data.get("priority", TaskPriority.NORMAL),
+            parallel_safe=data.get("parallel_safe", True),
+            execution_time=data.get("execution_time", 1.0),
+            supports_concurrent=data.get("supports_concurrent", False),
+            dependencies=data.get("dependencies", []),
+            resource_requirements=data.get("resource_requirements", {}),
             timeout=data.get("timeout", 30.0),
             cacheable=data.get("cacheable", True),
             cache_ttl=data.get("cache_ttl", 300),
@@ -288,6 +370,10 @@ class ToolRegistry:
         
         logger.debug(f"Unregistered tool: {name}")
         return True
+
+    # 向后兼容：旧接口名称
+    def unregister(self, name: str) -> bool:
+        return self.unregister_tool(name)
     
     def register_from_config(self, config_path: Union[str, Path]) -> int:
         """Register tools from a YAML or JSON configuration file."""
@@ -380,8 +466,191 @@ class ToolRegistry:
             "total_tools": len(self._tools),
             "categories": {cat: len(tools) for cat, tools in self._category_index.items()},
             "servers": {srv: len(tools) for srv, tools in self._server_index.items()},
+            "priority_distribution": self.get_priority_distribution(),
             "cacheable_tools": sum(1 for t in self._tools.values() if t.cacheable),
+            "parallel_safe_tools": sum(1 for t in self._tools.values() if t.parallel_safe),
         }
+    
+    def get_priority_distribution(self) -> Dict[str, int]:
+        """
+        获取优先级分布统计（从orchestration/tool_registry.py合并）
+        
+        Returns:
+            Dict[str, int]: 各优先级的工具数量
+        """
+        distribution = {
+            "CRITICAL": 0,
+            "HIGH": 0,
+            "NORMAL": 0,
+            "LOW": 0
+        }
+        
+        for config in self._tools.values():
+            if isinstance(config.priority, TaskPriority):
+                distribution[config.priority.name] += 1
+            else:
+                # 整数优先级映射
+                priority_map = {1: "CRITICAL", 2: "HIGH", 3: "NORMAL", 4: "LOW"}
+                priority_name = priority_map.get(config.priority, "NORMAL")
+                distribution[priority_name] += 1
+        
+        return distribution
+    
+    def get_tools_by_priority(self, priority: Union[TaskPriority, int]) -> List[str]:
+        """
+        按优先级获取工具列表（从orchestration/tool_registry.py合并）
+        
+        Args:
+            priority: 优先级（TaskPriority枚举或整数）
+            
+        Returns:
+            List[str]: 工具名称列表
+        """
+        target_priority = priority if isinstance(priority, TaskPriority) else TaskPriority(priority)
+        return [
+            name for name, config in self._tools.items()
+            if (isinstance(config.priority, TaskPriority) and config.priority == target_priority)
+            or (isinstance(config.priority, int) and config.priority == target_priority.value)
+        ]
+    
+    def get_parallel_safe_tools(self) -> List[str]:
+        """
+        获取所有并行安全的工具（从orchestration/tool_registry.py合并）
+        
+        Returns:
+            List[str]: 并行安全的工具名称列表
+        """
+        return [name for name, config in self._tools.items() if config.parallel_safe]
+    
+    def get_concurrent_tools(self) -> List[str]:
+        """
+        获取支持并发执行的工具（从orchestration/tool_registry.py合并）
+        
+        Returns:
+            List[str]: 支持并发的工具名称列表
+        """
+        return [name for name, config in self._tools.items() if config.supports_concurrent]
+    
+    def get_tool_execution_time(self, name: str) -> float:
+        """
+        获取工具的预估执行时间（从orchestration/tool_registry.py合并）
+        
+        Args:
+            name: 工具名称
+            
+        Returns:
+            float: 预估执行时间（秒）
+        """
+        config = self._tools.get(name)
+        return config.execution_time if config else 1.0
+    
+    def get_tool_dependencies(self, name: str) -> List[str]:
+        """
+        获取工具的依赖列表（从orchestration/tool_registry.py合并）
+        
+        Args:
+            name: 工具名称
+            
+        Returns:
+            List[str]: 依赖的工具名称列表
+        """
+        config = self._tools.get(name)
+        return config.dependencies if config else []
+    
+    # 兼容性别名方法（保持与orchestration/tool_registry.py的API兼容）
+    def register(self, tool_name: str, metadata: ToolConfig) -> None:
+        """
+        注册工具（兼容orchestration/tool_registry.py的API）
+        
+        Args:
+            tool_name: 工具名称
+            metadata: 工具配置（ToolConfig）
+        """
+        self.register_tool(tool_name, metadata)
+    
+    def get_metadata(self, tool_name: str) -> Optional[ToolConfig]:
+        """
+        获取工具元数据（兼容orchestration/tool_registry.py的API）
+        
+        Args:
+            tool_name: 工具名称
+            
+        Returns:
+            ToolConfig: 工具配置，不存在返回None
+        """
+        return self.get_tool_optional(tool_name)
+    
+    def get_metadata_required(self, tool_name: str) -> ToolConfig:
+        """
+        获取工具元数据（必须存在，兼容orchestration/tool_registry.py的API）
+        
+        Args:
+            tool_name: 工具名称
+            
+        Returns:
+            ToolConfig: 工具配置
+            
+        Raises:
+            ToolNotFoundError: 工具未找到
+        """
+        return self.get_tool(tool_name)
+    
+    def list_tools_by_mcp_server(self, mcp_server: str) -> List[str]:
+        """
+        按MCP服务器列出工具（兼容orchestration/tool_registry.py的API）
+        
+        Args:
+            mcp_server: MCP服务器名称
+            
+        Returns:
+            List[str]: 工具名称列表
+        """
+        return self.list_tools_by_server(mcp_server)
+    
+    def list_mcp_servers(self) -> List[str]:
+        """
+        列出所有MCP服务器（兼容orchestration/tool_registry.py的API）
+        
+        Returns:
+            List[str]: MCP服务器列表
+        """
+        return self.list_servers()
+    
+    def get_tool_count(self) -> int:
+        """
+        获取已注册工具数量（兼容orchestration/tool_registry.py的API）
+        
+        Returns:
+            int: 工具数量
+        """
+        return len(self._tools)
+    
+    def update_metadata(self, tool_name: str, metadata: ToolConfig) -> bool:
+        """
+        更新工具元数据（兼容orchestration/tool_registry.py的API）
+        
+        Args:
+            tool_name: 工具名称
+            metadata: 新的工具配置
+            
+        Returns:
+            bool: 是否成功更新
+        """
+        if tool_name not in self._tools:
+            logger.warning(f"Tool not found for update: {tool_name}")
+            return False
+        
+        # 先注销旧的
+        self.unregister_tool(tool_name)
+        
+        # 再注册新的
+        try:
+            self.register_tool(tool_name, metadata)
+            logger.info(f"Updated tool metadata: {tool_name}")
+            return True
+        except ValidationError:
+            logger.error(f"Failed to update tool: {tool_name}")
+            return False
     
     def clear(self) -> None:
         """Clear all registered tools."""
@@ -420,3 +689,11 @@ class ToolRegistry:
 def create_tool_registry() -> ToolRegistry:
     """Create a new tool registry instance."""
     return ToolRegistry()
+
+
+# 向后兼容别名（从orchestration/tool_registry.py迁移）
+# ToolMetadata 是 ToolConfig 的别名，保持与旧代码的兼容性
+ToolMetadata = ToolConfig
+
+# 异常类别名（保持兼容性）
+ToolAlreadyRegisteredError = ValidationError
