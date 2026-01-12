@@ -45,6 +45,7 @@ from .skills_integration import (
     # Feature Flags
     is_skills_mode_enabled,
     is_agent_mode_enabled,
+    get_skills_config,
     # 集成器
     SkillsIntegration,
     get_skills_integration,
@@ -73,6 +74,7 @@ __all__ = [
     # Feature Flags
     "is_skills_mode_enabled",
     "is_agent_mode_enabled",
+    "get_skills_config",
     # 集成器
     "SkillsIntegration",
     "get_skills_integration",

@@ -64,6 +64,23 @@ def is_agent_mode_enabled() -> bool:
     return os.getenv('USE_AGENT_MODE', 'false').lower() in ('true', '1', 'yes')
 
 
+def get_skills_config() -> Dict[str, Any]:
+    """
+    获取 Skills 架构配置（用于测试/诊断）
+
+    Returns:
+        Dict[str, Any]: 配置字典（包含 skills_mode_enabled/agent_mode_enabled/feature_flags）
+    """
+    return {
+        "skills_mode_enabled": is_skills_mode_enabled(),
+        "agent_mode_enabled": is_agent_mode_enabled(),
+        "feature_flags": {
+            "USE_SKILLS_MODE": os.getenv("USE_SKILLS_MODE", "false"),
+            "USE_AGENT_MODE": os.getenv("USE_AGENT_MODE", "false"),
+        },
+    }
+
+
 # =============================================================================
 # Skills架构集成器
 # =============================================================================
