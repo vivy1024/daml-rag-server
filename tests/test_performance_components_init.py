@@ -34,7 +34,7 @@ def test_get_cache_manager():
     
     assert cache_manager is not None
     assert hasattr(cache_manager, 'get')
-    assert hasattr(cache_manager, 'put')
+    assert hasattr(cache_manager, 'set')
     assert hasattr(cache_manager, 'get_stats')
     
     logger.info("✅ 智能缓存管理器获取测试通过")

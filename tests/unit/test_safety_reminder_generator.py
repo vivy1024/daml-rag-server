@@ -14,6 +14,7 @@ Properties:
 """
 
 import pytest
+pytest.importorskip("hypothesis", reason="属性测试依赖 hypothesis（可选）")
 from hypothesis import given, strategies as st, settings, assume
 from typing import Dict, Any, List
 

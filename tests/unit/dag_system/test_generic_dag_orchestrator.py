@@ -14,7 +14,7 @@ import asyncio
 from src.framework.orchestration import (
     GenericDAGOrchestrator,
     ToolRegistry,
-    ToolMetadata,
+    ToolConfig,  # 更新：使用ToolConfig替代ToolMetadata
     TaskPriority,
     DAGTemplate,
     DAGTask,
@@ -30,25 +30,28 @@ class TestGenericDAGOrchestrator:
         """创建测试用的工具注册表"""
         registry = ToolRegistry()
         
-        # 注册测试工具
-        registry.register("tool_a", ToolMetadata(
+        # 注册测试工具 - 更新：使用server_name替代mcp_server
+        registry.register("tool_a", ToolConfig(
             name="tool_a",
-            mcp_server="test-server",
+            description="Test tool A",
+            server_name="test-server",
             execution_time=1.0,
             priority=TaskPriority.HIGH
         ))
         
-        registry.register("tool_b", ToolMetadata(
+        registry.register("tool_b", ToolConfig(
             name="tool_b",
-            mcp_server="test-server",
+            description="Test tool B",
+            server_name="test-server",
             execution_time=1.0,
             dependencies=["tool_a"],
             priority=TaskPriority.NORMAL
         ))
         
-        registry.register("tool_c", ToolMetadata(
+        registry.register("tool_c", ToolConfig(
             name="tool_c",
-            mcp_server="test-server",
+            description="Test tool C",
+            server_name="test-server",
             execution_time=1.0,
             dependencies=["tool_a"],
             priority=TaskPriority.NORMAL

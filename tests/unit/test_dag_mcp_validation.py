@@ -22,10 +22,12 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.framework.orchestration.enhanced_parameter_extractor import EnhancedParameterExtractor
-from src.framework.orchestration.enhanced_parameter_validator import EnhancedParameterValidator
+from src.framework.orchestration.parameter_extractor import ParameterExtractor, ParamMapping
+from src.framework.orchestration.parameter_validator import ParameterValidator
 from src.framework.orchestration.mcp_tool_schema_registry import get_schema_registry, MCPToolSchemaRegistry
-from src.framework.orchestration.parameter_extractor import ParamMapping
+
+# 向后兼容别名
+EnhancedParameterValidator = ParameterValidator
 
 
 class TestEnhancedParameterExtractor:
@@ -33,7 +35,7 @@ class TestEnhancedParameterExtractor:
     
     def test_workflow_state_mappings_defined(self):
         """验证WORKFLOW_STATE_MAPPINGS已定义context和query_analysis"""
-        extractor = EnhancedParameterExtractor()
+        extractor = ParameterExtractor()
         
         # 验证context映射
         assert "context" in extractor.WORKFLOW_STATE_MAPPINGS
@@ -53,7 +55,7 @@ class TestEnhancedParameterExtractor:
     
     def test_extract_from_workflow_state_context(self):
         """验证从workflow state提取context数据"""
-        extractor = EnhancedParameterExtractor()
+        extractor = ParameterExtractor()
         
         # 模拟workflow state
         workflow_state = {
@@ -88,7 +90,7 @@ class TestEnhancedParameterExtractor:
     
     def test_extract_from_workflow_state_query_analysis(self):
         """验证从workflow state提取query_analysis数据"""
-        extractor = EnhancedParameterExtractor()
+        extractor = ParameterExtractor()
         
         # 模拟workflow state
         workflow_state = {
@@ -124,7 +126,7 @@ class TestEnhancedParameterExtractor:
     
     def test_no_warning_for_standard_workflow_data(self):
         """验证对于context和query_analysis不会记录"上游任务不存在"警告"""
-        extractor = EnhancedParameterExtractor()
+        extractor = ParameterExtractor()
         
         # 定义参数映射（从context提取，但上游结果为空）
         param_mappings = [
@@ -301,7 +303,7 @@ class TestIntegration:
     
     def test_full_dag_parameter_pipeline(self):
         """测试完整的DAG参数处理管道"""
-        extractor = EnhancedParameterExtractor()
+        extractor = ParameterExtractor()
         validator = EnhancedParameterValidator()
         
         # 模拟workflow state

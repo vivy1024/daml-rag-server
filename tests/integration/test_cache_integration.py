@@ -2,7 +2,7 @@
 """
 缓存集成测试
 
-测试IntelligentCacheManager在工作流执行器中的集成情况。
+测试 CacheManager（framework/mcp/cache_manager.py）在工作流执行器中的集成情况。
 
 版本: v1.0.0
 日期: 2025-12-21
@@ -18,7 +18,7 @@ from src.applications.fitness.workflow_executor import (
     get_cache_manager,
     initialize_performance_components
 )
-from src.framework.storage.intelligent_cache_manager import IntelligentCacheManager
+from src.framework.mcp.cache_manager import CacheManager
 
 
 class TestCacheIntegration:
@@ -35,7 +35,7 @@ class TestCacheIntegration:
         
         # 验证缓存管理器已初始化
         assert cache_manager is not None
-        assert isinstance(cache_manager, IntelligentCacheManager)
+        assert isinstance(cache_manager, CacheManager)
         
         print("✅ 缓存管理器初始化测试通过")
     
@@ -121,18 +121,18 @@ class TestCacheIntegration:
         await cache_manager.get("key2")  # 未命中
         
         # 获取统计信息
-        stats = cache_manager.get_stats()
+        stats = await cache_manager.get_stats()
         
         # 验证统计信息
         assert "hit_rate" in stats
-        assert "l1_hit_rate" in stats
-        assert "total_requests" in stats
-        assert stats["total_requests"] >= 2
+        assert "hits" in stats
+        assert "misses" in stats
+        assert (stats["hits"] + stats["misses"]) >= 2
         
         print("✅ 缓存统计功能测试通过")
-        print(f"   - 总请求数: {stats['total_requests']}")
-        print(f"   - 命中率: {stats['hit_rate']}%")
-        print(f"   - L1命中率: {stats['l1_hit_rate']}%")
+        print(f"   - 命中数: {stats['hits']}")
+        print(f"   - 未命中数: {stats['misses']}")
+        print(f"   - 命中率: {stats['hit_rate']}")
     
     @pytest.mark.asyncio
     async def test_user_profile_cache_key_format(self):

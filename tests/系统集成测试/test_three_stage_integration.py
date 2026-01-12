@@ -13,6 +13,11 @@ import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch
 
+pytest.importorskip(
+    "src.applications.fitness.three_stage_orchestrator",
+    reason="three_stage_orchestrator 已废弃/移除",
+)
+
 from src.applications.fitness.three_stage_orchestrator import (
     ThreeStageOrchestrator,
     ThreeStageRequest,

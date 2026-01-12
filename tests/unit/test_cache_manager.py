@@ -12,7 +12,7 @@ CacheManager单元测试
 import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch
-from src.framework.orchestration.cache_manager import CacheManager, CacheStatistics
+from src.framework.mcp.cache_manager import CacheManager, CacheStatistics
 
 
 class TestCacheManager:

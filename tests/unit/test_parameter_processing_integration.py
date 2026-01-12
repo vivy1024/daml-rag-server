@@ -231,18 +231,23 @@ class TestParameterValidator:
         """测试参数验证成功"""
         validator = ParameterValidator()
         
-        # 测试参数
+        # 测试参数 - 使用虚拟工具名避免Schema注册表干扰
+        # 或提供intelligent_exercise_selector的所有必需参数
         params = {
             "user_id": "test_user",
             "training_goal": "hypertrophy",
-            "difficulty_level": "intermediate"
+            "difficulty_level": "intermediate",
+            "muscle_group": "chest",
+            "available_equipment": ["dumbbell", "barbell"]
         }
         
         # 参数Schema
         param_schema = {
             "user_id": "str",
             "training_goal": "str",
-            "difficulty_level": "str"
+            "difficulty_level": "str",
+            "muscle_group": "str",
+            "available_equipment": "list"
         }
         
         # 验证参数
@@ -314,7 +319,9 @@ class TestIntegration:
                 "training_config": {
                     "available_equipment": ["dumbbell", "barbell"]  # 前端已传递英文
                 },
-                "target_muscle_groups": ["chest"]  # 前端已传递英文
+                "target_muscle_groups": ["chest"],  # 前端已传递英文
+                "muscle_group": "chest",  # 添加必需参数
+                "available_equipment": ["dumbbell", "barbell"]  # Schema注册表要求的必需参数
             }
         }
         
@@ -332,6 +339,14 @@ class TestIntegration:
             )
             for mapping in tool_config.param_mappings
         ]
+        
+        # 添加available_equipment的映射（Schema注册表要求）
+        param_mappings.append(ParamMapping(
+            source_task="get_user_profile",
+            source_path="available_equipment",
+            target_param="available_equipment",
+            default_value=["dumbbell"]
+        ))
         
         extracted_params = extractor.extract_from_upstream(
             param_mappings=param_mappings,

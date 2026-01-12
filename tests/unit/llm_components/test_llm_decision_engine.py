@@ -15,19 +15,15 @@ LLM决策引擎测试
 
 import pytest
 import asyncio
-import sys
 import os
 
-# 添加项目根目录到路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from applications.fitness.llm_decision_engine import (
+from src.applications.fitness.llm_decision_engine import (
     LLMDecisionEngine,
     DAGSelectionRequest,
     DAGSelectionResult,
     SelectionConfidence
 )
-from applications.fitness.dag_template_system import DAGTemplateManager
+from src.applications.fitness.dag_template_system import DAGTemplateManager
 
 
 class TestLLMDecisionEngine:
