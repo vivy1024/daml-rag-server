@@ -19,6 +19,7 @@ from .error_handler import (
 from .cache_manager import (
     CacheManager,
     CacheEntry,
+    CacheStatistics,
     get_cache_manager,
     cached
 )
@@ -33,6 +34,7 @@ __all__ = [
     # 缓存管理
     "CacheManager",
     "CacheEntry",
+    "CacheStatistics",
     "get_cache_manager",
     "cached",
 ]
