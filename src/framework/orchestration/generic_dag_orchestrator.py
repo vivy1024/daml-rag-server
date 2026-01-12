@@ -28,7 +28,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from collections import defaultdict, deque
 
-from .tool_registry import ToolRegistry, ToolMetadata, TaskPriority
+from ..tools.registry import ToolRegistry, ToolConfig, TaskPriority
+
+# 向后兼容别名
+ToolMetadata = ToolConfig
 
 logger = logging.getLogger(__name__)
 
@@ -453,21 +456,23 @@ class GenericDAGOrchestrator:
                 groups.append(cached_tasks)
                 used_tasks.update(task.tool_name for task in cached_tasks)
         
-        # 按MCP服务器分组
+        # 按MCP服务器分组（使用server_name属性，兼容ToolConfig）
         mcp_groups = defaultdict(list)
         for task in tasks:
             if task.tool_name not in used_tasks:
-                mcp_groups[task.tool_metadata.mcp_server].append(task)
+                # 兼容处理：优先使用server_name，回退到mcp_server
+                server_name = getattr(task.tool_metadata, 'server_name', None) or getattr(task.tool_metadata, 'mcp_server', 'default')
+                mcp_groups[server_name].append(task)
         
         # 为每个MCP服务器创建组
-        for mcp_server, server_tasks in mcp_groups.items():
+        for server_name, server_tasks in mcp_groups.items():
             if len(server_tasks) == 1:
                 # 单个任务直接成组
                 groups.append(server_tasks)
             else:
                 # 多个任务按资源限制分组
-                if mcp_server in self.resource_pools:
-                    semaphore = self.resource_pools[mcp_server]
+                if server_name in self.resource_pools:
+                    semaphore = self.resource_pools[server_name]
                     max_concurrent = semaphore._value
                     for i in range(0, len(server_tasks), max_concurrent):
                         group = server_tasks[i:i + max_concurrent]
@@ -584,10 +589,10 @@ class GenericDAGOrchestrator:
         task.start_time = time.time()
         
         try:
-            # 获取资源锁
-            mcp_server = task.tool_metadata.mcp_server
-            if mcp_server in self.resource_pools:
-                async with self.resource_pools[mcp_server]:
+            # 获取资源锁（兼容处理：优先使用server_name，回退到mcp_server）
+            server_name = getattr(task.tool_metadata, 'server_name', None) or getattr(task.tool_metadata, 'mcp_server', 'default')
+            if server_name in self.resource_pools:
+                async with self.resource_pools[server_name]:
                     result = await self._execute_task_with_retry(task, previous_results)
             else:
                 result = await self._execute_task_with_retry(task, previous_results)
