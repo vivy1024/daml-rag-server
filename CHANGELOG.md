@@ -1,8 +1,70 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.22.0
+**版本**: v9.23.0
 **更新日期**: 2026-01-12
-**状态**: ✅ 代码目录结构文档完善
+**状态**: ✅ 框架层去重重构完成
+
+---
+
+### v9.23.0 (2026-01-12) - 框架层去重重构 ✅
+
+**变更类型**: ♻️ 重构（代码去重）
+
+**需求背景**:
+- 框架层存在4组明显重复的文件（共10个文件）
+- 需要合并为5个文件，减少约50%的冗余代码
+- 提高代码可维护性，为开源做准备
+
+**实现内容**:
+
+1. **合并参数提取器** ✅
+   - `enhanced_parameter_extractor.py` → `parameter_extractor.py`
+   - 添加 `WORKFLOW_STATE_MAPPINGS` 类属性
+   - 添加 `extract_from_workflow_state()` 方法
+   - 保持向后兼容（`workflow_state` 参数可选）
+
+2. **合并参数验证器** ✅
+   - `enhanced_parameter_validator.py` → `parameter_validator.py`
+   - 添加 `schema_registry` 构造参数
+   - 支持Schema注册表优先验证
+   - 支持枚举类型验证
+
+3. **合并缓存管理器** ✅
+   - `orchestration/cache_manager.py` → `mcp/cache_manager.py`
+   - 添加用户档案缓存方法
+   - 添加会员权限缓存方法
+   - 扩展 `CACHE_CONFIG` 配置
+
+4. **合并工具注册表** ✅
+   - `orchestration/tool_registry.py` → `tools/registry.py`
+   - 添加 `TaskPriority` 枚举类
+   - 扩展 `ToolConfig` 添加优先级和并行安全字段
+
+5. **重命名适配器接口** ✅
+   - `interfaces/base_adapter.py` → `interfaces/adapter_interfaces.py`
+   - 避免与 `adapters/base_adapter.py` 混淆
+
+**删除的文件**:
+- `orchestration/enhanced_parameter_extractor.py`
+- `orchestration/enhanced_parameter_validator.py`
+- `orchestration/cache_manager.py`
+- `orchestration/tool_registry.py`
+- `interfaces/base_adapter.py`（重命名）
+
+**代码统计**:
+- 框架层文件数：68个 → 63个（减少5个）
+- 代码行数：~35,000行 → ~33,000行（减少约6%）
+- orchestration模块：15个 → 11个文件
+
+**文档更新**:
+- `docs/02-核心架构/01-系统架构/05-代码目录结构.md` v7.1.0
+- 更新模块统计表格
+- 更新文件说明
+
+**相关规范**:
+- `.kiro/specs/framework-deduplication/requirements.md`
+- `.kiro/specs/framework-deduplication/design.md`
+- `.kiro/specs/framework-deduplication/tasks.md`
 
 ---
 
