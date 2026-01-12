@@ -67,7 +67,7 @@ class EnhancedDAGOrchestrator:
         self.mcp_orchestrator = mcp_orchestrator
         self.cache_manager = cache_manager
         self.template_manager = template_manager or DAGTemplateManager()
-        self.visualizer = visualizer or DAGVisualizer(debug_mode=False, log_level=LogLevel.NORMAL)
+        self.visualizer = visualizer  # DAGVisualizer已删除，visualizer为None时不使用可视化
         
         # 初始化工具元数据和依赖图
         self.tool_metadata_registry = self._initialize_tool_metadata()
@@ -93,16 +93,16 @@ class EnhancedDAGOrchestrator:
     def _init_parameter_processors(self):
         """初始化参数处理层组件"""
         from src.framework.orchestration.config_loader import get_config_loader
-        from src.framework.orchestration.enhanced_parameter_extractor import EnhancedParameterExtractor
+        from src.framework.orchestration.parameter_extractor import ParameterExtractor
         from src.framework.orchestration.parameter_converter import ParameterConverter
-        from src.framework.orchestration.enhanced_parameter_validator import EnhancedParameterValidator
+        from src.framework.orchestration.parameter_validator import ParameterValidator
         
         self.config_loader = get_config_loader()
-        self.parameter_extractor = EnhancedParameterExtractor()
+        self.parameter_extractor = ParameterExtractor()
         self.parameter_converter = ParameterConverter()
-        self.parameter_validator = EnhancedParameterValidator()
+        self.parameter_validator = ParameterValidator()
         
-        logger.info("✅ 参数处理层初始化完成（使用EnhancedParameterExtractor + EnhancedParameterValidator）")
+        logger.info("✅ 参数处理层初始化完成（使用ParameterExtractor + ParameterValidator）")
 
     def _initialize_tool_metadata(self) -> Dict[str, ToolMetadata]:
         """初始化工具元数据注册表"""
@@ -1090,12 +1090,17 @@ class EnhancedDAGOrchestrator:
         limit: Optional[int] = None
     ) -> List[Any]:
         """获取执行日志"""
-        return self.visualizer.get_execution_logs(tool_name, status, limit)
+        if self.visualizer:
+            return self.visualizer.get_execution_logs(tool_name, status, limit)
+        return []
 
     def generate_execution_summary(self) -> str:
         """生成执行摘要"""
-        return self.visualizer.generate_execution_summary()
+        if self.visualizer:
+            return self.visualizer.generate_execution_summary()
+        return "Visualizer not available"
 
     def export_execution_logs(self, filepath: str):
         """导出执行日志到文件"""
-        self.visualizer.export_logs_to_file(filepath)
+        if self.visualizer:
+            self.visualizer.export_logs_to_file(filepath)

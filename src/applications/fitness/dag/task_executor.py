@@ -686,16 +686,16 @@ class TaskExecutor:
                         for mapping in tool_config.param_mappings
                     ]
                     
-                    # 构建workflow_state用于EnhancedParameterExtractor的回退提取
+                    # 构建workflow_state用于ParameterExtractor的回退提取
                     # workflow_state包含context和query_analysis的数据
                     workflow_state = self._build_workflow_state(previous_results)
                     
-                    # 调用增强参数提取器，传递workflow_state参数
+                    # 调用参数提取器，传递workflow_state参数
                     extracted_params = self.parameter_extractor.extract_from_upstream(
                         param_mappings=param_mappings,
                         upstream_results=previous_results,
                         context={"tool_name": tool_name},
-                        workflow_state=workflow_state  # 新增：传递workflow_state
+                        workflow_state=workflow_state  # 传递workflow_state启用回退提取
                     )
                     task.params.update(extracted_params)
             except Exception as e:
@@ -736,10 +736,10 @@ class TaskExecutor:
 
     def _build_workflow_state(self, previous_results: Dict[str, Any]) -> Dict[str, Any]:
         """
-        构建workflow_state用于EnhancedParameterExtractor的回退提取
+        构建workflow_state用于ParameterExtractor的回退提取
         
         从previous_results中提取context和query_analysis数据，
-        构建符合EnhancedParameterExtractor.WORKFLOW_STATE_MAPPINGS格式的状态对象。
+        构建符合ParameterExtractor.WORKFLOW_STATE_MAPPINGS格式的状态对象。
         
         Args:
             previous_results: 之前任务的执行结果
