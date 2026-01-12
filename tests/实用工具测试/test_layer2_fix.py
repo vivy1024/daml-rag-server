@@ -14,6 +14,12 @@ import logging
 import sys
 import os
 
+# 这是手工验证脚本（依赖 Neo4j/Qdrant/真实数据），不纳入默认 pytest 套件
+if "pytest" in sys.modules:
+    import pytest
+
+    pytest.skip("手工验证脚本（Layer2 图谱查询修复），默认跳过", allow_module_level=True)
+
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 

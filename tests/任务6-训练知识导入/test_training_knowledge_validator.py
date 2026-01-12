@@ -16,6 +16,11 @@ import json
 import pytest
 from pathlib import Path
 
+pytest.importorskip(
+    "src.applications.fitness.data_supplement",
+    reason="data_supplement 模块已移除/未包含",
+)
+
 from src.applications.fitness.data_supplement.validator import DataValidator
 
 

@@ -13,6 +13,12 @@
 """
 
 import pytest
+
+# monitoring v3.0.0 已删除 legacy performance_monitor.py；这些测试仅适用于旧实现。
+pytest.importorskip(
+    "src.framework.monitoring.performance_monitor",
+    reason="Legacy PerformanceMonitor 已移除（由 metrics_collector/prometheus_integration 覆盖）",
+)
 import time
 import json
 from src.framework.monitoring.performance_monitor import (

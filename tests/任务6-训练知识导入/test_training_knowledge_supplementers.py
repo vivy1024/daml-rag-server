@@ -5,6 +5,12 @@
 """
 
 import pytest
+
+# data_supplement 模块已移除/未包含：保留此文件作为历史验证用例（默认跳过）
+pytest.importorskip(
+    "src.applications.fitness.data_supplement",
+    reason="data_supplement 模块已移除/未包含",
+)
 import asyncio
 import sys
 from pathlib import Path

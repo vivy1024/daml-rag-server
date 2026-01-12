@@ -12,11 +12,7 @@ import tempfile
 import yaml
 from unittest.mock import patch
 
-# 添加项目路径
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from applications.fitness.services.equipment_alias_mapper import (
+from src.applications.fitness.services.equipment_alias_mapper import (
     EquipmentAliasMapper,
     get_equipment_alias_mapper,
     reset_equipment_alias_mapper

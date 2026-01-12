@@ -11,13 +11,14 @@
 
 import pytest
 import asyncio
-import sys
-from pathlib import Path
 
-# 添加项目根目录到路径
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# three_stage_orchestrator 已废弃/移除：保留此文件作为历史验证用例（默认跳过）
+pytest.importorskip(
+    "src.applications.fitness.three_stage_orchestrator",
+    reason="three_stage_orchestrator 已废弃/移除",
+)
 
-from applications.fitness.three_stage_orchestrator import (
+from src.applications.fitness.three_stage_orchestrator import (
     ThreeStageOrchestrator,
     ThreeStageRequest,
     ThreeStageResult

@@ -20,6 +20,7 @@ import json
 import time
 import asyncio
 import aiohttp
+import os
 from pathlib import Path
 from typing import Dict, Any, List
 from datetime import datetime
@@ -27,6 +28,14 @@ from datetime import datetime
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 API_BASE_URL = "http://localhost:8001"
+
+# 该文件为“验收测试”，依赖运行中的服务与完整环境。
+# 默认跳过，避免在普通 `pytest` 场景下误报失败。
+if os.getenv("RUN_DAML_RAG_ACCEPTANCE_TESTS", "false").lower() not in ("true", "1", "yes"):
+    pytest.skip(
+        "需要运行中的DAML-RAG服务与验收环境（设置RUN_DAML_RAG_ACCEPTANCE_TESTS=true启用）",
+        allow_module_level=True,
+    )
 
 
 class AcceptanceTestResults:

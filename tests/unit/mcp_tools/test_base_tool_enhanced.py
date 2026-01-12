@@ -15,11 +15,7 @@ from unittest.mock import Mock, AsyncMock, MagicMock
 from typing import Dict, Any, List
 from pydantic import BaseModel
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
-
-from applications.fitness.mcp_tools.base_tool import (
+from src.applications.fitness.mcp_tools.base_tool import (
     BaseMCPTool,
     ToolMetadata,
     VersionInfo,

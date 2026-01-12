@@ -1,5 +1,5 @@
 {
-  "test_time": "2025-12-20T21:19:57.267565",
+  "test_time": "2026-01-12T16:27:36.742607",
   "test_type": "性能优化验收测试",
   "version": "v1.0.0",
   "categories": {
@@ -8,7 +8,7 @@
       "passed": 3,
       "failed": 1,
       "pass_rate": 0.75,
-      "warnings": 1,
+      "warnings": 0,
       "test_items": [
         {
           "category": "性能指标",
@@ -31,7 +31,7 @@
           "name": "并发处理能力 (QPS)",
           "passed": true,
           "expected": ">= 50 (目标: 200)",
-          "actual": "68.45",
+          "actual": "1643.14",
           "details": "成功率: 0.0%"
         },
         {
@@ -43,57 +43,55 @@
           "details": "命中: 0, 未命中: 0"
         }
       ],
-      "warning_messages": [
-        "QPS (68.45) 未达到目标 (200)，但超过最低要求 (50)"
-      ]
+      "warning_messages": []
     },
     "错误处理": {
       "total_tests": 4,
-      "passed": 0,
-      "failed": 4,
-      "pass_rate": 0.0,
+      "passed": 4,
+      "failed": 0,
+      "pass_rate": 1.0,
       "warnings": 0,
       "test_items": [
         {
           "category": "错误处理",
           "name": "数据库连接池耗尽处理",
-          "passed": false,
+          "passed": true,
           "expected": ">= 50% 成功率",
-          "actual": "0.0%",
-          "details": "失败: 50, 超时: 0"
+          "actual": "100.0%",
+          "details": "失败: 0, 超时: 0"
         },
         {
           "category": "错误处理",
           "name": "Redis缓存不可用处理",
-          "passed": false,
+          "passed": true,
           "expected": ">= 60% 成功率 (降级模式)",
-          "actual": "0.0%",
+          "actual": "100.0%",
           "details": "系统应降级到内存缓存或直接查询数据库"
         },
         {
           "category": "错误处理",
           "name": "LLM后端失败处理",
-          "passed": false,
+          "passed": true,
           "expected": ">= 50% 成功率 (模板响应)",
-          "actual": "0.0%",
+          "actual": "100.0%",
           "details": "系统应降级到模板化响应"
         },
         {
           "category": "错误处理",
           "name": "网络延迟处理",
-          "passed": false,
+          "passed": true,
           "expected": ">= 70% 成功率",
-          "actual": "0.0%",
-          "details": "平均响应时间: 0.00s"
+          "actual": "100.0%",
+          "details": "平均响应时间: 11.88s"
         }
       ],
       "warning_messages": []
     },
     "监控系统": {
       "total_tests": 5,
-      "passed": 4,
-      "failed": 1,
-      "pass_rate": 0.8,
+      "passed": 5,
+      "failed": 0,
+      "pass_rate": 1.0,
       "warnings": 0,
       "test_items": [
         {
@@ -131,10 +129,10 @@
         {
           "category": "监控系统",
           "name": "性能报告文件",
-          "passed": false,
+          "passed": true,
           "expected": "至少存在1个性能报告",
-          "actual": "存在 0 个报告",
-          "details": "报告: []"
+          "actual": "存在 2 个报告",
+          "details": "报告: ['performance_report.json', 'stress_test_report.json']"
         }
       ],
       "warning_messages": []
@@ -142,10 +140,10 @@
   },
   "overall_summary": {
     "total_tests": 13,
-    "passed": 7,
-    "failed": 6,
-    "pass_rate": 0.5384615384615384,
-    "warnings": 1,
+    "passed": 12,
+    "failed": 1,
+    "pass_rate": 0.9230769230769231,
+    "warnings": 0,
     "categories_tested": 3
   },
   "test_passed": false,
@@ -157,54 +155,6 @@
       "actual": "0.0%",
       "severity": "high",
       "recommendation": "优化缓存策略，增加缓存预热，调整TTL配置"
-    },
-    {
-      "category": "错误处理",
-      "test": "数据库连接池耗尽处理",
-      "expected": ">= 50% 成功率",
-      "actual": "0.0%",
-      "severity": "medium",
-      "recommendation": "增加连接池大小，优化连接管理，实现连接复用"
-    },
-    {
-      "category": "错误处理",
-      "test": "Redis缓存不可用处理",
-      "expected": ">= 60% 成功率 (降级模式)",
-      "actual": "0.0%",
-      "severity": "medium",
-      "recommendation": "确保Redis服务稳定，实现降级机制，增加内存缓存"
-    },
-    {
-      "category": "错误处理",
-      "test": "LLM后端失败处理",
-      "expected": ">= 50% 成功率 (模板响应)",
-      "actual": "0.0%",
-      "severity": "medium",
-      "recommendation": "实现LLM降级策略，增加模板响应，优化重试机制"
-    },
-    {
-      "category": "错误处理",
-      "test": "网络延迟处理",
-      "expected": ">= 70% 成功率",
-      "actual": "0.0%",
-      "severity": "medium",
-      "recommendation": "增加超时时间，实现异步处理，优化网络配置"
-    },
-    {
-      "category": "监控系统",
-      "test": "性能报告文件",
-      "expected": "至少存在1个性能报告",
-      "actual": "存在 0 个报告",
-      "severity": "medium",
-      "recommendation": "检查相关配置和日志，进行针对性优化"
-    },
-    {
-      "category": "警告",
-      "test": "性能警告",
-      "expected": "无警告",
-      "actual": "QPS (68.45) 未达到目标 (200)，但超过最低要求 (50)",
-      "severity": "low",
-      "recommendation": "关注性能指标，考虑进一步优化"
     }
   ]
 }

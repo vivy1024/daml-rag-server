@@ -9,6 +9,12 @@
 """
 
 import pytest
+
+# monitoring v3.0.0 已删除 legacy enhanced_logging.py；这些测试仅适用于旧实现。
+pytest.importorskip(
+    "src.framework.monitoring.enhanced_logging",
+    reason="Legacy EnhancedLogger 已移除（由 structured_logger 覆盖）",
+)
 import time
 from src.framework.monitoring.enhanced_logging import EnhancedLogger, SessionLogContext
 
