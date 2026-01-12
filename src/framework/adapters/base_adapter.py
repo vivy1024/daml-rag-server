@@ -4,15 +4,15 @@
 
 提供框架层通用适配器的默认实现。
 
-版本：v2.0.0
-日期：2025-11-26
+版本：v2.1.0
+日期：2026-01-12
 """
 
 import logging
 from typing import Dict, Any, List, Optional, Union
 from abc import ABC
 
-from ..interfaces.base_adapter import (
+from ..interfaces.adapter_interfaces import (
     IDomainAdapter,
     IQueryAdapter,
     IWorkflowAdapter,

@@ -34,7 +34,7 @@ from .domain_adapter import (
     register_domain_adapter,
 )
 
-from ..interfaces.base_adapter import (
+from ..interfaces.adapter_interfaces import (
     AdapterContext,
     AdapterResult
 )
