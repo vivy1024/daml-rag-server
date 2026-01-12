@@ -4,16 +4,19 @@
 
 提供通用的DAG编排、Agent执行和工具管理功能。
 
-版本: v1.1.0
-日期: 2026-01-11
+版本: v1.2.0
+日期: 2026-01-12
+变更: 工具注册表已迁移到tools模块，此处重新导出以保持向后兼容
 """
 
-from .tool_registry import (
+# 工具注册表已迁移到tools模块，为了向后兼容，从tools模块重新导出
+from ..tools.registry import (
     ToolRegistry,
-    ToolMetadata,
+    ToolConfig,
+    ToolMetadata,  # ToolConfig的别名，保持向后兼容
     TaskPriority,
-    ToolAlreadyRegisteredError,
-    ToolNotFoundError
+    ToolNotFoundError,
+    ValidationError as ToolAlreadyRegisteredError  # 保持向后兼容
 )
 
 from .generic_dag_orchestrator import (
@@ -25,7 +28,9 @@ from .generic_dag_orchestrator import (
     TaskStatus
 )
 
-from .cache_manager import (
+# CacheManager和CacheStatistics已迁移到mcp模块
+# 为了向后兼容，从mcp模块重新导出
+from ..mcp.cache_manager import (
     CacheManager,
     CacheStatistics
 )
@@ -44,9 +49,10 @@ from .agent_executor import (
 )
 
 __all__ = [
-    # 工具注册表
+    # 工具注册表（从tools模块重新导出）
     "ToolRegistry",
-    "ToolMetadata",
+    "ToolConfig",
+    "ToolMetadata",  # ToolConfig的别名
     "TaskPriority",
     "ToolAlreadyRegisteredError",
     "ToolNotFoundError",
