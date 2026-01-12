@@ -16,7 +16,7 @@ User Profile Cache - 用户档案缓存
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,62 @@ class UserProfileCache:
         self.ttl = 300  # 5分钟
         
         logger.info("UserProfileCache initialized with TTL=300s")
+
+    # ============ 兼容接口（供工作流与CacheManager使用） ============
+
+    async def get_user_profile(
+        self,
+        user_id: Union[str, int],
+        force_refresh: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        兼容接口：获取用户档案
+
+        说明：
+        - 旧接口使用字符串user_id；这里统一转换为int
+        - force_refresh=True 时先失效缓存再重新加载
+        """
+        try:
+            user_id_int = int(user_id)
+        except Exception:
+            logger.warning(f"Invalid user_id for get_user_profile: {user_id!r}")
+            return None
+
+        if force_refresh:
+            await self.invalidate_profile(user_id_int)
+
+        return await self.get_profile(user_id_int)
+
+    async def set_user_profile(
+        self,
+        user_id: Union[str, int],
+        profile: Dict[str, Any],
+        ttl: Optional[int] = None,
+    ) -> None:
+        """兼容接口：写入用户档案缓存"""
+        try:
+            user_id_int = int(user_id)
+        except Exception:
+            logger.warning(f"Invalid user_id for set_user_profile: {user_id!r}")
+            return
+
+        cache_key = self._get_cache_key(user_id_int)
+        cache_ttl = ttl if ttl is not None else self.ttl
+        await self.cache.set(cache_key, profile, cache_ttl)
+
+    async def invalidate_user(self, user_id: Union[str, int]) -> bool:
+        """兼容接口：使指定用户缓存失效"""
+        try:
+            user_id_int = int(user_id)
+        except Exception:
+            logger.warning(f"Invalid user_id for invalidate_user: {user_id!r}")
+            return False
+
+        return await self.invalidate_profile(user_id_int)
+
+    async def shutdown(self) -> None:
+        """兼容接口：关闭缓存（当前无资源需要释放）"""
+        return None
     
     async def get_profile(self, user_id: int) -> Optional[Dict[str, Any]]:
         """
