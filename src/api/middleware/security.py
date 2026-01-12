@@ -17,6 +17,7 @@ import logging
 import re
 import time
 import hashlib
+import os
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -148,7 +149,7 @@ class InputValidator:
 class RateLimiter:
     """限流器 - 防止API滥用和DDoS攻击"""
     
-    # 内部调用白名单（不受限流限制）
+    # 内部调用白名单（默认不跳过限流；仅在显式开启时生效）
     INTERNAL_IPS = {'127.0.0.1', 'localhost', '::1'}
     
     def __init__(
@@ -214,10 +215,11 @@ class RateLimiter:
         """
         client_id = self._get_client_id(request)
         
-        # 内部调用白名单检查（跳过限流）
-        client_ip = request.client.host if request.client else None
-        if client_ip in self.INTERNAL_IPS:
-            return True
+        # 内部调用白名单检查（可选跳过限流）
+        if os.getenv("BYPASS_RATE_LIMIT_FOR_INTERNAL", "false").lower() in ("true", "1", "yes"):
+            client_ip = request.client.host if request.client else None
+            if client_ip in self.INTERNAL_IPS:
+                return True
         
         # 检查黑名单
         if client_id in self.blacklist:
@@ -325,7 +327,14 @@ class AuthenticationManager:
     
     def is_public_path(self, path: str) -> bool:
         """检查是否是公开路径"""
-        return any(path.startswith(public_path) for public_path in self.PUBLIC_PATHS)
+        for public_path in self.PUBLIC_PATHS:
+            if public_path == "/":
+                if path == "/":
+                    return True
+                continue
+            if path.startswith(public_path):
+                return True
+        return False
     
     def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
         """
@@ -478,6 +487,87 @@ class SecurityLogger:
         }
         
         logger.warning(f"安全事件: {log_data}")
+
+
+class DataMasker:
+    """数据脱敏器 - 用于日志/输出中的敏感信息遮蔽"""
+
+    def mask_email(self, email: str) -> str:
+        """邮箱脱敏：u***@example.com / a*@example.com"""
+        if not email or "@" not in email:
+            return "***"
+
+        local_part, domain = email.split("@", 1)
+        if not local_part:
+            return f"***@{domain}"
+        if len(local_part) == 1:
+            return f"{local_part[0]}***@{domain}"
+        if len(local_part) == 2:
+            return f"{local_part[0]}*@{domain}"
+        return f"{local_part[0]}***@{domain}"
+
+    def mask_phone(self, phone: str) -> str:
+        """手机号脱敏：138****8000"""
+        if not phone:
+            return "***"
+        phone_str = str(phone)
+        if len(phone_str) < 7:
+            return "***"
+        return f"{phone_str[:3]}****{phone_str[-4:]}"
+
+    def mask_id_card(self, id_card: str) -> str:
+        """身份证号脱敏：110***********1234"""
+        if not id_card:
+            return "***"
+        id_str = str(id_card)
+        if len(id_str) <= 7:
+            return "***"
+        masked_len = max(len(id_str) - 7, 0)
+        return f"{id_str[:3]}{'*' * masked_len}{id_str[-4:]}"
+
+    def mask_token(self, token: str, visible_chars: int = 8) -> str:
+        """令牌脱敏：sk-abc12..."""
+        if not token:
+            return "***"
+        token_str = str(token)
+        if visible_chars <= 0:
+            return "..."
+        if len(token_str) <= visible_chars:
+            return token_str
+        return f"{token_str[:visible_chars]}..."
+
+    def mask_dict(self, data: Dict[str, Any], mask_rules: Dict[str, str]) -> Dict[str, Any]:
+        """
+        按规则对字典字段脱敏
+
+        Args:
+            data: 原始数据
+            mask_rules: {字段名: 脱敏类型}，类型支持 email/phone/id_card/token
+        """
+        if not isinstance(data, dict):
+            return {}
+
+        result: Dict[str, Any] = dict(data)
+        for field, mask_type in (mask_rules or {}).items():
+            if field not in result:
+                continue
+            value = result.get(field)
+            if value is None:
+                continue
+
+            if mask_type == "email":
+                result[field] = self.mask_email(str(value))
+            elif mask_type == "phone":
+                result[field] = self.mask_phone(str(value))
+            elif mask_type == "id_card":
+                result[field] = self.mask_id_card(str(value))
+            elif mask_type == "token":
+                result[field] = self.mask_token(str(value))
+            else:
+                # 未知类型：统一遮蔽
+                result[field] = "***"
+
+        return result
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):

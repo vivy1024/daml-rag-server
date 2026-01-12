@@ -56,7 +56,7 @@ async def warmup_user(request: WarmupRequest) -> WarmupResponse:
     加快后续对话中的数据加载速度。
     
     预热内容：
-    1. 用户档案（IntelligentUserCache）
+    1. 用户档案（UserProfileCache）
     2. 会员权限数据（SmartPreloader）
     
     Args:
@@ -87,10 +87,11 @@ async def warmup_user(request: WarmupRequest) -> WarmupResponse:
     try:
         # 1. 预热用户档案
         try:
-            from ...framework.storage.intelligent_user_profile_cache import IntelligentUserCache
             from ...applications.fitness.workflow_executor import get_user_cache
+            from ...applications.fitness.clients.backend_client import BackendClient
             
-            user_cache = get_user_cache()
+            backend_client = BackendClient()
+            user_cache = get_user_cache(backend_client=backend_client)
             if user_cache:
                 # 如果force_refresh=True，强制刷新缓存（用户档案已更新）
                 profile = await user_cache.get_user_profile(user_id, force_refresh=force_refresh)
