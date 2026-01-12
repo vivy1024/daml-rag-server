@@ -9,15 +9,13 @@
 日期: 2025-12-28
 
 单例组件:
-- IntelligentUserCache: 用户档案缓存
-- IntelligentMembershipCache: 会员权限缓存
-- DAMLWorkflowMonitor: 工作流监控器
-- DAGVisualizer: DAG可视化器
-- IntelligentCacheManager: 智能缓存管理器
+- UserProfileCache: 用户档案缓存
+- MembershipCache: 会员权限缓存
+- CacheManager: 通用/工作流缓存管理器（MCP模块）
 - ConnectionPoolManager: 连接池管理器
 - LLMFallbackManager: LLM降级管理器
 - ConcurrencyLimiter: 并发限流器
-- PerformanceMonitor: 性能监控器
+- MetricsCollector: 指标收集器（兼容 get_performance_monitor）
 """
 
 import logging
@@ -27,17 +25,16 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
-# ============ Feature Flag配置 ============
+# ============ Feature Flag配置（保留兼容，旧缓存实现已移除） ============
 
 def _use_new_cache() -> bool:
     """
     检查是否使用新缓存系统
-    
-    Returns:
-        bool: True=使用新缓存，False=使用旧缓存
+
+    说明：历史上存在“旧 Intelligent*Cache / 新 UnifiedCache 系列”两套实现。
+    当前代码库已移除旧实现，因此无论flag如何都使用新缓存体系。
     """
-    use_new = os.getenv('USE_NEW_CACHE', 'false').lower() in ('true', '1', 'yes')
-    return use_new
+    return os.getenv("USE_NEW_CACHE", "true").lower() in ("true", "1", "yes")
 
 
 # ============ 全局组件实例（单例模式） ============
@@ -63,47 +60,35 @@ def get_user_cache(backend_client=None, redis_client=None):
     """
     获取用户缓存单例
     
-    根据 USE_NEW_CACHE 环境变量选择新旧缓存系统：
-    - USE_NEW_CACHE=false（默认）：使用旧的 IntelligentUserCache
-    - USE_NEW_CACHE=true：使用新的 UserProfileCache
+    当前仅保留 UnifiedCache + UserProfileCache 实现（旧 IntelligentUserCache 已移除）。
     
     Args:
         backend_client: 后端客户端（首次调用时需要）
         redis_client: Redis客户端（可选）
         
     Returns:
-        用户缓存实例（IntelligentUserCache 或 UserProfileCache）
+        用户缓存实例（UserProfileCache）
     """
     global _user_cache_instance
     if _user_cache_instance is None:
-        if _use_new_cache():
-            # 使用新缓存系统
-            from ....framework.storage.user_profile_cache import UserProfileCache
-            from ....framework.storage.unified_cache import UnifiedCache, CacheConfig
-            
-            # 创建统一缓存
-            cache_config = CacheConfig()
-            unified_cache = UnifiedCache(redis_client=redis_client, config=cache_config)
-            
-            # 创建用户档案缓存（注意：新缓存使用db_client而不是backend_client）
-            _user_cache_instance = UserProfileCache(
-                unified_cache=unified_cache,
-                db_client=backend_client  # 传递为db_client参数
-            )
-            logger.info("✅ UserProfileCache（新缓存）初始化完成")
-        else:
-            # 使用旧缓存系统（默认）
-            from ....framework.storage.intelligent_user_profile_cache import (
-                IntelligentUserCache,
-                CacheConfig
-            )
-            cache_config = CacheConfig()
-            _user_cache_instance = IntelligentUserCache(
-                backend_client=backend_client,
-                redis_client=redis_client,
-                config=cache_config
-            )
-            logger.info("✅ IntelligentUserCache（旧缓存）初始化完成")
+        from ....framework.storage.user_profile_cache import UserProfileCache
+        from ....framework.storage.unified_cache import UnifiedCache, CacheConfig
+
+        if not _use_new_cache():
+            logger.warning("USE_NEW_CACHE=false 但旧缓存实现已移除，将使用新缓存实现")
+
+        cache_config = CacheConfig()
+        unified_cache = UnifiedCache(redis_client=redis_client, config=cache_config)
+        _user_cache_instance = UserProfileCache(
+            unified_cache=unified_cache,
+            db_client=backend_client,
+        )
+        logger.info("✅ UserProfileCache 初始化完成")
+
+    # 允许后续注入backend_client（避免首次以None创建后无法回源）
+    if backend_client is not None and hasattr(_user_cache_instance, "db_client"):
+        if getattr(_user_cache_instance, "db_client") is None:
+            _user_cache_instance.db_client = backend_client
     return _user_cache_instance
 
 
@@ -113,47 +98,35 @@ def get_membership_cache(backend_client=None, redis_client=None):
     """
     获取会员权限缓存单例
     
-    根据 USE_NEW_CACHE 环境变量选择新旧缓存系统：
-    - USE_NEW_CACHE=false（默认）：使用旧的 IntelligentMembershipCache
-    - USE_NEW_CACHE=true：使用新的 MembershipCache
+    当前仅保留 UnifiedCache + MembershipCache 实现（旧 IntelligentMembershipCache 已移除）。
     
     Args:
         backend_client: 后端客户端（首次调用时需要）
         redis_client: Redis客户端（可选）
         
     Returns:
-        会员缓存实例（IntelligentMembershipCache 或 MembershipCache）
+        会员缓存实例（MembershipCache）
     """
     global _membership_cache_instance
     if _membership_cache_instance is None:
-        if _use_new_cache():
-            # 使用新缓存系统
-            from ....framework.storage.membership_cache import MembershipCache
-            from ....framework.storage.unified_cache import UnifiedCache, CacheConfig
-            
-            # 创建统一缓存
-            cache_config = CacheConfig()
-            unified_cache = UnifiedCache(redis_client=redis_client, config=cache_config)
-            
-            # 创建会员缓存
-            _membership_cache_instance = MembershipCache(
-                unified_cache=unified_cache,
-                backend_client=backend_client
-            )
-            logger.info("✅ MembershipCache（新缓存）初始化完成")
-        else:
-            # 使用旧缓存系统（默认）
-            from ....framework.storage.intelligent_membership_cache import (
-                IntelligentMembershipCache
-            )
-            _membership_cache_instance = IntelligentMembershipCache(
-                backend_client=backend_client,
-                redis_client=redis_client,
-                max_memory_entries=200,
-                redis_ttl_seconds=600,  # 10分钟TTL
-                api_timeout_ms=2500  # 2.5秒超时
-            )
-            logger.info("✅ IntelligentMembershipCache（旧缓存）初始化完成")
+        from ....framework.storage.membership_cache import MembershipCache
+        from ....framework.storage.unified_cache import UnifiedCache, CacheConfig
+
+        if not _use_new_cache():
+            logger.warning("USE_NEW_CACHE=false 但旧缓存实现已移除，将使用新缓存实现")
+
+        cache_config = CacheConfig()
+        unified_cache = UnifiedCache(redis_client=redis_client, config=cache_config)
+        _membership_cache_instance = MembershipCache(
+            unified_cache=unified_cache,
+            backend_client=backend_client,
+        )
+        logger.info("✅ MembershipCache 初始化完成")
+
+    # 允许后续注入backend_client（避免首次以None创建后无法回源）
+    if backend_client is not None and hasattr(_membership_cache_instance, "backend_client"):
+        if getattr(_membership_cache_instance, "backend_client") is None:
+            _membership_cache_instance.backend_client = backend_client
     return _membership_cache_instance
 
 
@@ -171,12 +144,11 @@ def initialize_performance_components():
     """
     初始化性能优化组件（单例模式）
     
-    该函数初始化以下5个性能优化组件：
-    1. IntelligentCacheManager - 智能缓存管理器
+    该函数初始化以下4个性能优化组件：
+    1. CacheManager - 缓存管理器（基于 framework/mcp/cache_manager.py）
     2. ConnectionPoolManager - 连接池管理器
     3. LLMFallbackManager - LLM降级管理器
     4. ConcurrencyLimiter - 并发限流器
-    5. PerformanceMonitor - 性能监控器
     
     所有组件使用单例模式，确保全局只有一个实例。
     """
@@ -184,11 +156,10 @@ def initialize_performance_components():
     global _llm_degradation_manager_instance, _concurrency_limiter_instance
     global _performance_monitor_instance
     
-    # 1. 初始化智能缓存管理器
+    # 1. 初始化缓存管理器（懒加载下游依赖，确保代码可运行）
     if _cache_manager_instance is None:
-        from ....framework.storage.intelligent_cache_manager import IntelligentCacheManager
-        _cache_manager_instance = IntelligentCacheManager()
-        logger.info("✅ IntelligentCacheManager初始化完成")
+        _cache_manager_instance = get_cache_manager()
+        logger.info("✅ CacheManager初始化完成")
     
     # 2. 初始化连接池管理器
     if _connection_pool_manager_instance is None:
@@ -257,7 +228,11 @@ def initialize_performance_components():
         _concurrency_limiter_instance = ConcurrencyLimiter()
         logger.info("✅ ConcurrencyLimiter初始化完成")
     
-    # 注意：performance_monitor已删除，不再初始化
+    # 5. 兼容：performance_monitor 已删除，保留 get_performance_monitor() 作为 MetricsCollector 别名
+    if _performance_monitor_instance is None:
+        from ....framework.monitoring.metrics_collector import get_metrics_collector
+        _performance_monitor_instance = get_metrics_collector()
+        logger.info("✅ MetricsCollector初始化完成（兼容 get_performance_monitor）")
     
     logger.info("🎉 所有性能优化组件初始化完成")
 
@@ -269,11 +244,27 @@ def get_cache_manager():
     获取智能缓存管理器单例
     
     Returns:
-        IntelligentCacheManager 实例
+        CacheManager 实例
     """
     global _cache_manager_instance
     if _cache_manager_instance is None:
-        initialize_performance_components()
+        from ....framework.mcp.cache_manager import CacheManager
+
+        try:
+            from ..clients.backend_client import BackendClient
+            backend_client = BackendClient()
+        except Exception:
+            backend_client = None
+
+        user_cache = get_user_cache(backend_client=backend_client)
+        membership_cache = get_membership_cache(backend_client=backend_client)
+
+        _cache_manager_instance = CacheManager(
+            user_cache=user_cache,
+            membership_cache=membership_cache,
+            user_profile_ttl=300,
+            membership_ttl=600,
+        )
     return _cache_manager_instance
 
 
@@ -329,7 +320,7 @@ def get_performance_monitor():
     获取性能监控器单例
     
     Returns:
-        PerformanceMonitor 实例
+        MetricsCollector 实例（兼容旧命名）
     """
     global _performance_monitor_instance
     if _performance_monitor_instance is None:
@@ -540,7 +531,6 @@ __all__ = [
     "get_cache_manager",
     "get_workflow_caches",
     # 监控相关
-    "get_workflow_monitor",
     "get_performance_monitor",
     # 连接池和降级
     "get_connection_pool_manager",

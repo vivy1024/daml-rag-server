@@ -785,7 +785,7 @@ async def node_execute_dag(
         
         # 执行DAG模板
         # 构建完整的_context，包含user_id, query, session_id, user_profile
-        # 这些数据将被EnhancedParameterExtractor用于workflow state回退提取
+        # 这些数据将被ParameterExtractor用于workflow state回退提取
         dag_execution_result = await dag_orchestrator.execute_template(
             template_id=selected_template_id,
             user_profile=user_profile or {},
