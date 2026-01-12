@@ -68,10 +68,8 @@ class WorkflowExecutor:
     @property
     def workflow_monitor(self):
         """获取工作流监控器"""
-        if self._workflow_monitor is None and self.enable_monitoring:
-            from .singletons import get_workflow_monitor
-            self._workflow_monitor = get_workflow_monitor()
-        return self._workflow_monitor
+        # 注意：旧版 DAMLWorkflowMonitor 已移除，避免运行时导入失败
+        return None
     
     @property
     def performance_monitor(self):
