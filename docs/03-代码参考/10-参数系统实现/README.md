@@ -18,13 +18,13 @@
 
 1. **[enhanced_parameter_extractor.py](./01-enhanced_parameter_extractor.md)**
    - **功能**：增强参数提取器
-   - **位置**：`src/framework/orchestration/enhanced_parameter_extractor.py`
-   - **说明**：从LLM响应中智能提取结构化参数
+   - **位置**：✅ 已合并到 `src/framework/orchestration/parameter_extractor.py`
+   - **说明**：增强能力已并入基础提取器（保留兼容别名 `EnhancedParameterExtractor`）
 
 2. **[enhanced_parameter_validator.py](./02-enhanced_parameter_validator.md)**
    - **功能**：增强参数验证器
-   - **位置**：`src/framework/orchestration/enhanced_parameter_validator.py`
-   - **说明**：验证参数完整性和业务规则
+   - **位置**：✅ 已合并到 `src/framework/orchestration/parameter_validator.py`
+   - **说明**：增强能力已并入基础验证器（保留兼容别名 `EnhancedParameterValidator`）
 
 3. **[parameter_extractor.py](./03-parameter_extractor.md)**
    - **功能**：参数提取器
@@ -55,9 +55,9 @@
 ```
 LLM响应输出
     ↓
-参数提取 (enhanced_parameter_extractor)
+参数提取 (parameter_extractor，已合并增强功能)
     ↓
-参数验证 (enhanced_parameter_validator)
+参数验证 (parameter_validator，已合并增强功能)
     ↓
 参数转换 (parameter_converter)
     ↓

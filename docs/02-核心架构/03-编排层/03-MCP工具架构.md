@@ -527,7 +527,7 @@ adjusted_volume = base_volume * recovery_factor
 - 加载工具元数据
 - 配置验证
 
-#### 5. enhanced_parameter_extractor.py - 增强参数提取器
+#### 5. parameter_extractor.py - 参数提取器（已合并增强功能）
 
 **功能**：从用户输入中提取结构化参数
 **特性**：
@@ -535,7 +535,7 @@ adjusted_volume = base_volume * recovery_factor
 - 参数完整性验证
 - 错误提示
 
-#### 6. enhanced_parameter_validator.py - 增强参数验证器
+#### 6. parameter_validator.py - 参数验证器（已合并增强功能）
 
 **功能**：多层次参数验证
 **层次**：类型 → 存在 → 格式 → 安全
