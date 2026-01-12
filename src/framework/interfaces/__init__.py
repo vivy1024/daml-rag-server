@@ -6,11 +6,11 @@ DAML-RAG框架通用接口
 - IDomainAdapter: 领域适配器接口
 - IResultProcessor: 结果处理器接口
 
-版本：v2.0.0
-日期：2025-11-26
+版本：v2.1.0
+日期：2026-01-12
 """
 
-from .base_adapter import (
+from .adapter_interfaces import (
     IDomainAdapter,
     IQueryAdapter,
     IWorkflowAdapter,
