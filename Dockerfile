@@ -43,26 +43,30 @@ RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple --upg
 # 复制DAML-RAG源代码（v3.0精简架构）
 COPY . .
 
-# MCP服务器通过volumes挂载，不复制到镜像中
-# 启动时在容器内构建（见docker-compose.yml的command）
-
 # 创建数据目录和日志目录
-RUN mkdir -p /app/data /app/logs
+RUN mkdir -p /app/data /app/logs /app/mcp-servers
 
-# 预下载GTE-Large-zh模型（使用国内镜像加速）
-# 注释掉以避免HuggingFace限流问题，模型已在本地缓存
-# ENV HF_ENDPOINT=https://hf-mirror.com
-# RUN python -c "from sentence_transformers import SentenceTransformer; \
-#     model = SentenceTransformer('thenlper/gte-large-zh'); \
-#     print('✅ GTE-Large-zh model downloaded successfully')"
+# ============= 预下载GTE-Large-zh模型 =============
+# 使用HuggingFace国内镜像加速下载
+ENV HF_ENDPOINT=https://hf-mirror.com
+RUN python -c "from sentence_transformers import SentenceTransformer; \
+    model = SentenceTransformer('thenlper/gte-large-zh'); \
+    print('✅ GTE-Large-zh model downloaded successfully')" || \
+    echo "⚠️ Model download failed, will retry at runtime"
+
+# ============= 复制MCP服务构建文件 =============
+# MCP服务的构建文件已预先复制到daml-rag-server/mcp-servers目录
+# 这样在Zeabur构建时可以直接包含进镜像
+COPY mcp-servers/user-profile-stdio/build /app/mcp-servers/user-profile-stdio/build
+COPY mcp-servers/user-profile-stdio/package.json /app/mcp-servers/user-profile-stdio/
 
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1 \
     LOG_LEVEL=INFO \
-    PORT=3000 \
+    PORT=8001 \
     HOST=0.0.0.0 \
-    TRANSFORMERS_OFFLINE=1 \
-    HF_HUB_OFFLINE=1
+    TRANSFORMERS_OFFLINE=0 \
+    HF_HUB_OFFLINE=0
 
 # 暴露HTTP API端口
 EXPOSE 8001
@@ -80,4 +84,3 @@ RUN if [ -f /app/.env ]; then sed -i 's/\r$//' /app/.env; fi
 
 # 使用entrypoint脚本启动（确保MCP服务构建）
 ENTRYPOINT ["/app/entrypoint.sh"]
-

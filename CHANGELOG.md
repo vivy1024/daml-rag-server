@@ -1,8 +1,53 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.24.0
+**版本**: v9.25.0
 **更新日期**: 2026-01-13
-**状态**: ✅ 生产环境数据库连接修复
+**状态**: ✅ 生产环境Dockerfile优化
+
+---
+
+### v9.25.0 (2026-01-13) - 生产环境Dockerfile优化 ✅
+
+**变更类型**: 🔧 构建优化
+
+**问题描述**:
+- Zeabur生产环境启动日志显示两个警告：
+  1. `[WARN] user-profile-stdio MCP service not found` - MCP服务构建文件未包含在镜像中
+  2. `We couldn't connect to 'https://huggingface.co'` - Embedding模型无法下载
+
+**根因分析**:
+- 本地Docker通过volumes挂载模型和MCP服务，但Zeabur镜像中没有这些文件
+- Zeabur服务器无法访问HuggingFace下载模型
+
+**修复内容**:
+
+1. **预下载GTE-Large-zh模型** ✅
+   - 使用HuggingFace国内镜像 `hf-mirror.com` 加速下载
+   - 在Dockerfile构建阶段预下载模型
+   - 避免运行时网络问题
+
+2. **复制MCP服务构建文件** ✅
+   - 将 `mcp-servers/user-profile-stdio/build/` 目录复制到镜像
+   - 包含 `index.js` 和 `package.json`
+   - 确保MCP服务在Zeabur环境可用
+
+**Dockerfile变更**:
+```dockerfile
+# 预下载GTE-Large-zh模型
+ENV HF_ENDPOINT=https://hf-mirror.com
+RUN python -c "from sentence_transformers import SentenceTransformer; \
+    model = SentenceTransformer('thenlper/gte-large-zh'); \
+    print('✅ GTE-Large-zh model downloaded successfully')"
+
+# 复制MCP服务构建文件
+COPY mcp-servers/user-profile-stdio/build /app/mcp-servers/user-profile-stdio/build
+COPY mcp-servers/user-profile-stdio/package.json /app/mcp-servers/user-profile-stdio/
+```
+
+**影响范围**:
+- Zeabur生产环境构建时间增加（模型下载约2-3分钟）
+- 镜像大小增加（模型约1.3GB）
+- 运行时启动更快（无需下载模型）
 
 ---
 
