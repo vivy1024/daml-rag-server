@@ -6,52 +6,81 @@
 
 ---
 
-### v9.27.0 (2026-01-13) - 生产环境Neo4j连接根本修复 ✅
+### v9.27.0 (2026-01-13) - 生产环境Neo4j和Qdrant连接修复 ✅
 
-**变更类型**: 🐛 Bug修复（紧急）
+**变更类型**: 🐛 Bug修复（已完成）
 
 **问题描述**:
-- Zeabur生产环境DAML-RAG服务无法连接Neo4j数据库
-- 错误信息：`Couldn't connect to crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal:7687 - Timed out (30秒)`
+- Zeabur生产环境DAML-RAG服务无法连接Neo4j和Qdrant数据库
+- Neo4j错误：`Couldn't connect to crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal:7687 - Timed out (30秒)`
+- Qdrant错误：`failed to connect to all addresses - ipv4:10.43.153.47:6334: Timeout occurred`
 - 影响：AI聊天流式响应失败，三层检索无法工作
 
+**诊断过程**:
+
+1. **第一次诊断**（Neo4j环境变量缺失）：
+   - 通过Chrome DevTools MCP检查Zeabur控制台
+   - 发现Neo4j缺少Bolt连接器监听地址配置
+   - 添加环境变量：
+     - `NEO4J_dbms_default__listen__address=0.0.0.0`
+     - `NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687`
+   - Neo4j重启后日志确认：`Bolt enabled on 0.0.0.0:7687` ✅
+
+2. **第二次验证**（重启DAML-RAG）：
+   - 重启DAML-RAG服务（时间戳：`01/13 16:35:10`）
+   - DNS解析正常：`10.43.1.229:7687` ✅
+   - 其他数据库连接正常：MySQL、Redis ✅
+   - **Neo4j连接成功** ✅
+   - **Qdrant gRPC端口（6334）连接超时** ❌
+
+3. **第三次诊断**（Qdrant端口配置）：
+   - 检查Qdrant服务的Networking配置
+   - 发现TCP端口6334配置已存在但未生效
+   - 尝试添加端口配置，收到"Port number already exists"错误
+   - 确认根本原因：**内网TCP端口没有真正暴露**
+
+4. **最终修复**（重启Qdrant服务）：
+   - 重启Qdrant服务使端口配置生效
+   - 重启DAML-RAG服务（时间戳：`01/13 17:02:58`）
+   - **Neo4j连接成功** ✅：`✅ Neo4j连接成功: bolt://crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal:7687`
+   - **Qdrant连接成功** ✅：`✅ Qdrant客户端已连接 (gRPC连接: 启用)`
+
 **根本原因**:
-通过Chrome DevTools MCP检查Zeabur控制台，发现Neo4j环境变量配置缺失：
-- ✅ HTTP连接器（7474端口）配置了 `NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474`
-- ❌ **Bolt连接器（7687端口）没有配置监听地址**
-- ❌ **默认监听地址也没有配置**
+1. **Neo4j问题**：缺少Bolt连接器监听地址环境变量，导致只监听localhost
+2. **Qdrant问题**：TCP端口6334配置存在但未生效，需要重启服务使配置生效
 
-这导致Bolt连接器只监听localhost，无法从其他服务（DAML-RAG）访问。
+**解决方案**:
+1. **Neo4j修复**：
+   - 添加环境变量 `NEO4J_dbms_default__listen__address=0.0.0.0`
+   - 添加环境变量 `NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687`
+   - 重启Neo4j服务
 
-**修复方案**:
-在Zeabur控制台添加缺失的Neo4j环境变量：
-```
-NEO4J_dbms_default__listen__address=0.0.0.0
-NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
-```
+2. **Qdrant修复**：
+   - 确认TCP端口6334配置已存在
+   - 重启Qdrant服务使配置生效
+   - 重启DAML-RAG服务验证连接
 
-**修复步骤**:
-1. ✅ 使用Chrome DevTools MCP访问Zeabur控制台
-2. ✅ 在Neo4j服务的Variable页面添加环境变量
-3. ✅ 保存配置（配置成功保存到Variable List）
-4. ✅ 重启Neo4j服务（日志确认Bolt监听 `0.0.0.0:7687`）
-5. ✅ 重启DAML-RAG服务（等待验证连接）
-6. ⏳ 待验证：查看DAML-RAG启动日志确认Neo4j连接成功
+**验证结果**:
+- ✅ Neo4j Bolt连接正常（内网域名）
+- ✅ Qdrant gRPC连接正常（内网域名）
+- ✅ MySQL连接正常
+- ✅ Redis连接正常
+- ✅ 框架完全初始化成功
+- ✅ AI聊天功能恢复正常
 
-**验证状态**:
-- ✅ Neo4j环境变量已添加并保存
-- ✅ Neo4j服务已重启，Bolt连接器正确监听 `0.0.0.0:7687`
-- ✅ DAML-RAG服务已重启
-- ⏳ 等待DAML-RAG新日志生成，验证连接是否成功
-
-**临时方案（已回滚）**:
-- 曾尝试使用公网端口 `bolt://182.92.78.183:32633`
+**临时方案（已废弃）**:
+- 曾尝试使用Neo4j公网端口 `bolt://182.92.78.183:32633`
 - 用户拒绝：公网连接太慢
 - 已回滚到内部域名配置
 
 **相关文档**:
 - Spec文档：`.kiro/specs/zeabur-neo4j-connection-fix/`
 - 生产环境规则：`.kiro/steering/zeabur-production.md`
+
+**经验教训**:
+1. Zeabur服务的Private端口配置可能需要重启服务才能生效
+2. 数据库服务需要正确配置监听地址（0.0.0.0）才能接受内网连接
+3. 使用Chrome DevTools MCP可以高效地检查和操作Zeabur控制台
 
 ---
 
