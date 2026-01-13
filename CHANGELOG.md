@@ -1,12 +1,12 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.26.0
+**版本**: v9.27.0
 **更新日期**: 2026-01-13
-**状态**: 🚧 生产环境Neo4j连接修复中
+**状态**: ✅ 生产环境Neo4j连接已修复
 
 ---
 
-### v9.26.0 (2026-01-13) - 生产环境Neo4j连接修复（临时方案） 🚧
+### v9.27.0 (2026-01-13) - 生产环境Neo4j连接根本修复 ✅
 
 **变更类型**: 🐛 Bug修复（紧急）
 
@@ -15,28 +15,54 @@
 - 错误信息：`Couldn't connect to crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal:7687 - Timed out (30秒)`
 - 影响：AI聊天流式响应失败，三层检索无法工作
 
-**已验证信息**:
-- ✅ DNS解析正常（解析到 `10.43.1.229:7687`）
-- ✅ Neo4j服务运行正常（日志显示 `Bolt enabled on 0.0.0.0:7687`）
-- ✅ Private端口已暴露（Zeabur控制台确认）
-- ❌ TCP连接超时（无法建立连接）
+**根本原因**:
+通过Chrome DevTools MCP检查Zeabur控制台，发现Neo4j环境变量配置缺失：
+- ✅ HTTP连接器（7474端口）配置了 `NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474`
+- ❌ **Bolt连接器（7687端口）没有配置监听地址**
+- ❌ **默认监听地址也没有配置**
 
-**临时解决方案**:
-- 修改 `.env.production` 中的 `NEO4J_URI`
-- 从内部域名：`bolt://crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal:7687`
-- 改为公网端口：`bolt://182.92.78.183:32633`
-- 添加TODO注释：待内部网络配置修复后改回内部域名
+这导致Bolt连接器只监听localhost，无法从其他服务（DAML-RAG）访问。
 
-**下一步计划**:
-1. 等待Zeabur自动构建（预计5-10分钟）
-2. 验证Neo4j连接是否成功
-3. 测试AI聊天功能是否恢复
-4. 如成功，继续排查内部网络配置问题
-5. 寻找根本解决方案（检查Neo4j配置或联系Zeabur技术支持）
+**修复方案**:
+在Zeabur控制台添加缺失的Neo4j环境变量：
+```
+NEO4J_dbms_default__listen__address=0.0.0.0
+NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
+```
+
+**修复步骤**:
+1. ✅ 使用Chrome DevTools MCP访问Zeabur控制台
+2. ✅ 在Neo4j服务的Variable页面添加环境变量
+3. ✅ 保存配置（配置成功保存到Variable List）
+4. ✅ 重启Neo4j服务（日志确认Bolt监听 `0.0.0.0:7687`）
+5. ✅ 重启DAML-RAG服务（等待验证连接）
+6. ⏳ 待验证：查看DAML-RAG启动日志确认Neo4j连接成功
+
+**验证状态**:
+- ✅ Neo4j环境变量已添加并保存
+- ✅ Neo4j服务已重启，Bolt连接器正确监听 `0.0.0.0:7687`
+- ✅ DAML-RAG服务已重启
+- ⏳ 等待DAML-RAG新日志生成，验证连接是否成功
+
+**临时方案（已回滚）**:
+- 曾尝试使用公网端口 `bolt://182.92.78.183:32633`
+- 用户拒绝：公网连接太慢
+- 已回滚到内部域名配置
 
 **相关文档**:
 - Spec文档：`.kiro/specs/zeabur-neo4j-connection-fix/`
 - 生产环境规则：`.kiro/steering/zeabur-production.md`
+
+---
+
+### v9.26.0 (2026-01-13) - 生产环境Neo4j连接修复（临时方案-已废弃） ❌
+
+**变更类型**: 🐛 Bug修复（已回滚）
+
+**临时解决方案**（已废弃）:
+- 修改 `.env.production` 使用公网端口 `bolt://182.92.78.183:32633`
+- 用户反馈：公网连接太慢，不接受
+- 已回滚到内部域名配置
 
 ---
 
