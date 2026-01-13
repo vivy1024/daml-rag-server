@@ -2,13 +2,13 @@
 
 **版本**: v9.27.0
 **更新日期**: 2026-01-13
-**状态**: ✅ 生产环境Neo4j连接已修复
+**状态**: 🚧 进行中 - Neo4j已修复，Qdrant仍在诊断
 
 ---
 
-### v9.27.0 (2026-01-13) - 生产环境Neo4j和Qdrant连接修复 ✅
+### v9.27.0 (2026-01-13) - 生产环境Neo4j和Qdrant连接修复 🚧
 
-**变更类型**: 🐛 Bug修复（已完成）
+**变更类型**: 🐛 Bug修复（进行中）
 
 **问题描述**:
 - Zeabur生产环境DAML-RAG服务无法连接Neo4j和Qdrant数据库
@@ -39,34 +39,57 @@
    - 尝试添加端口配置，收到"Port number already exists"错误
    - 确认根本原因：**内网TCP端口没有真正暴露**
 
-4. **最终修复**（重启Qdrant服务）：
+4. **第四次尝试**（重启Qdrant服务）：
    - 重启Qdrant服务使端口配置生效
    - 重启DAML-RAG服务（时间戳：`01/13 17:02:58`）
    - **Neo4j连接成功** ✅：`✅ Neo4j连接成功: bolt://crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal:7687`
-   - **Qdrant连接成功** ✅：`✅ Qdrant客户端已连接 (gRPC连接: 启用)`
+   - **Qdrant连接仍然失败** ❌：`failed to connect to all addresses - ipv4:10.43.153.47:6334: Timeout occurred`
 
-**根本原因**:
-1. **Neo4j问题**：缺少Bolt连接器监听地址环境变量，导致只监听localhost
-2. **Qdrant问题**：TCP端口6334配置存在但未生效，需要重启服务使配置生效
+5. **第五次尝试**（添加Qdrant监听地址配置）：
+   - 对比本地docker-compose.yml配置
+   - 通过Chrome DevTools MCP添加环境变量：
+     - `QDRANT__SERVICE__HOST=0.0.0.0`
+   - 重启Qdrant服务
+   - 重启DAML-RAG服务（时间戳：`01/13 17:27:37`）
+   - **Qdrant连接仍然失败** ❌：gRPC端口6334仍然超时
 
-**解决方案**:
-1. **Neo4j修复**：
+6. **最终解决方案**（禁用gRPC连接）：
+   - 分析：Zeabur环境gRPC端口6334无法正常工作
+   - 方案：禁用gRPC连接，只使用HTTP端口6333（已确认可用）
+   - 修改`.env.production`：
+     - 添加`QDRANT_PREFER_GRPC=false`
+     - 添加`QDRANT_GRPC_PORT=0`
+   - 预期：Qdrant客户端将使用HTTP端口6333连接
+
+**当前状态**（2026-01-13 17:35）:
+- ✅ Neo4j连接成功
+- ✅ MySQL连接正常
+- 🔄 Qdrant修复中：禁用gRPC，使用HTTP端口
+- ✅ Redis连接正常
+- ❌ **Qdrant gRPC端口（6334）仍然连接超时**
+- ⚠️ 框架部分初始化：成功组件2个，失败组件1个（graphrag）
+
+**根本原因分析**:
+1. **Neo4j问题**（已解决）：缺少Bolt连接器监听地址环境变量，导致只监听localhost
+2. **Qdrant问题**（未解决）：TCP端口6334配置在Zeabur控制台中存在，但实际未生效，重启服务后问题仍然存在
+
+**已完成的修复**:
+1. **Neo4j修复** ✅：
    - 添加环境变量 `NEO4J_dbms_default__listen__address=0.0.0.0`
    - 添加环境变量 `NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687`
    - 重启Neo4j服务
+   - 验证成功
 
-2. **Qdrant修复**：
+2. **Qdrant修复尝试** ❌（未成功）：
    - 确认TCP端口6334配置已存在
-   - 重启Qdrant服务使配置生效
-   - 重启DAML-RAG服务验证连接
+   - 重启Qdrant服务
+   - 重启DAML-RAG服务
+   - **结果**：连接仍然超时
 
-**验证结果**:
-- ✅ Neo4j Bolt连接正常（内网域名）
-- ✅ Qdrant gRPC连接正常（内网域名）
-- ✅ MySQL连接正常
-- ✅ Redis连接正常
-- ✅ 框架完全初始化成功
-- ✅ AI聊天功能恢复正常
+**下一步计划**:
+- 方案A：检查Qdrant服务的环境变量配置
+- 方案B：使用Qdrant HTTP端口（6333）而非gRPC端口（6334）
+- 方案C：联系Zeabur技术支持解决内网端口问题
 
 **临时方案（已废弃）**:
 - 曾尝试使用Neo4j公网端口 `bolt://182.92.78.183:32633`
@@ -81,6 +104,11 @@
 1. Zeabur服务的Private端口配置可能需要重启服务才能生效
 2. 数据库服务需要正确配置监听地址（0.0.0.0）才能接受内网连接
 3. 使用Chrome DevTools MCP可以高效地检查和操作Zeabur控制台
+4. **重启服务不一定能解决所有端口配置问题，需要深入诊断**
+
+**待解决问题**:
+- ❌ Qdrant gRPC端口（6334）连接超时问题仍未解决
+- 需要进一步诊断Qdrant服务配置或考虑替代方案
 
 ---
 
