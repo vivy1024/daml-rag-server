@@ -1,8 +1,32 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.23.0
-**更新日期**: 2026-01-12
-**状态**: ✅ 框架层去重重构完成
+**版本**: v9.24.0
+**更新日期**: 2026-01-13
+**状态**: ✅ 生产环境数据库连接修复
+
+---
+
+### v9.24.0 (2026-01-13) - 生产环境数据库连接修复 ✅
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**:
+- Zeabur生产环境DAML-RAG服务无法连接Neo4j/Qdrant/MySQL/Redis
+- 错误信息: `Failed to DNS resolve address fitness_neo4j.zeabur.internal:7687`
+- 原因: 阿里云镜像部署的服务使用不同的内部域名格式
+
+**修复内容**:
+- 更新 `.env.production` 中的数据库连接地址
+- 从 `fitness_xxx.zeabur.internal` 改为 `crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal`
+- 影响服务: Neo4j, Qdrant, MySQL, Redis
+
+**配置变更**:
+```
+NEO4J_URI=bolt://crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal:7687
+QDRANT_HOST=crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal
+MYSQL_HOST=crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal
+REDIS_HOST=crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal
+```
 
 ---
 
