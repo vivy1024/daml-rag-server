@@ -1,0 +1,30 @@
+{
+  "name": "mcp-user-profile-stdio",
+  "version": "2.1.0",
+  "description": "stdio版本的User Profile MCP服务器，提供增强的用户档案管理功能（含营养指南字段 + 前端数据同步）",
+  "main": "build/index.js",
+  "type": "module",
+  "bin": {
+    "mcp-user-profile": "./build/index.js"
+  },
+  "scripts": {
+    "build": "rimraf build && tsc",
+    "start": "node build/index.js",
+    "dev": "tsx src/index.ts",
+    "http": "tsc && node build/http-server.js",
+    "inspector": "tsc && npx @modelcontextprotocol/inspector npx tsx src/index.ts",
+    "test": "npm run build && npm run test:mcp",
+    "test:mcp": "npx @modelcontextprotocol/inspector npx tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.25.46",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  }
+} 
