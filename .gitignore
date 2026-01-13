@@ -5,6 +5,7 @@ __pycache__/
 *.so
 .Python
 build/
+!mcp-servers/**/build/
 develop-eggs/
 dist/
 downloads/

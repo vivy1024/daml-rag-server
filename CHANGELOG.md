@@ -16,38 +16,39 @@
   2. `We couldn't connect to 'https://huggingface.co'` - Embedding模型无法下载
 
 **根因分析**:
-- 本地Docker通过volumes挂载模型和MCP服务，但Zeabur镜像中没有这些文件
-- Zeabur服务器无法访问HuggingFace下载模型
+- `.gitignore` 中的 `build/` 规则导致MCP服务的build目录被忽略
+- 模型下载后设置了 `TRANSFORMERS_OFFLINE=0`，运行时仍尝试连接HuggingFace
 
 **修复内容**:
 
-1. **预下载GTE-Large-zh模型** ✅
-   - 使用HuggingFace国内镜像 `hf-mirror.com` 加速下载
-   - 在Dockerfile构建阶段预下载模型
-   - 避免运行时网络问题
+1. **修复.gitignore** ✅
+   - 添加 `!mcp-servers/**/build/` 排除规则
+   - 允许MCP服务的build目录被Git跟踪
 
-2. **复制MCP服务构建文件** ✅
-   - 将 `mcp-servers/user-profile-stdio/build/` 目录复制到镜像
-   - 包含 `index.js` 和 `package.json`
-   - 确保MCP服务在Zeabur环境可用
+2. **强制添加MCP服务构建文件** ✅
+   - `mcp-servers/user-profile-stdio/build/index.js`
+   - `mcp-servers/user-profile-stdio/build/index.d.ts`
+   - `mcp-servers/user-profile-stdio/build/simple-graphrag-client.js`
+   - `mcp-servers/user-profile-stdio/build/simple-graphrag-client.d.ts`
 
-**Dockerfile变更**:
+3. **优化Dockerfile模型缓存** ✅
+   - 设置 `HF_HOME=/root/.cache/huggingface` 确保缓存路径一致
+   - 设置 `TRANSFORMERS_OFFLINE=1` 和 `HF_HUB_OFFLINE=1` 强制离线模式
+   - 移除多余的COPY指令（`COPY . .` 已包含所有文件）
+
+**Dockerfile关键变更**:
 ```dockerfile
-# 预下载GTE-Large-zh模型
 ENV HF_ENDPOINT=https://hf-mirror.com
-RUN python -c "from sentence_transformers import SentenceTransformer; \
-    model = SentenceTransformer('thenlper/gte-large-zh'); \
-    print('✅ GTE-Large-zh model downloaded successfully')"
+ENV HF_HOME=/root/.cache/huggingface
+RUN python -c "from sentence_transformers import SentenceTransformer; ..."
 
-# 复制MCP服务构建文件
-COPY mcp-servers/user-profile-stdio/build /app/mcp-servers/user-profile-stdio/build
-COPY mcp-servers/user-profile-stdio/package.json /app/mcp-servers/user-profile-stdio/
+ENV TRANSFORMERS_OFFLINE=1 \
+    HF_HUB_OFFLINE=1
 ```
 
 **影响范围**:
-- Zeabur生产环境构建时间增加（模型下载约2-3分钟）
-- 镜像大小增加（模型约1.3GB）
-- 运行时启动更快（无需下载模型）
+- MCP服务在Zeabur环境可用
+- 模型使用离线缓存，不再尝试网络下载
 
 ---
 
