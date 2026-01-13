@@ -48,25 +48,21 @@ RUN mkdir -p /app/data /app/logs /app/mcp-servers
 
 # ============= 预下载GTE-Large-zh模型 =============
 # 使用HuggingFace国内镜像加速下载
+# 模型会缓存到 /root/.cache/huggingface/hub/
 ENV HF_ENDPOINT=https://hf-mirror.com
+ENV HF_HOME=/root/.cache/huggingface
 RUN python -c "from sentence_transformers import SentenceTransformer; \
     model = SentenceTransformer('thenlper/gte-large-zh'); \
     print('✅ GTE-Large-zh model downloaded successfully')" || \
     echo "⚠️ Model download failed, will retry at runtime"
 
-# ============= 复制MCP服务构建文件 =============
-# MCP服务的构建文件已预先复制到daml-rag-server/mcp-servers目录
-# 这样在Zeabur构建时可以直接包含进镜像
-COPY mcp-servers/user-profile-stdio/build /app/mcp-servers/user-profile-stdio/build
-COPY mcp-servers/user-profile-stdio/package.json /app/mcp-servers/user-profile-stdio/
-
-# 设置环境变量
+# 设置环境变量（保持HF_ENDPOINT在运行时也生效）
 ENV PYTHONUNBUFFERED=1 \
     LOG_LEVEL=INFO \
     PORT=8001 \
     HOST=0.0.0.0 \
-    TRANSFORMERS_OFFLINE=0 \
-    HF_HUB_OFFLINE=0
+    TRANSFORMERS_OFFLINE=1 \
+    HF_HUB_OFFLINE=1
 
 # 暴露HTTP API端口
 EXPOSE 8001
