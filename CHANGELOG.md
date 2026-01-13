@@ -1,8 +1,42 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.25.0
+**版本**: v9.26.0
 **更新日期**: 2026-01-13
-**状态**: ✅ 生产环境Dockerfile优化
+**状态**: 🚧 生产环境Neo4j连接修复中
+
+---
+
+### v9.26.0 (2026-01-13) - 生产环境Neo4j连接修复（临时方案） 🚧
+
+**变更类型**: 🐛 Bug修复（紧急）
+
+**问题描述**:
+- Zeabur生产环境DAML-RAG服务无法连接Neo4j数据库
+- 错误信息：`Couldn't connect to crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal:7687 - Timed out (30秒)`
+- 影响：AI聊天流式响应失败，三层检索无法工作
+
+**已验证信息**:
+- ✅ DNS解析正常（解析到 `10.43.1.229:7687`）
+- ✅ Neo4j服务运行正常（日志显示 `Bolt enabled on 0.0.0.0:7687`）
+- ✅ Private端口已暴露（Zeabur控制台确认）
+- ❌ TCP连接超时（无法建立连接）
+
+**临时解决方案**:
+- 修改 `.env.production` 中的 `NEO4J_URI`
+- 从内部域名：`bolt://crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal:7687`
+- 改为公网端口：`bolt://182.92.78.183:32633`
+- 添加TODO注释：待内部网络配置修复后改回内部域名
+
+**下一步计划**:
+1. 等待Zeabur自动构建（预计5-10分钟）
+2. 验证Neo4j连接是否成功
+3. 测试AI聊天功能是否恢复
+4. 如成功，继续排查内部网络配置问题
+5. 寻找根本解决方案（检查Neo4j配置或联系Zeabur技术支持）
+
+**相关文档**:
+- Spec文档：`.kiro/specs/zeabur-neo4j-connection-fix/`
+- 生产环境规则：`.kiro/steering/zeabur-production.md`
 
 ---
 
