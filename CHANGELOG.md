@@ -1,8 +1,60 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.28.0
+**版本**: v9.29.0
 **更新日期**: 2026-01-14
-**状态**: 🚧 进行中 - Neo4j内网连接问题根因分析
+**状态**: 🚧 进行中 - 修复Qdrant gRPC配置读取问题
+
+---
+
+### v9.29.0 (2026-01-14) - 修复Qdrant gRPC配置读取问题 🐛
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**:
+- Qdrant客户端尝试使用gRPC连接，导致连接超时
+- 错误：`failed to connect to all addresses; ipv4:10.43.1.229:0: Timeout occurred: FD Shutdown`
+- `.env.production` 中已设置 `QDRANT_PREFER_GRPC=false`，但未生效
+
+**根因分析**:
+- `OptimizedQdrantClient` 的 `prefer_grpc` 参数默认值为 `True`
+- 代码没有从环境变量 `QDRANT_PREFER_GRPC` 读取配置
+- 导致即使环境变量设置为 `false`，仍然尝试gRPC连接
+
+**修复内容**:
+1. 修改 `src/framework/clients/qdrant_client.py`
+2. 添加从环境变量读取 `QDRANT_PREFER_GRPC` 的逻辑
+3. 支持多种格式：`true/false`, `1/0`, `yes/no`
+4. 默认值改为从环境变量读取，如果未设置则为 `true`
+
+**代码变更**:
+```python
+# 修改前
+prefer_grpc: bool = True
+
+# 修改后
+prefer_grpc: Optional[bool] = None
+
+# 添加环境变量读取逻辑
+if prefer_grpc is None:
+    prefer_grpc_env = os.getenv('QDRANT_PREFER_GRPC', 'true').lower()
+    self.prefer_grpc = prefer_grpc_env in ('true', '1', 'yes')
+else:
+    self.prefer_grpc = prefer_grpc
+```
+
+**验证方法**:
+1. 确认 `.env.production` 中 `QDRANT_PREFER_GRPC=false`
+2. 重新构建并部署到Zeabur
+3. 查看启动日志，应显示 `gRPC连接: 禁用`
+4. Qdrant应通过HTTP端口6333成功连接
+
+**影响范围**:
+- Zeabur生产环境
+- 所有使用 `OptimizedQdrantClient` 的代码
+
+**相关问题**:
+- 与Neo4j Bolt协议问题类似，Zeabur阿里云区域不支持gRPC等自定义协议的内网连接
+- 必须使用标准HTTP/TCP协议
 
 ---
 

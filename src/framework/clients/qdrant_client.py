@@ -35,7 +35,7 @@ class OptimizedQdrantClient:
         port: Optional[int] = None,
         url: Optional[str] = None,
         grpc_port: Optional[int] = None,
-        prefer_grpc: bool = True,
+        prefer_grpc: Optional[bool] = None,
         timeout: float = 30.0,
         **kwargs
     ):
@@ -47,14 +47,21 @@ class OptimizedQdrantClient:
             port: HTTP端口（默认6333）
             url: 完整URL（如果提供，优先使用）
             grpc_port: gRPC端口（默认6334）
-            prefer_grpc: 是否优先使用gRPC（默认True）
+            prefer_grpc: 是否优先使用gRPC（默认从环境变量读取，否则True）
             timeout: 超时时间（秒，默认30.0）
             **kwargs: 其他QdrantClient参数
         """
         self.host = host or os.getenv('QDRANT_HOST', 'qdrant')
         self.port = port or int(os.getenv('QDRANT_PORT', '6333'))
         self.grpc_port = grpc_port or int(os.getenv('QDRANT_GRPC_PORT', '6334'))
-        self.prefer_grpc = prefer_grpc
+        
+        # 从环境变量读取prefer_grpc配置
+        if prefer_grpc is None:
+            prefer_grpc_env = os.getenv('QDRANT_PREFER_GRPC', 'true').lower()
+            self.prefer_grpc = prefer_grpc_env in ('true', '1', 'yes')
+        else:
+            self.prefer_grpc = prefer_grpc
+            
         self.timeout = timeout
         
         # 构建连接参数
