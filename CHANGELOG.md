@@ -37,28 +37,31 @@
 
 **解决方案**:
 
-采用**公网端口方案**（临时但可靠）：
+采用**公网端口方案**：
 
-1. **修改配置文件**：
-   - 文件：`daml-rag-server/.env.production`
-   - 从：`bolt://crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal:7687`
-   - 改为：`bolt://182.92.78.183:32633`（公网端口）
-   - 原因：绕过内网服务发现机制，直接使用公网连接
+1. **第一次尝试**（错误端口）：
+   - 使用端口32633 - Connection refused
+   - 原因：端口号错误
 
-2. **安全性说明**：
-   - 公网端口已在防火墙规则中
-   - Neo4j有密码保护（`build_body_2024`）
-   - 仅用于Zeabur内部服务间通信
-   - 风险可控
+2. **第二次修正**（正确端口）✅：
+   - 通过Zeabur控制台Networking标签确认实际端口
+   - 修改为：`bolt://182.92.78.183:32372`
+   - Public端口：32372
+   - Container端口：TCP:7687
+
+**安全性说明**：
+- 公网端口已在防火墙规则中
+- Neo4j有密码保护（`build_body_2024`）
+- 仅用于Zeabur内部服务间通信
+- 风险可控
 
 **文件变更**:
-- `daml-rag-server/.env.production` - 修改Neo4j连接地址为公网端口
+- `daml-rag-server/.env.production` - 修改Neo4j连接地址为公网端口32372
 
 **下一步**:
-1. 提交并推送到GitHub
-2. 等待Zeabur自动构建（5-10分钟）
-3. 验证Neo4j连接是否成功
-4. 如果成功，更新文档记录解决方案
+1. 等待Zeabur自动构建（5-10分钟）
+2. 验证Neo4j连接是否成功
+3. 测试AI聊天功能
 
 ---
 
