@@ -1,8 +1,80 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.29.0
+**版本**: v9.30.0
 **更新日期**: 2026-01-14
-**状态**: 🚧 进行中 - 修复Qdrant gRPC配置读取问题
+**状态**: ✅ 已完成 - 修正数据库内网域名配置
+
+---
+
+### v9.30.0 (2026-01-14) - 修正数据库内网域名配置 🔧
+
+**变更类型**: 🔧 配置修复
+
+**问题描述**:
+- DAML-RAG服务无法连接Qdrant、MySQL、Redis数据库
+- 错误：连接超时（Operation timed out）
+- 使用了错误的内网域名格式：`crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal`
+
+**根因分析**:
+1. **历史遗留配置**：
+   - 配置文件中使用了旧版Zeabur的内网域名格式
+   - 旧格式：`crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal`
+   - 新格式：`<服务名>.zeabur.internal`
+
+2. **Zeabur平台升级**：
+   - Zeabur更新了内网服务发现机制
+   - 旧的域名格式不再工作
+   - 新的域名格式更简洁、更易读
+
+3. **配置未同步**：
+   - `.env.production` 文件中的配置没有及时更新
+   - 导致服务间无法通过内网通信
+
+**修复内容**:
+修改 `daml-rag-server/.env.production`，使用Zeabur自动生成的环境变量：
+
+```env
+# 修改前（错误的旧版域名格式）
+QDRANT_HOST=crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal
+MYSQL_HOST=crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal
+REDIS_HOST=crpi-32sc66smgb44ld25cn-hangzhoupers.zeabur.internal
+
+# 修改后（使用Zeabur自动生成的变量）
+QDRANT_HOST=${FITNESS_QDRANT_HOST}
+MYSQL_HOST=${FITNESS_MYSQL_HOST}
+REDIS_HOST=${FITNESS_REDIS_HOST}
+```
+
+**Zeabur自动生成的变量映射**:
+- `FITNESS_MYSQL_HOST` → `fitness_mysql.zeabur.internal`
+- `FITNESS_QDRANT_HOST` → `fitness_qdrant.zeabur.internal`
+- `FITNESS_REDIS_HOST` → `fitness-redis.zeabur.internal`
+
+**优点**:
+- ✅ 使用Zeabur官方推荐的方式
+- ✅ 自动适配服务名变化
+- ✅ 不需要硬编码域名
+- ✅ 更容易维护和更新
+
+**影响范围**:
+- Qdrant向量数据库连接
+- MySQL关系数据库连接
+- Redis缓存连接
+- 所有依赖这些数据库的功能
+
+**验证清单**:
+- [ ] DAML-RAG服务启动成功
+- [ ] Qdrant连接成功（日志中显示 `✅ Qdrant客户端已连接`）
+- [ ] MySQL连接成功
+- [ ] Redis连接成功
+- [ ] Neo4j连接成功（已使用公网端口，不受影响）
+- [ ] `/api/health` 端点返回正常
+- [ ] `/api/health/components` 端点返回正常
+- [ ] AI聊天功能正常工作
+
+**相关文档**:
+- 修复方案：`.kiro/specs/production-domain-verification/zeabur-env-fix-plan.md`
+- 生产环境规则：`.kiro/steering/zeabur-production.md`
 
 ---
 
