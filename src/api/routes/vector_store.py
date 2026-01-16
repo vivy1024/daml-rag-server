@@ -50,12 +50,13 @@ def _init_services():
     if _qdrant_client is None:
         try:
             # 初始化Qdrant客户端（优化配置）
+            import os
             from src.framework.clients.qdrant_client import create_qdrant_client
             _qdrant_client = create_qdrant_client(
-                host="localhost",
-                port=6333,
-                timeout=30.0,  # 增加超时时间到30秒
-                prefer_grpc=True  # 启用gRPC连接
+                host=os.getenv('QDRANT_HOST', 'qdrant'),
+                port=int(os.getenv('QDRANT_PORT', '6333')),
+                timeout=30.0  # 增加超时时间到30秒
+                # prefer_grpc 从环境变量 QDRANT_PREFER_GRPC 读取
             )
 
             # 初始化BGE嵌入模型

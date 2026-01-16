@@ -1,8 +1,31 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.32.0
+**版本**: v9.33.0
 **更新日期**: 2026-01-16
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.33.0 (2026-01-16) - 修复Zeabur生产环境Qdrant gRPC连接超时 🔧
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**：
+- Zeabur生产环境 GraphRAG 初始化失败
+- 错误：`grpc_status:14 UNAVAILABLE - failed to connect to all addresses`
+- 原因：Zeabur内网不支持gRPC协议，但代码中多处硬编码了 `prefer_grpc=True`
+
+**修复方案**：
+移除4个文件中硬编码的 `prefer_grpc=True`，改为从环境变量 `QDRANT_PREFER_GRPC` 读取：
+
+1. `src/api/routes/vector_store.py` - 使用 `create_qdrant_client()` 并从环境变量读取配置
+2. `src/utils/qdrant_helper.py` - 移除硬编码的 `prefer_grpc=True`
+3. `src/framework/retrieval/graph/vector_search_engine.py` - 移除硬编码的 `prefer_grpc=True`
+4. `src/applications/fitness/workflow/singletons.py` - 改用 `create_qdrant_client()` 替代原生 `QdrantClient`
+
+**配置说明**：
+- 本地开发：`QDRANT_PREFER_GRPC=true`（默认，使用gRPC提升性能）
+- Zeabur生产：`QDRANT_PREFER_GRPC=false`（已在 `.env.production` 配置）
 
 ---
 

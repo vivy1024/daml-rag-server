@@ -70,8 +70,8 @@ class VectorSearchEngine:
         self.client = create_qdrant_client(
             host=host,
             port=port,
-            timeout=30.0,  # 增加超时时间到30秒
-            prefer_grpc=True  # 启用gRPC连接
+            timeout=30.0  # 增加超时时间到30秒
+            # prefer_grpc 从环境变量 QDRANT_PREFER_GRPC 读取
         )
         
         # 距离度量映射
