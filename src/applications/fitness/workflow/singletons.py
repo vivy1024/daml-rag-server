@@ -419,11 +419,12 @@ def get_mcp_tool_registry(neo4j_client=None, qdrant_client=None, three_layer_eng
             
             if qdrant_client is None:
                 try:
-                    from qdrant_client import QdrantClient
+                    from src.framework.clients.qdrant_client import create_qdrant_client
                     import os
                     qdrant_host = os.getenv('QDRANT_HOST', 'fitness_qdrant')
                     qdrant_port = int(os.getenv('QDRANT_PORT', '6333'))
-                    qdrant_client = QdrantClient(host=qdrant_host, port=qdrant_port)
+                    # 使用优化的客户端，自动从环境变量读取 QDRANT_PREFER_GRPC
+                    qdrant_client = create_qdrant_client(host=qdrant_host, port=qdrant_port)
                     logger.info(f"✅ QdrantClient自动创建成功 ({qdrant_host}:{qdrant_port})")
                 except Exception as e:
                     logger.warning(f"⚠️ QdrantClient创建失败: {e}")
