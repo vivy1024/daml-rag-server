@@ -36,6 +36,7 @@ class OptimizedQdrantClient:
         url: Optional[str] = None,
         grpc_port: Optional[int] = None,
         prefer_grpc: Optional[bool] = None,
+        api_key: Optional[str] = None,
         timeout: float = 30.0,
         **kwargs
     ):
@@ -48,12 +49,14 @@ class OptimizedQdrantClient:
             url: 完整URL（如果提供，优先使用）
             grpc_port: gRPC端口（默认6334）
             prefer_grpc: 是否优先使用gRPC（默认从环境变量读取，否则True）
+            api_key: API密钥（默认从环境变量读取）
             timeout: 超时时间（秒，默认30.0）
             **kwargs: 其他QdrantClient参数
         """
         self.host = host or os.getenv('QDRANT_HOST', 'qdrant')
         self.port = port or int(os.getenv('QDRANT_PORT', '6333'))
         self.grpc_port = grpc_port or int(os.getenv('QDRANT_GRPC_PORT', '6334'))
+        self.api_key = api_key or os.getenv('QDRANT_API_KEY')
         
         # 从环境变量读取prefer_grpc配置
         if prefer_grpc is None:
@@ -71,6 +74,11 @@ class OptimizedQdrantClient:
             **kwargs
         }
         
+        # 添加API Key（如果存在）
+        if self.api_key:
+            connection_params['api_key'] = self.api_key
+            logger.info(f"🔑 使用API Key认证")
+        
         # 如果提供了URL，使用URL连接
         if url:
             connection_params['url'] = url
@@ -80,7 +88,7 @@ class OptimizedQdrantClient:
             connection_params['port'] = self.port
             if self.prefer_grpc:
                 connection_params['grpc_port'] = self.grpc_port
-            logger.info(f"🔗 连接Qdrant: {self.host}:{self.port} (gRPC: {self.grpc_port})")
+            logger.info(f"🔗 连接Qdrant: {self.host}:{self.port} (gRPC: {self.grpc_port if self.prefer_grpc else 0})")
         
         # 初始化客户端
         try:

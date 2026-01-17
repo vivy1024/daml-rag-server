@@ -1,8 +1,52 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.36.0
+**版本**: v9.37.0
 **更新日期**: 2026-01-17
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.37.0 (2026-01-17) - 修复：Qdrant API Key认证支持 🔐
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**：
+- Zeabur生产环境Qdrant开启了API Key认证
+- DAML-RAG客户端未传递API Key导致401错误
+- 错误信息：`Unexpected Response: 401 (Unauthorized) - Must provide an API key or an Authorization bearer token`
+
+**修复内容**：
+
+1. **Qdrant客户端代码** (`src/framework/clients/qdrant_client.py`)
+   - ✅ 新增 `api_key` 参数支持
+   - ✅ 从环境变量 `QDRANT_API_KEY` 读取
+   - ✅ 自动添加到连接参数
+   - ✅ 添加日志记录（使用API Key认证）
+
+2. **生产环境配置** (`.env.production`)
+   - ✅ 新增 `QDRANT_API_KEY=${QDRANT_API_KEY}` 配置
+   - ✅ 从Zeabur环境变量覆盖
+
+3. **文档更新** (`.kiro/steering/zeabur-env-vars.md`)
+   - ✅ 更新版本至 v2.1.0
+   - ✅ 确认 `QDRANT_API_KEY` 配置说明
+
+**测试验证**：
+- ⏳ 待部署后验证Qdrant连接成功
+- ⏳ 待验证向量检索功能正常
+
+**部署说明**：
+```bash
+cd daml-rag-server
+git add .
+git commit -m "fix(qdrant): 添加API Key认证支持"
+git push origin main
+# Zeabur自动构建部署
+```
+
+**相关文档**：
+- Zeabur环境变量：`.kiro/steering/zeabur-env-vars.md`
+- Qdrant客户端：`src/framework/clients/qdrant_client.py`
 
 ---
 
