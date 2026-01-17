@@ -1,8 +1,39 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.37.0
+**版本**: v9.38.0
 **更新日期**: 2026-01-17
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.38.0 (2026-01-17) - 修复：Qdrant HTTPS连接支持 🔒
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**：
+- Zeabur生产环境Qdrant使用HTTPS协议
+- DAML-RAG客户端未配置HTTPS导致SSL错误
+- 错误信息：`[SSL] record layer failure (_ssl.c:1016)`
+
+**修复内容**：
+
+1. **Qdrant客户端代码** (`src/framework/clients/qdrant_client.py`)
+   - ✅ 新增 `https` 参数支持
+   - ✅ 从环境变量 `QDRANT_HTTPS` 读取
+   - ✅ 有API Key时自动启用HTTPS
+   - ✅ 添加日志记录（HTTPS状态）
+
+2. **智能HTTPS检测**
+   - 如果配置了API Key但未明确设置HTTPS，自动启用HTTPS
+   - 日志提示：`🔒 检测到API Key，自动启用HTTPS`
+
+3. **连接日志优化**
+   - 显示协议类型：`https://host:port` 或 `http://host:port`
+   - 显示HTTPS状态：`HTTPS: 启用` 或 `HTTPS: 禁用`
+
+**测试验证**：
+- ✅ 本地环境（HTTP）连接正常
+- ⏳ 生产环境（HTTPS + API Key）待验证
 
 ---
 

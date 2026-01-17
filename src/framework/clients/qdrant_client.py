@@ -37,6 +37,7 @@ class OptimizedQdrantClient:
         grpc_port: Optional[int] = None,
         prefer_grpc: Optional[bool] = None,
         api_key: Optional[str] = None,
+        https: Optional[bool] = None,
         timeout: float = 30.0,
         **kwargs
     ):
@@ -50,6 +51,7 @@ class OptimizedQdrantClient:
             grpc_port: gRPC端口（默认6334）
             prefer_grpc: 是否优先使用gRPC（默认从环境变量读取，否则True）
             api_key: API密钥（默认从环境变量读取）
+            https: 是否使用HTTPS（默认从环境变量读取，有API Key时自动启用）
             timeout: 超时时间（秒，默认30.0）
             **kwargs: 其他QdrantClient参数
         """
@@ -64,6 +66,17 @@ class OptimizedQdrantClient:
             self.prefer_grpc = prefer_grpc_env in ('true', '1', 'yes')
         else:
             self.prefer_grpc = prefer_grpc
+        
+        # 从环境变量读取https配置，如果有API Key则自动启用HTTPS
+        if https is None:
+            https_env = os.getenv('QDRANT_HTTPS', 'false').lower()
+            self.https = https_env in ('true', '1', 'yes')
+            # 如果有API Key但未明确配置HTTPS，自动启用HTTPS
+            if self.api_key and not self.https:
+                self.https = True
+                logger.info(f"🔒 检测到API Key，自动启用HTTPS")
+        else:
+            self.https = https
             
         self.timeout = timeout
         
@@ -71,6 +84,7 @@ class OptimizedQdrantClient:
         connection_params = {
             'timeout': self.timeout,
             'prefer_grpc': self.prefer_grpc,
+            'https': self.https,
             **kwargs
         }
         
@@ -88,13 +102,15 @@ class OptimizedQdrantClient:
             connection_params['port'] = self.port
             if self.prefer_grpc:
                 connection_params['grpc_port'] = self.grpc_port
-            logger.info(f"🔗 连接Qdrant: {self.host}:{self.port} (gRPC: {self.grpc_port if self.prefer_grpc else 0})")
+            protocol = "https" if self.https else "http"
+            logger.info(f"🔗 连接Qdrant: {protocol}://{self.host}:{self.port} (gRPC: {self.grpc_port if self.prefer_grpc else 0})")
         
         # 初始化客户端
         try:
             self.client = BaseQdrantClient(**connection_params)
             logger.info(f"✅ Qdrant客户端已连接")
             logger.info(f"  - 超时时间: {self.timeout}秒")
+            logger.info(f"  - HTTPS: {'启用' if self.https else '禁用'}")
             logger.info(f"  - gRPC连接: {'启用' if self.prefer_grpc else '禁用'}")
             
             # 测试连接
