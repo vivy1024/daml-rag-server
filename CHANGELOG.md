@@ -1,8 +1,67 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.43.0
+**版本**: v9.44.0
 **更新日期**: 2026-01-17
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.44.0 (2026-01-17) - 完成：Neo4j生产环境数据迁移 ✅
+
+**变更类型**: 📦 数据迁移 + 🛠️ 运维工具
+
+**背景**：
+- 生产环境Neo4j数据库为空（0个节点，0条关系）
+- 本地环境有完整数据（4250个节点，61854条关系）
+- 需要将本地知识图谱完整迁移到生产环境
+
+**解决方案**：
+1. **修正唯一键配置**：使用正确的节点唯一键进行匹配
+   - Exercise: `id` (不是exercise_id)
+   - Muscle: `name_en` (不是muscle_id)
+   - Equipment: `name` (不是equipment_id)
+   - TrainingParams: `goal+level` 复合键
+   - 其他标准节点使用`id`或`name`
+
+2. **解决内存溢出问题**：生产环境Neo4j内存限制358.4 MiB
+   - 创建分批删除脚本，每批1000个节点
+   - 避免一次性删除大量数据导致内存溢出
+
+3. **使用Neo4j 5.x新API**：替换已弃用的`id()`函数
+   - 使用`elementId()`替代`id()`
+   - 消除deprecation警告
+
+**新增脚本**：
+- `scripts/migrate_neo4j_fixed_v2.py`：改进的迁移脚本（使用正确唯一键）
+- `scripts/clear_neo4j_production_batch.py`：分批清空脚本（避免内存溢出）
+- `scripts/clear_neo4j_production_force.py`：强制清空脚本
+- `scripts/diagnose_neo4j_migration.py`：诊断唯一键问题
+
+**迁移结果**：
+- ✅ 节点：4250/4250 (100%)
+- ✅ 关系：61854/61854 (100%)
+- ✅ 数据完整性验证通过
+
+**节点类型统计**（生产环境）：
+- Food: 1880 | Exercise: 1790 | StrengthStandard: 360
+- Muscle: 40 | TrainingParams: 32 | Nutrient: 29
+- Equipment: 21 | InjuryType: 21 | 其他: 77
+
+**关系类型统计**（生产环境）：
+- CONTAINS_NUTRIENT: 44406 | CONTRAINDICATED_FOR: 3078
+- HAS_KINETIC_CHAIN: 1790 | REQUIRES: 1790
+- SUITABLE_FOR_LEVEL: 1790 | 其他: 9000
+
+**技术细节**：
+- 使用唯一键映射确保关系正确连接
+- 分批导入避免内存压力
+- 完整的进度显示和错误处理
+- 迁移前后数据验证
+
+**影响范围**：
+- 恢复生产环境AI对话的知识图谱检索功能
+- 支持动作推荐、肌肉关系查询、训练参数查询
+- 完整的健身知识图谱数据可用
 
 ---
 
