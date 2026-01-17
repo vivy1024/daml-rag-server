@@ -1,12 +1,47 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.38.0
+**版本**: v9.39.0
 **更新日期**: 2026-01-17
 **状态**: ✅ 生产环境运行中
 
 ---
 
-### v9.38.0 (2026-01-17) - 修复：Qdrant HTTPS连接支持 🔒
+### v9.39.0 (2026-01-17) - 修复：移除错误的HTTPS自动启用逻辑 🔧
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**：
+- v9.38.0错误地在有API Key时自动启用HTTPS
+- Zeabur内网直连Qdrant 6333端口使用**明文HTTP + API Key认证**
+- 自动启用HTTPS会导致SSL错误：`[SSL] record layer failure`
+
+**修复内容**：
+
+1. **移除错误逻辑**
+   - 删除"有API Key时自动启用HTTPS"的代码
+   - HTTPS仅通过环境变量 `QDRANT_HTTPS` 显式控制
+
+2. **生产环境配置** (`.env.production`)
+   - 新增 `QDRANT_HTTPS=false` 明确禁用HTTPS
+   - 注释说明：Zeabur内网直连使用明文HTTP + API Key
+
+3. **正确的连接方式**
+   - Zeabur内网：`http://service-xxx:6333` + API Key
+   - 公网/反代：`https://domain:port` + API Key
+
+**预期日志**：
+```
+🔗 连接Qdrant: http://service-xxx:6333 (gRPC: 0)
+🔑 使用API Key认证
+✅ Qdrant客户端已连接
+  - 超时时间: 30.0秒
+  - HTTPS: 禁用
+  - gRPC连接: 禁用
+```
+
+---
+
+### v9.38.0 (2026-01-17) - ❌ 错误修复：HTTPS自动启用导致SSL错误
 
 **变更类型**: 🐛 Bug修复
 

@@ -67,14 +67,12 @@ class OptimizedQdrantClient:
         else:
             self.prefer_grpc = prefer_grpc
         
-        # 从环境变量读取https配置，如果有API Key则自动启用HTTPS
+        # 从环境变量读取https配置
+        # 注意：Zeabur内网直连Qdrant 6333端口使用明文HTTP + API Key认证，不需要HTTPS
+        # 只有通过公网域名/反代访问时才需要HTTPS
         if https is None:
             https_env = os.getenv('QDRANT_HTTPS', 'false').lower()
             self.https = https_env in ('true', '1', 'yes')
-            # 如果有API Key但未明确配置HTTPS，自动启用HTTPS
-            if self.api_key and not self.https:
-                self.https = True
-                logger.info(f"🔒 检测到API Key，自动启用HTTPS")
         else:
             self.https = https
             
