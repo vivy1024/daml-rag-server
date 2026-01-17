@@ -1,8 +1,44 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.39.0
+**版本**: v9.40.0
 **更新日期**: 2026-01-17
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.40.0 (2026-01-17) - 新增：生产环境Qdrant数据导入脚本 📥
+
+**变更类型**: ✨ 新功能
+
+**背景**：
+- 生产环境Qdrant集合存在但数据为空（0个向量）
+- 本地环境有完整数据（fitness_exercises_v2: 1790个向量）
+- 需要将本地数据导入到生产环境
+
+**新增内容**：
+
+1. **生产环境导入脚本** (`scripts/import_to_production_qdrant.py`)
+   - 直接在Zeabur DAML-RAG容器中运行
+   - 使用内网Qdrant地址（fitness_qdrant.zeabur.internal:6333）
+   - 支持API Key认证
+   - 从容器内数据文件导入（/app/data/enhanced_perfect_exercises_dataset.json）
+
+2. **更新Exercise导入器** (`scripts/数据导入向量化/import_exercises_to_qdrant.py`)
+   - 新增 `qdrant_api_key` 参数支持
+   - 自动检测API Key并配置HTTPS=False（内网连接）
+   - 向后兼容（API Key为可选参数）
+
+**使用方法**：
+```bash
+# 在生产环境DAML-RAG容器中执行
+docker exec fitness_daml_rag python scripts/import_to_production_qdrant.py
+```
+
+**技术细节**：
+- 使用GTE-Large-zh模型（1024维向量）
+- 批量导入（100个/批次）
+- 自动创建集合（如不存在）
+- 支持增量导入（不删除现有数据）
 
 ---
 

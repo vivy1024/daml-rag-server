@@ -40,6 +40,7 @@ class ExerciseQdrantImporter:
         data_file: str,
         qdrant_host: str = "qdrant",
         qdrant_port: int = 6333,
+        qdrant_api_key: str = None,
         collection_name: str = "fitness_exercises_v2",
         vector_size: int = 1024,
         embedding_model: str = "BAAI/bge-m3"
@@ -49,9 +50,18 @@ class ExerciseQdrantImporter:
         self.vector_size = vector_size
         self.embedding_model = embedding_model
         
-        # 连接Qdrant
-        self.client = QdrantClient(host=qdrant_host, port=qdrant_port)
-        logger.info(f"✅ 连接到Qdrant: {qdrant_host}:{qdrant_port}")
+        # 连接Qdrant（支持API Key）
+        if qdrant_api_key:
+            self.client = QdrantClient(
+                host=qdrant_host, 
+                port=qdrant_port,
+                api_key=qdrant_api_key,
+                https=False  # 内网使用HTTP
+            )
+            logger.info(f"✅ 连接到Qdrant: {qdrant_host}:{qdrant_port} (使用API Key)")
+        else:
+            self.client = QdrantClient(host=qdrant_host, port=qdrant_port)
+            logger.info(f"✅ 连接到Qdrant: {qdrant_host}:{qdrant_port}")
         
         # 加载BGE-M3模型
         self.encoder = self._load_encoder()
