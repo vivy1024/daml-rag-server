@@ -1,8 +1,8 @@
 # API文档
 
-**版本**: v3.11.0
-**更新日期**: 2025-12-31
-**状态**: ✅ 17工具API就绪 - SSE流式响应
+**版本**: v6.0.0
+**更新日期**: 2026-01-16
+**状态**: ✅ 文档整理完成 - 单一权威来源
 
 ---
 
@@ -10,71 +10,84 @@
 
 | 文档 | 说明 | 状态 |
 |-----|------|------|
-| [API参考文档](./API参考文档.md) | FastAPI完整接口 | ✅ |
-| [MCP工具API](./MCP工具API.md) | MCP工具接口 | ✅ |
-| [API_USAGE](./API_USAGE.md) | API使用示例 | ✅ |
-
-**v1.8.0 API更新** (2025-11-07):
-- ✅ **服务就绪**: Docker容器健康运行
-- ✅ **FastAPI服务**: `http://localhost:8001`
-- ✅ **交互式文档**: `http://localhost:8001/docs`
-- ✅ **健康检查**: `http://localhost:8001/health`
-- ✅ **SSE流式响应**: `/v1/chat/stream` 端点
-- ✅ **会员权限控制**: 分级功能权限
+| [API参考文档](./API参考文档.md) | HTTP API完整接口参考 | ✅ 主文档 |
+| [MCP工具API参考](./MCP工具API参考.md) | MCP工具详细API规范 | ✅ 主文档 |
+| [API文档整理分析](./API文档整理分析.md) | 文档整理分析报告 | ✅ 归档 |
 
 ---
 
-## 🔌 核心API端点
+## 🔄 文档整理说明（v6.0.0 - 2026-01-16）
 
-| 端点 | 方法 | 功能 | 状态 |
-|-----|------|------|------|
-| `/v1/chat` | POST | 同步对话 | ✅ |
-| `/v1/chat/stream` | POST | 流式对话（SSE） | ✅ ⭐ |
-| `/v1/feedback` | POST | 提交反馈 | ✅ |
-| `/health` | GET | 健康检查 | ✅ |
-| `/docs` | GET | 交互式API文档 | ✅ |
-| `/admin/learning/stats` | GET | 学习统计 | ✅ |
+### 整理目标
+- ✅ 消除重复内容
+- ✅ 建立单一权威来源
+- ✅ 简化文档结构
+- ✅ 提高可维护性
+
+### 整理结果
+- **保留文档**: 2个主文档 + 1个索引
+- **删除文档**: 3个重复文档
+- **重复率降低**: 从90%降至0%
+
+### 已删除文档
+1. ~~03-API接口参考.md~~ - 内容已整合到API参考文档.md
+2. ~~API_USAGE.md~~ - 使用示例已整合到API参考文档.md
+3. ~~MCP工具API.md~~ - 内容已整合到MCP工具API参考.md
+
+### 文档定位
+
+#### API参考文档.md（主文档）
+- **定位**: HTTP API接口完整参考
+- **内容**: 
+  - 系统健康检查API
+  - GraphRAG三层检索API
+  - 聊天交互API
+  - 用户反馈API
+  - JSON补丁操作API
+  - 快速开始和使用示例
+  - 错误处理和性能基准
+  - 故障排查指南
+
+#### MCP工具API参考.md（主文档）
+- **定位**: MCP工具详细API规范
+- **内容**:
+  - 16个MCP工具完整API
+  - 工具分类和功能说明
+  - 输入输出格式规范
+  - 使用示例和最佳实践
+  - 错误处理和性能优化
+  - 安全考虑和集成建议
 
 ---
 
-## 🚀 快速示例
+## 🚀 快速开始
 
-### 同步对话请求
+### 启动服务器
 
+**Docker环境**（推荐）:
 ```bash
-curl -X POST http://localhost:8001/v1/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "test_user",
-    "message": "我想增肌",
-    "membership_level": "free"
-  }'
+# 启动DAML-RAG服务
+docker-compose up -d fitness_daml_rag
+
+# 查看日志
+docker-compose logs -f fitness_daml_rag
 ```
 
-### 流式对话请求（SSE）
-
+**本地开发**:
 ```bash
-curl -N http://localhost:8001/v1/chat/stream \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "test_user",
-    "message": "制定增肌计划",
-    "membership_level": "premium"
-  }'
+# Windows
+start_api_server.bat
+
+# Linux/Mac
+chmod +x start_api_server.sh
+./start_api_server.sh
 ```
 
-### 健康检查
+服务器启动后访问：
+- **API文档**: http://localhost:8001/docs
+- **健康检查**: http://localhost:8001/health
 
-```bash
-curl http://localhost:8001/health
-# 返回: {"status": "healthy", "qdrant": "connected", ...}
-```
-
-### 访问交互式文档
-
-浏览器打开: `http://localhost:8001/docs`
-
-完整API说明参见: [API参考文档.md](./API参考文档.md)
+> **注意**: 使用8001端口避开PHP后端的8000端口
 
 ---
 
@@ -82,10 +95,12 @@ curl http://localhost:8001/health
 
 - [代码参考](../03-代码参考/05-Tools工具层参考.md) - 工具实现细节
 - [快速开始](../01-快速开始/快速开始.md) - 使用示例
+- [监控系统](../02-核心架构/05-监控层/01-监控系统架构.md) - 监控API详细说明
 
 ---
 
-**维护者**: BUILD_BODY Team  
-**最后更新**: 2025-12-31
+**维护者**: 薛小川
+**最后更新**: 2026-01-16
+**版本**: v6.0.0
 
 
