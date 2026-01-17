@@ -1,8 +1,133 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.40.0
+**版本**: v9.43.0
 **更新日期**: 2026-01-17
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.43.0 (2026-01-17) - 修复：Neo4j迁移脚本支持复合唯一键 🔧
+
+**变更类型**: 🐛 Bug修复 + ⚡ 性能优化
+
+**问题**：
+- 原迁移脚本使用错误的唯一键（如Exercise.exercise_id不存在，实际是id）
+- TrainingParams节点缺少单一唯一键，需要使用goal+level组合
+- 导致核心节点（Exercise、Muscle、Equipment等）无法迁移
+
+**修复内容**：
+1. 更新节点唯一键映射：
+   - Exercise: exercise_id → id
+   - Muscle: muscle_id → name_en
+   - Equipment: equipment_id → name
+   - StrengthStandard: name → id
+   - TrainingParams: name → goal+level（复合键）
+   - ACSMStandard/NSCAStandard: name → id
+
+2. 新增复合键支持：
+   - 创建`migrate_neo4j_production_fixed.py`支持多字段组合唯一键
+   - TrainingParams使用goal+level组合确保唯一性
+
+3. 迁移结果：
+   - 节点：4250个（100%完成）
+   - 关系：61854条（持续导入中）
+   - 所有节点类型成功迁移
+
+**新增脚本**：
+- `scripts/migrate_neo4j_production_fixed.py`：支持复合键的迁移脚本
+- `scripts/check_neo4j_labels.py`：检查节点标签分布
+- `scripts/check_missing_nodes.py`：检查缺失节点的属性
+- `scripts/check_migration_progress.py`：监控迁移进度
+
+**使用方法**：
+```bash
+# 迁移数据（强制清空生产环境）
+docker exec fitness_daml_rag python scripts/migrate_neo4j_production_fixed.py --force
+
+# 检查迁移进度
+docker exec fitness_daml_rag python scripts/check_migration_progress.py
+
+# 检查节点分布
+docker exec fitness_daml_rag python scripts/check_neo4j_labels.py
+```
+
+**影响范围**：
+- 生产环境Neo4j数据库现已包含完整的知识图谱数据
+- 所有基于Neo4j的MCP工具可正常使用
+- 图检索功能恢复正常
+
+---
+
+### v9.42.0 (2026-01-17) - 新增：Neo4j生产环境迁移脚本 🔧
+
+**变更类型**: 🛠️ 运维工具
+
+**背景**：
+- 生产环境Neo4j数据库为空（0个节点，0条关系）
+- 本地环境有完整数据（4250个节点，61854条关系）
+- 需要将本地数据完整迁移到生产环境
+
+**新增脚本**：
+- `scripts/migrate_neo4j_to_production.py`：完整的Neo4j数据迁移工具
+- 使用正确的生产端口：`bolt://182.92.78.183:32372`
+
+**功能特性**：
+1. 完整导出本地所有节点和关系
+2. 保持节点属性和关系属性完整性
+3. 自动建立ID映射确保关系正确
+4. 按节点类型和关系类型分组导入
+5. 提供详细的进度显示和统计信息
+6. 迁移前后数据验证
+
+**使用方法**：
+```bash
+docker exec fitness_daml_rag python scripts/migrate_neo4j_to_production.py
+```
+
+**安全措施**：
+- 迁移前确认是否清空生产数据
+- 支持增量导入（跳过已存在数据）
+- 详细的错误处理和日志记录
+
+**相关修正**：
+- 修正文档中Neo4j端口号从32633改为32372
+- 更新验证脚本使用正确端口
+
+**影响范围**：
+- 支持生产环境Neo4j知识图谱数据迁移
+- 恢复AI对话的图谱检索功能
+
+---
+
+### v9.41.0 (2026-01-17) - 完成：生产环境Qdrant数据手动导入 ✅
+
+**变更类型**: 📦 数据迁移
+
+**背景**：
+- 生产环境Qdrant集合`fitness_exercises_v2`存在但数据为空（0个向量）
+- 本地环境有完整数据（1790个向量 + 1851个食物向量 + 43个知识向量）
+- 自动迁移脚本因网络限制无法从本地Docker连接到Zeabur生产环境
+
+**解决方案**：
+- 通过Qdrant Dashboard手动上传本地备份数据
+- 访问：`https://qdrant.yuzhen-fitness.cn/dashboard`
+- 使用API Key认证：`yuzhen_qdrant_2025_secure_abc123xyz789`
+
+**迁移结果**：
+- ✅ `fitness_exercises_v2`: 1790个向量（动作数据）
+- ✅ `food_nutrition_vector`: 1851个向量（食物数据）
+- ✅ `training_knowledge`: 43个向量（训练知识）
+- ⏭️ `chat_conversations`: 0个向量（空集合，无需迁移）
+- ⏭️ `fitness_fewshot_pool`: 0个向量（空集合，无需迁移）
+
+**技术细节**：
+- 本地备份位置：`backups/qdrant/`（通过Dashboard导出）
+- 导入方式：Dashboard UI手动上传
+- 数据格式：Qdrant原生快照格式
+
+**后续优化**：
+- 考虑使用Zeabur内网直连方式实现自动化迁移
+- 或使用公网HTTP REST API（需要找到正确的端口映射）
 
 ---
 
