@@ -376,13 +376,13 @@ async def _check_daml_rag_framework() -> Dict[str, Any]:
                 "last_check": datetime.now().isoformat()
             }
 
-        # 检查框架是否已初始化
-        initialized = initializer.is_initialized()
+        # 检查框架是否已初始化（通过检查components属性）
+        # SimpleFrameworkInitializer使用components字典存储已初始化的组件
+        initialized = bool(initializer.components)
 
         if initialized:
             # 获取已初始化的组件信息
-            components = initializer.get_components()
-            component_names = list(components.keys()) if components else []
+            component_names = list(initializer.components.keys())
             
             return {
                 "status": "healthy",
@@ -430,11 +430,11 @@ async def _check_three_layer_retrieval() -> Dict[str, Any]:
         from ...framework.core.simple_framework_initializer import get_framework_initializer
         
         initializer = get_framework_initializer()
-        if initializer and initializer.is_initialized():
-            framework_components = initializer.get_components()
+        if initializer and initializer.components:
+            framework_components = initializer.components
             
             # 检查知识图谱组件（包含向量搜索和图推理）
-            if framework_components.get("knowledge_graph"):
+            if framework_components.get("kg_full"):
                 components["semantic_search"] = True
                 components["graph_reasoning"] = True
                 components["fusion_engine"] = True
@@ -443,8 +443,9 @@ async def _check_three_layer_retrieval() -> Dict[str, Any]:
             if framework_components.get("mcp_client"):
                 components["business_constraints"] = True
             
-            # 检查健身特定组件
-            components["fitness_specific"] = True  # 框架初始化成功即表示健身领域可用
+            # 检查健身特定组件（领域适配器）
+            if framework_components.get("domain_adapter"):
+                components["fitness_specific"] = True
 
         # 计算整体状态
         healthy_count = sum(1 for v in components.values() if v is True)
@@ -474,10 +475,9 @@ async def _check_field_standardizer() -> Dict[str, Any]:
         from ...framework.core.simple_framework_initializer import get_framework_initializer
         
         initializer = get_framework_initializer()
-        if initializer and initializer.is_initialized():
-            components = initializer.get_components()
+        if initializer and initializer.components:
             # 知识图谱提供字段标准化能力
-            if components.get("knowledge_graph"):
+            if initializer.components.get("kg_full"):
                 return {
                     "status": "healthy",
                     "available": True,
@@ -514,11 +514,10 @@ async def _check_anti_hallucination() -> Dict[str, Any]:
         from ...framework.core.simple_framework_initializer import get_framework_initializer
         
         initializer = get_framework_initializer()
-        if initializer and initializer.is_initialized():
-            components = initializer.get_components()
+        if initializer and initializer.components:
             # 知识图谱和MCP工具提供反幻觉能力
-            kg_available = components.get("knowledge_graph") is not None
-            mcp_available = components.get("mcp_client") is not None
+            kg_available = initializer.components.get("kg_full") is not None
+            mcp_available = initializer.components.get("mcp_client") is not None
             
             if kg_available and mcp_available:
                 return {
@@ -593,12 +592,14 @@ async def _check_databases() -> Dict[str, Any]:
             qdrant_host = os.getenv('QDRANT_HOST', 'qdrant')
             qdrant_port = int(os.getenv('QDRANT_PORT', '6333'))
             qdrant_api_key = os.getenv('QDRANT_API_KEY', '')
+            qdrant_https = os.getenv('QDRANT_HTTPS', 'false').lower() == 'true'
             
-            # 使用Qdrant客户端检查连接（支持API Key认证）
+            # 使用Qdrant客户端检查连接（支持API Key认证，显式禁用HTTPS）
             client = QdrantClient(
                 host=qdrant_host,
                 port=qdrant_port,
                 api_key=qdrant_api_key if qdrant_api_key else None,
+                https=qdrant_https,  # 显式设置HTTPS，默认禁用
                 timeout=5
             )
             # 获取集合列表来验证连接
@@ -776,13 +777,12 @@ async def _check_daml_rag_details() -> Dict[str, Any]:
     try:
         from ...framework.core.simple_framework_initializer import get_framework_initializer
         initializer = get_framework_initializer()
-        if initializer and initializer.is_initialized():
-            components = initializer.get_components()
+        if initializer and initializer.components:
             return {
                 "framework_metrics": {
                     "initialized": True,
-                    "component_count": len(components) if components else 0,
-                    "components": list(components.keys()) if components else []
+                    "component_count": len(initializer.components),
+                    "components": list(initializer.components.keys())
                 }
             }
         return {"framework_metrics": {"initialized": False}}
