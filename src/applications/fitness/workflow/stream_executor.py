@@ -736,7 +736,8 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     mcp_results = {}
                     for key, value in aggregated_data.items():
                         if not key.startswith('_') and key not in ['workflow_metadata', 'retrieval_results']:
-                            mcp_results[key] = value
+                            # 处理特殊对象类型（如MembershipPermissions）
+                            mcp_results[key] = self._make_json_serializable(value)
                     if mcp_results:
                         mcp_tools_result_str = json.dumps(mcp_results, ensure_ascii=False, indent=2)
                 except Exception as e:
@@ -986,6 +987,41 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 "remaining": -1,
                 "message": f"权限检查异常，暂时允许执行: {e}"
             }
+    
+    def _make_json_serializable(self, obj: Any) -> Any:
+        """
+        将对象转换为JSON可序列化格式
+        
+        处理特殊对象类型（如MembershipPermissions、dataclass等）
+        
+        Args:
+            obj: 要转换的对象
+            
+        Returns:
+            JSON可序列化的对象
+        """
+        # 基本类型直接返回
+        if obj is None or isinstance(obj, (str, int, float, bool)):
+            return obj
+        
+        # 列表递归处理
+        if isinstance(obj, list):
+            return [self._make_json_serializable(item) for item in obj]
+        
+        # 字典递归处理
+        if isinstance(obj, dict):
+            return {k: self._make_json_serializable(v) for k, v in obj.items()}
+        
+        # 有to_dict方法的对象（如MembershipPermissions、UserProfile等）
+        if hasattr(obj, 'to_dict') and callable(getattr(obj, 'to_dict')):
+            return obj.to_dict()
+        
+        # 有__dict__属性的对象
+        if hasattr(obj, '__dict__'):
+            return {k: self._make_json_serializable(v) for k, v in obj.__dict__.items() if not k.startswith('_')}
+        
+        # 其他情况转为字符串
+        return str(obj)
     
     async def _increment_usage_after_execute(
         self,

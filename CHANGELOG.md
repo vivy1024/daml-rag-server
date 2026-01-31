@@ -1,8 +1,35 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.46.0
+**版本**: v9.47.0
 **更新日期**: 2026-02-01
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.47.0 (2026-02-01) - 修复：用量增加API认证和MCP结果序列化问题 ✅
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**：
+1. 用量增加API返回401认证失败
+   - 原因：`/api/usage/increment` 需要JWT认证，但DAML-RAG使用内部API令牌
+2. MCP工具结果序列化失败
+   - 原因：`MembershipPermissions` 对象无法直接JSON序列化
+
+**修复内容**：
+1. **用量增加API端点** (`backend_client.py`):
+   - 修改 `increment_usage()` 方法的endpoint
+   - 从 `/api/usage/increment` 改为 `/api/internal/membership/increment-usage`
+   - 使用内部API令牌认证
+
+2. **MCP结果序列化** (`stream_executor.py`):
+   - 添加 `_make_json_serializable()` 辅助方法
+   - 处理 `MembershipPermissions`、`UserProfile` 等特殊对象
+   - 支持 `to_dict()` 方法、`__dict__` 属性的对象转换
+
+**修改文件**：
+- `src/applications/fitness/clients/backend_client.py` - 修改increment_usage端点
+- `src/applications/fitness/workflow/stream_executor.py` - 添加序列化辅助方法
 
 ---
 
