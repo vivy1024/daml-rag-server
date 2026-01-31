@@ -177,23 +177,43 @@ async def get_warmup_status(user_id: str) -> Dict[str, Any]:
     try:
         # 检查用户档案缓存状态
         from ...applications.fitness.workflow_executor import get_user_cache
-        user_cache = get_user_cache()
-        if user_cache and user_id in user_cache.memory_cache:
-            entry = user_cache.memory_cache[user_id]
-            status["user_profile_cached"] = not entry.is_expired()
-            status["user_profile_access_count"] = entry.access_count
+        from ...applications.fitness.clients.backend_client import BackendClient
+        
+        backend_client = BackendClient()
+        user_cache = get_user_cache(backend_client=backend_client)
+        
+        if user_cache:
+            # UserProfileCache 使用 UnifiedCache，直接尝试获取用户档案
+            # 不使用 force_refresh，这样可以检查缓存是否存在
+            try:
+                profile = await user_cache.get_user_profile(user_id, force_refresh=False)
+                status["user_profile_cached"] = profile is not None
+                if profile:
+                    # 添加一些档案信息用于调试
+                    status["profile_preview"] = {
+                        "has_name": bool(profile.get("name")),
+                        "has_fitness_level": bool(profile.get("fitness_level")),
+                        "has_goals": bool(profile.get("goals")),
+                    }
+            except Exception as cache_err:
+                logger.warning(f"获取用户档案失败: {cache_err}")
+                status["user_profile_cached"] = False
+                status["cache_error"] = str(cache_err)
+        else:
+            status["cache_error"] = "user_cache not initialized"
         
         # 检查会员预热状态
-        from ...framework.storage.warmup import get_warmup_manager
-        warmup_manager = get_warmup_manager()
-        if warmup_manager:
-            # 新预加载器暂时没有is_user_preloaded方法，标记为unknown
-            status["membership_preloaded"] = "unknown"
+        if _use_new_cache():
+            from ...framework.storage.warmup import get_warmup_manager
+            warmup_manager = get_warmup_manager()
+            if warmup_manager:
+                # 新预加载器暂时没有is_user_preloaded方法，标记为unknown
+                status["membership_preloaded"] = "unknown"
         
         return status
         
     except Exception as e:
-        logger.error(f"获取预热状态失败: user_id={user_id}, error={e}")
+        logger.error(f"获取预热状态失败: user_id={user_id}, error={e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"获取状态失败: {str(e)}")
 
 
