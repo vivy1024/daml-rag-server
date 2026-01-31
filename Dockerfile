@@ -38,7 +38,8 @@ RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple --upg
     neo4j>=5.15.0 \
     toml>=0.10.2 \
     prometheus_client>=0.19.0 \
-    aiomysql>=0.2.0
+    aiomysql>=0.2.0 \
+    requests>=2.31.0
 
 # 复制DAML-RAG源代码（v3.0精简架构）
 COPY . .
