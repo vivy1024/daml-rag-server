@@ -1,8 +1,40 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.45.0
-**更新日期**: 2026-01-31
+**版本**: v9.46.0
+**更新日期**: 2026-02-01
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.46.0 (2026-02-01) - 修复：warmup status API和Backend API连接问题 ✅
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**：
+1. 访问 `/api/v1/user/warmup/status/{user_id}` 返回500错误
+   - 原因：代码假设 `UserProfileCache` 有 `memory_cache` 属性，但实际使用的是 `UnifiedCache`
+2. Backend API 网络错误：`[Errno -2] Name or service not known`
+   - 原因：`.env.production` 中使用了错误的内网域名 `fitness_php_v2.zeabur.internal`（下划线）
+   - 正确域名：`fitness-php-v2.zeabur.internal`（连字符）
+
+**修复内容**：
+1. **warmup status API**：
+   - 移除对 `memory_cache` 属性的错误假设
+   - 直接使用 `get_user_profile()` 方法检查缓存状态
+   - 添加 `profile_preview` 字段用于调试
+
+2. **Backend API URL**：
+   - 修正 `BACKEND_API_URL` 从 `fitness_php_v2` 改为 `fitness-php-v2`
+   - Zeabur 内网域名使用连字符而非下划线
+
+**修改文件**：
+- `src/api/routes/user.py`：修复 `get_warmup_status` 函数
+- `.env.production`：修正 `BACKEND_API_URL`
+
+**影响范围**：
+- 用户档案预热状态检查恢复正常
+- DAML-RAG 与 PHP 后端的内网通信恢复正常
+- AI对话的交互记录、三轨评分、用量统计等功能恢复正常
 
 ---
 
