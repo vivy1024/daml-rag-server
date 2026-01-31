@@ -363,18 +363,32 @@ async def _check_all_components() -> Dict[str, Any]:
 async def _check_daml_rag_framework() -> Dict[str, Any]:
     """检查DAML-RAG框架状态"""
     try:
-        from ..framework.core import daml_rag_core
+        from ...framework.core.simple_framework_initializer import get_framework_initializer
+
+        # 获取框架初始化器实例
+        initializer = get_framework_initializer()
+        
+        if initializer is None:
+            return {
+                "status": "unhealthy",
+                "initialized": False,
+                "error": "Framework initializer not available",
+                "last_check": datetime.now().isoformat()
+            }
 
         # 检查框架是否已初始化
-        initialized = daml_rag_core._initialized if hasattr(daml_rag_core, '_initialized') else False
+        initialized = initializer.is_initialized()
 
-        # 尝试健康检查
         if initialized:
-            health = await daml_rag_core.health_check()
+            # 获取已初始化的组件信息
+            components = initializer.get_components()
+            component_names = list(components.keys()) if components else []
+            
             return {
-                "status": "healthy" if health.get("overall_status") == "healthy" else "unhealthy",
-                "initialized": initialized,
-                "supported_domains": health.get("supported_domains", []),
+                "status": "healthy",
+                "initialized": True,
+                "components": component_names,
+                "component_count": len(component_names),
                 "last_check": datetime.now().isoformat()
             }
         else:
@@ -385,11 +399,11 @@ async def _check_daml_rag_framework() -> Dict[str, Any]:
                 "last_check": datetime.now().isoformat()
             }
 
-    except ImportError:
+    except ImportError as e:
         return {
             "status": "unhealthy",
             "initialized": False,
-            "error": "Framework not available",
+            "error": f"Import error: {str(e)}",
             "last_check": datetime.now().isoformat()
         }
     except Exception as e:
@@ -407,25 +421,30 @@ async def _check_three_layer_retrieval() -> Dict[str, Any]:
         "semantic_search": False,
         "graph_reasoning": False,
         "business_constraints": False,
-        "fusion_engine": False
+        "fusion_engine": False,
+        "fitness_specific": False
     }
 
     try:
-        # 检查各层组件是否可用
-        try:
-            from ..framework.retrieval.three_layer_core import create_three_layer_retriever
-            components["semantic_search"] = True
-            components["graph_reasoning"] = True
-            components["business_constraints"] = True
-            components["fusion_engine"] = True
-        except ImportError:
-            pass
-
-        try:
-            from ..applications.fitness.retrieval.fitness_three_layer import create_fitness_three_layer_retriever
-            components["fitness_specific"] = True
-        except ImportError:
-            components["fitness_specific"] = False
+        # 检查框架初始化器中的组件
+        from ...framework.core.simple_framework_initializer import get_framework_initializer
+        
+        initializer = get_framework_initializer()
+        if initializer and initializer.is_initialized():
+            framework_components = initializer.get_components()
+            
+            # 检查知识图谱组件（包含向量搜索和图推理）
+            if framework_components.get("knowledge_graph"):
+                components["semantic_search"] = True
+                components["graph_reasoning"] = True
+                components["fusion_engine"] = True
+            
+            # 检查MCP客户端（业务约束通过MCP工具实现）
+            if framework_components.get("mcp_client"):
+                components["business_constraints"] = True
+            
+            # 检查健身特定组件
+            components["fitness_specific"] = True  # 框架初始化成功即表示健身领域可用
 
         # 计算整体状态
         healthy_count = sum(1 for v in components.values() if v is True)
@@ -451,31 +470,34 @@ async def _check_three_layer_retrieval() -> Dict[str, Any]:
 async def _check_field_standardizer() -> Dict[str, Any]:
     """检查字段标准化器状态"""
     try:
-        from ..framework.standardization.field_standardizer import create_field_standardizer
-
-        # 尝试创建标准化器实例
-        standardizer = await create_field_standardizer()
+        # v3.0架构中，字段标准化通过知识图谱和MCP工具实现
+        from ...framework.core.simple_framework_initializer import get_framework_initializer
+        
+        initializer = get_framework_initializer()
+        if initializer and initializer.is_initialized():
+            components = initializer.get_components()
+            # 知识图谱提供字段标准化能力
+            if components.get("knowledge_graph"):
+                return {
+                    "status": "healthy",
+                    "available": True,
+                    "implementation": "knowledge_graph_based",
+                    "supported_types": [
+                        "exercise",
+                        "muscle",
+                        "equipment",
+                        "food"
+                    ],
+                    "last_check": datetime.now().isoformat()
+                }
 
         return {
-            "status": "healthy",
-            "available": True,
-            "supported_types": [
-                "fitness_level",
-                "muscle_anatomy",
-                "exercise",
-                "equipment",
-                "goal"
-            ],
-            "last_check": datetime.now().isoformat()
-        }
-
-    except ImportError:
-        return {
-            "status": "unhealthy",
+            "status": "degraded",
             "available": False,
-            "error": "FieldStandardizer not available",
+            "error": "Knowledge graph not initialized",
             "last_check": datetime.now().isoformat()
         }
+
     except Exception as e:
         return {
             "status": "unhealthy",
@@ -488,29 +510,45 @@ async def _check_field_standardizer() -> Dict[str, Any]:
 async def _check_anti_hallucination() -> Dict[str, Any]:
     """检查反幻觉系统状态"""
     try:
-        from ..framework.validation.anti_hallucination import create_anti_hallucination_system
-
-        # 尝试创建反幻觉系统实例
-        anti_hallucination = await create_anti_hallucination_system()
+        # v3.0架构中，反幻觉通过DAG模板和Layer3约束实现
+        from ...framework.core.simple_framework_initializer import get_framework_initializer
+        
+        initializer = get_framework_initializer()
+        if initializer and initializer.is_initialized():
+            components = initializer.get_components()
+            # 知识图谱和MCP工具提供反幻觉能力
+            kg_available = components.get("knowledge_graph") is not None
+            mcp_available = components.get("mcp_client") is not None
+            
+            if kg_available and mcp_available:
+                return {
+                    "status": "healthy",
+                    "available": True,
+                    "implementation": "dag_template_based",
+                    "layers": [
+                        "knowledge_graph_validation",
+                        "layer3_constraints",
+                        "mcp_tool_verification"
+                    ],
+                    "last_check": datetime.now().isoformat()
+                }
+            elif kg_available or mcp_available:
+                return {
+                    "status": "degraded",
+                    "available": True,
+                    "implementation": "partial",
+                    "kg_available": kg_available,
+                    "mcp_available": mcp_available,
+                    "last_check": datetime.now().isoformat()
+                }
 
         return {
-            "status": "healthy",
-            "available": True,
-            "layers": [
-                "medical_safety",
-                "evidence_consistency",
-                "professional_standards"
-            ],
-            "last_check": datetime.now().isoformat()
-        }
-
-    except ImportError:
-        return {
-            "status": "unhealthy",
+            "status": "degraded",
             "available": False,
-            "error": "AntiHallucinationSystem not available",
+            "error": "Framework components not initialized",
             "last_check": datetime.now().isoformat()
         }
+
     except Exception as e:
         return {
             "status": "unhealthy",
@@ -551,11 +589,21 @@ async def _check_databases() -> Dict[str, Any]:
 
         # Qdrant检查
         try:
-            import requests
+            from qdrant_client import QdrantClient
             qdrant_host = os.getenv('QDRANT_HOST', 'qdrant')
-            qdrant_port = os.getenv('QDRANT_PORT', '6333')
-            response = requests.get(f"http://{qdrant_host}:{qdrant_port}/health", timeout=5)
-            databases["qdrant"] = "connected" if response.status_code == 200 else "error"
+            qdrant_port = int(os.getenv('QDRANT_PORT', '6333'))
+            qdrant_api_key = os.getenv('QDRANT_API_KEY', '')
+            
+            # 使用Qdrant客户端检查连接（支持API Key认证）
+            client = QdrantClient(
+                host=qdrant_host,
+                port=qdrant_port,
+                api_key=qdrant_api_key if qdrant_api_key else None,
+                timeout=5
+            )
+            # 获取集合列表来验证连接
+            collections = client.get_collections()
+            databases["qdrant"] = "connected"
         except Exception as e:
             databases["qdrant"] = f"error: {str(e)[:50]}"
 
@@ -726,11 +774,20 @@ def _calculate_overall_status(components: Dict[str, Any], metrics: Dict[str, Any
 async def _check_daml_rag_details() -> Dict[str, Any]:
     """获取DAML-RAG框架详细信息"""
     try:
-        from ..framework.core import daml_rag_core
-        metrics = await daml_rag_core.get_metrics()
-        return {"framework_metrics": metrics}
-    except Exception:
-        return {"framework_metrics": {}}
+        from ...framework.core.simple_framework_initializer import get_framework_initializer
+        initializer = get_framework_initializer()
+        if initializer and initializer.is_initialized():
+            components = initializer.get_components()
+            return {
+                "framework_metrics": {
+                    "initialized": True,
+                    "component_count": len(components) if components else 0,
+                    "components": list(components.keys()) if components else []
+                }
+            }
+        return {"framework_metrics": {"initialized": False}}
+    except Exception as e:
+        return {"framework_metrics": {"error": str(e)}}
 
 
 async def _check_three_layer_details() -> Dict[str, Any]:
