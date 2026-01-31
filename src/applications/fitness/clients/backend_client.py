@@ -1075,6 +1075,7 @@ class BackendClient:
         Requirements: 7.4
         
         在查询完成后调用，增加用户的用量计数。
+        使用内部API端点，通过X-Internal-Token认证。
         
         Args:
             user_id: 用户ID
@@ -1089,7 +1090,8 @@ class BackendClient:
             print(f"今日已使用: {result['dag_used']}次")
             ```
         """
-        endpoint = "/api/usage/increment"
+        # 使用内部API端点（通过X-Internal-Token认证）
+        endpoint = "/api/internal/membership/increment-usage"
         
         try:
             data = await self._request(
