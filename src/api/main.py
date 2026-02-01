@@ -105,7 +105,7 @@ async def lifespan(app: FastAPI):
         framework_config = {
             # "user_profile_provider": user_profile_provider  # 已废弃
         }
-        init_result = await initialize_framework(framework_config)
+        init_result = await initialize_framework(framework_config, domain_adapter="fitness")
         if init_result.success:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug("✅ DAML-RAG框架v3.0初始化成功")
