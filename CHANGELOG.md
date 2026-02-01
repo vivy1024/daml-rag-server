@@ -1,8 +1,47 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.47.0
+**版本**: v9.48.0
 **更新日期**: 2026-02-01
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.48.0 (2026-02-01) - 修复：MCP参数构建器fitness_goals数据结构不一致问题 ✅
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**：
+1. `primary_goal` 枚举值为空
+   - 原因：`TaskParamBuilder` 假设 `fitness_goals` 是列表格式 `["增肌"]`
+   - 实际上 `fitness_goals` 是字典格式 `{"primary_goal": "hypertrophy", ...}`
+   - 导致参数转换时 `primary_goal` 变成空字符串
+
+2. `exercise_alternative_finder` 和 `safe_exercise_modifier` 失败
+   - 原因：缺少必需参数 `exercise_id` / `original_exercise_id`
+   - 这是因为 `intelligent_exercise_selector` 返回空 `recommendations` 时无法提取
+
+**修复内容**：
+1. **TaskParamBuilder** (`task_executor.py`):
+   - 添加 `_get_primary_goal()` 辅助方法，统一处理字典和列表两种格式
+   - 添加 `_map_goal_to_english()` 辅助方法，统一中英文目标映射
+   - 修改所有使用 `fitness_goals` 的方法（9个）：
+     - `_build_exercise_selector_params`
+     - `_build_program_designer_params`
+     - `_build_periodized_program_params`
+     - `_build_training_split_params`
+     - `_build_tdee_params`
+     - `_build_meal_plan_params`
+     - `_build_volume_calculator_params`
+     - `_build_nutrition_intake_params`
+     - `_build_exercise_nutrition_params`
+
+**修改文件**：
+- `src/applications/fitness/dag/task_executor.py` - 重构参数构建逻辑
+
+**兼容性**：
+- 支持新格式（字典）：`{"primary_goal": "hypertrophy", "secondary_goals": [...]}`
+- 支持旧格式（列表）：`["增肌", "减脂"]`
+- 支持中英文目标值自动映射
 
 ---
 
