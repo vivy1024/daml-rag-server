@@ -1,8 +1,25 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.48.0
+**版本**: v9.49.0
 **更新日期**: 2026-02-01
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.49.0 (2026-02-01) - 修复：启用健身领域适配器 ✅
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**：
+- 健康检查显示 `fitness_specific: false`
+- 原因：`main.py` 调用 `initialize_framework` 时未传递 `domain_adapter="fitness"` 参数
+
+**修复内容**：
+- 在 `main.py` 中添加 `domain_adapter="fitness"` 参数
+- 启用健身领域适配器，使 `three_layer_retrieval` 状态变为 `healthy`
+
+**修改文件**：
+- `src/api/main.py` - 添加domain_adapter参数
 
 ---
 
