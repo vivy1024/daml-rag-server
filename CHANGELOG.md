@@ -1,8 +1,34 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.49.0
-**更新日期**: 2026-02-01
+**版本**: v9.50.0
+**更新日期**: 2026-02-02
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.50.0 (2026-02-02) - 新增：DAG模板强制选择功能 ✅
+
+**变更类型**: ✨ 新功能
+
+**功能描述**：
+- 支持前端传递 `template_id` 参数强制指定DAG模板
+- 用户选择AI场景时直接执行该模板，跳过LLM选择步骤
+- 符合DAG模式设计理念：LLM只是"翻译器"，用户选择即执行
+
+**修改文件**：
+- `src/api/routes/chat.py` - 接收 `template_id` 参数并传递到工作流
+- `src/applications/fitness/workflow/__init__.py` - `execute_eleven_step_workflow_stream` 添加 `template_id` 参数
+- `src/applications/fitness/workflow/nodes.py` - `node_select_dag_template` 支持强制模板选择
+
+**工作流程**：
+1. 检查是否有用户强制指定的模板ID（`template_id`参数）
+2. 如果有强制指定，验证模板有效性后直接使用（跳过LLM选择）
+3. 如果没有强制指定，使用LLM关键词匹配选择模板
+4. 会员权限检查（无权限时降级）
+
+**日志示例**：
+- 强制指定：`🎯 [xxx] 步骤6.5: 用户强制指定模板=complete_training_plan，跳过LLM选择`
+- LLM选择：`🤖 [xxx] 步骤6.5: LLM选择模板=complete_training_plan, 置信度=0.95`
 
 ---
 
