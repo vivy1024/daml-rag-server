@@ -139,7 +139,8 @@ async def execute_eleven_step_workflow_stream(
     user_profile=None,
     session_id=None,
     topic_id=None,  # 话题ID，用于多轮对话
-    strategy: str = "dag"  # 执行策略：dag或agent
+    strategy: str = "dag",  # 执行策略：dag或agent
+    template_id: str = None  # DAG模板ID（用户选择时强制使用）
 ):
     """
     执行11步工作流程（流式版本，向后兼容）
@@ -154,6 +155,7 @@ async def execute_eleven_step_workflow_stream(
         session_id: 会话ID（可选）
         topic_id: 话题ID（可选，用于多轮对话）
         strategy: 执行策略（dag或agent，默认dag）
+        template_id: DAG模板ID（可选，用户选择时强制使用，跳过LLM选择）
         
     Yields:
         Dict[str, Any]: SSE事件
@@ -165,7 +167,8 @@ async def execute_eleven_step_workflow_stream(
         user_profile=user_profile,
         session_id=session_id,
         topic_id=topic_id,
-        strategy=strategy
+        strategy=strategy,
+        template_id=template_id
     ):
         yield event
 

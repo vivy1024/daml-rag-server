@@ -606,10 +606,12 @@ async def node_select_dag_template(
     步骤6.5：LLM选择DAG模板（含会员权限检查）
     
     工作流程：
-    1. LLM根据用户查询选择最合适的DAG模板
-    2. 检查用户会员等级是否有权使用该模板
-    3. 如果无权限，自动降级到用户可用的模板
-    4. 返回最终选择的模板ID和权限检查结果
+    1. 检查是否有用户强制指定的模板ID（template_id参数）
+    2. 如果有强制指定，直接使用该模板（跳过LLM选择）
+    3. 如果没有强制指定，LLM根据用户查询选择最合适的DAG模板
+    4. 检查用户会员等级是否有权使用该模板
+    5. 如果无权限，自动降级到用户可用的模板
+    6. 返回最终选择的模板ID和权限检查结果
     
     会员等级与模板对应（MVP阶段）：
     - 免费版(2个): greeting, quick_consultation
@@ -630,6 +632,7 @@ async def node_select_dag_template(
     session_id = state.get("session_id")
     few_shot_examples = state.get("few_shot_examples", [])
     membership_info = state.get("membership_info")  # 从步骤3获取的会员信息
+    force_template_id = state.get("template_id")  # 用户强制指定的模板ID
     
     selected_template_id = None
     permission_denied = False
@@ -648,27 +651,47 @@ async def node_select_dag_template(
         if template_manager is None:
             template_manager = DAGTemplateManager()
         
-        # 初始化决策引擎
-        if decision_engine is None:
-            decision_engine = LLMDecisionEngine(template_manager)
+        # ✅ 检查是否有用户强制指定的模板ID
+        if force_template_id:
+            # 验证模板ID是否有效
+            template = template_manager.get_template(force_template_id)
+            if template:
+                original_template_id = force_template_id
+                logger.info(
+                    f"🎯 [{request_id}] 步骤6.5: 用户强制指定模板={force_template_id}，跳过LLM选择"
+                )
+            else:
+                # 无效的模板ID，回退到LLM选择
+                logger.warning(
+                    f"⚠️ [{request_id}] 步骤6.5: 无效的模板ID={force_template_id}，回退到LLM选择"
+                )
+                force_template_id = None
         
-        # 创建选择请求
-        selection_request = DAGSelectionRequest(
-            user_query=query_text,
-            user_profile=user_profile or {},
-            available_templates=template_manager.get_all_templates(),
-            session_context={"session_id": session_id},
-            few_shot_examples=few_shot_examples
-        )
-        
-        # LLM选择DAG模板
-        selection_result = await decision_engine.select_dag_template(selection_request)
-        original_template_id = selection_result.selected_template_id
-        
-        logger.info(
-            f"🤖 [{request_id}] 步骤6.5: LLM选择模板={original_template_id}, "
-            f"置信度={selection_result.confidence:.2f}"
-        )
+        # 如果没有强制指定，使用LLM选择
+        if not force_template_id:
+            # 初始化决策引擎
+            if decision_engine is None:
+                decision_engine = LLMDecisionEngine(template_manager)
+            
+            # 创建选择请求
+            selection_request = DAGSelectionRequest(
+                user_query=query_text,
+                user_profile=user_profile or {},
+                available_templates=template_manager.get_all_templates(),
+                session_context={"session_id": session_id},
+                few_shot_examples=few_shot_examples
+            )
+            
+            # LLM选择DAG模板
+            selection_result = await decision_engine.select_dag_template(selection_request)
+            original_template_id = selection_result.selected_template_id
+            
+            logger.info(
+                f"🤖 [{request_id}] 步骤6.5: LLM选择模板={original_template_id}, "
+                f"置信度={selection_result.confidence:.2f}"
+            )
+        else:
+            original_template_id = force_template_id
         
         # ✅ 会员权限检查
         permission_result = check_template_permission(original_template_id, membership_info)
@@ -681,6 +704,7 @@ async def node_select_dag_template(
             logger.info(
                 f"✅ [{request_id}] 步骤6.5完成: 模板={selected_template_id}, "
                 f"会员={user_tier}, 可用模板={available_count}/{total_count}"
+                f"{', 用户强制指定' if force_template_id else ''}"
             )
         else:
             # 无权限，使用降级模板
@@ -696,9 +720,10 @@ async def node_select_dag_template(
         
         return StateUpdate(updates={
             "dag_template_id": selected_template_id,
-            "_dag_selection_confidence": selection_result.confidence,
-            "_dag_selection_reason": selection_result.selection_reason,
+            "_dag_selection_confidence": 1.0 if force_template_id else selection_result.confidence,
+            "_dag_selection_reason": "用户强制指定" if force_template_id else selection_result.selection_reason,
             "_original_template_id": original_template_id,
+            "_force_template_used": bool(force_template_id),
             "_permission_denied": permission_denied,
             "_upgrade_message": upgrade_message,
             "_user_tier": user_tier,
