@@ -9,22 +9,25 @@ Health Route - 系统健康检查接口
 - API接口状态
 - 性能指标监控
 
-GET  /api/health - 综合健康检查
-GET  /api/health/components - 组件详细状态
-GET  /api/health/metrics - 性能指标
+GET  /api/health - 公开健康检查（仅返回基本状态）
+GET  /api/health/components - 组件详细状态（需要管理员认证）
+GET  /api/health/metrics - 性能指标（需要管理员认证）
 
-版本：v2.1.0
-更新日期：2025-12-16
-重构说明：集成结构化日志和指标收集系统
+版本：v2.2.0
+更新日期：2026-01-18
+重构说明：安全加固 - 公开端点仅返回基本状态，详细端点需要认证
+安全加固：Requirements 9.1, 9.2, 9.3, 9.4
 """
 
 import logging
 import os
 import asyncio
 import psutil
+import jwt
 from datetime import datetime, timedelta
-from fastapi import APIRouter, HTTPException
-from typing import Dict, Any, Optional
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from typing import Dict, Any, Optional, Union, List
 
 # 导入API模型
 from ..models import ApiResponse, HealthResponse
@@ -37,34 +40,233 @@ logger = logging.getLogger(__name__)
 structured_logger = get_logger("health_check")
 metrics_collector = get_metrics_collector()
 
+# 安全加固：HTTPBearer认证（auto_error=False允许公开端点不需要认证）
+security = HTTPBearer(auto_error=False)
+
 router = APIRouter(
     prefix="/health",  # 注意：main.py会添加/api前缀
     tags=["health"]
 )
 
 
-@router.get("/", response_model=ApiResponse[HealthResponse])
-async def health_check():
+# ============================================================================
+# 安全加固：敏感信息过滤函数
+# Requirements 9.3: 不暴露数据库连接字符串、API密钥等敏感信息
+# ============================================================================
+
+def _filter_sensitive_data(data: Union[Dict, List, Any]) -> Union[Dict, List, Any]:
     """
-    综合健康检查
-
-    检查所有核心组件的状态，返回整体系统健康状况。
-
+    过滤敏感信息
+    
+    安全加固：Requirements 9.3
+    过滤数据库连接字符串、API密钥、密码等敏感信息
+    
+    Args:
+        data: 需要过滤的数据（字典、列表或其他类型）
+        
     Returns:
-        ApiResponse[HealthResponse]: 系统健康状态
+        过滤后的数据，敏感字段值替换为 '[REDACTED]'
+    """
+    # 敏感关键字列表（不区分大小写）
+    sensitive_keys = [
+        'password', 'secret', 'key', 'token', 
+        'credential', 'auth', 'connection_string',
+        'api_key', 'apikey', 'private_key', 'privatekey',
+        'access_token', 'refresh_token', 'jwt',
+        'mysql_password', 'neo4j_password', 'redis_password',
+        'qdrant_api_key', 'deepseek_api_key', 'encryption_key'
+    ]
+    
+    def _is_sensitive_key(key: str) -> bool:
+        """检查键名是否为敏感键"""
+        key_lower = str(key).lower()
+        return any(sensitive in key_lower for sensitive in sensitive_keys)
+    
+    def _filter_value(value: Any) -> Any:
+        """递归过滤值"""
+        if isinstance(value, dict):
+            return {
+                k: '[REDACTED]' if _is_sensitive_key(k) else _filter_value(v)
+                for k, v in value.items()
+            }
+        elif isinstance(value, list):
+            return [_filter_value(item) for item in value]
+        elif isinstance(value, str):
+            # 检查字符串值是否包含敏感模式（如连接字符串）
+            value_lower = value.lower()
+            if any(pattern in value_lower for pattern in ['password=', 'secret=', 'key=', 'token=']):
+                return '[REDACTED]'
+            return value
+        return value
+    
+    return _filter_value(data)
+
+
+def _verify_admin_token(credentials: Optional[HTTPAuthorizationCredentials]) -> bool:
+    """
+    验证管理员Token
+    
+    安全加固：Requirements 9.2
+    详细端点需要管理员认证
+    
+    Args:
+        credentials: HTTP Bearer认证凭证
+        
+    Returns:
+        bool: Token是否有效
+    """
+    if not credentials:
+        return False
+    
+    token = credentials.credentials
+    if not token:
+        return False
+    
+    try:
+        # 获取JWT密钥
+        jwt_secret = os.getenv('JWT_SECRET', '')
+        if not jwt_secret:
+            structured_logger.warning(
+                "JWT_SECRET未配置",
+                component="health_auth",
+                security_warning="JWT_SECRET not configured for admin verification"
+            )
+            return False
+        
+        # 解码并验证Token
+        payload = jwt.decode(token, jwt_secret, algorithms=['HS256'])
+        
+        # 检查是否为管理员角色
+        role = payload.get('role', '')
+        if role == 'admin':
+            return True
+        
+        # 检查用户ID是否为管理员（user_id=1通常是管理员）
+        user_id = payload.get('sub') or payload.get('user_id')
+        if user_id == 1 or user_id == '1':
+            return True
+        
+        return False
+        
+    except jwt.ExpiredSignatureError:
+        structured_logger.warning(
+            "管理员Token已过期",
+            component="health_auth"
+        )
+        return False
+    except jwt.InvalidTokenError as e:
+        structured_logger.warning(
+            "无效的管理员Token",
+            component="health_auth",
+            error=str(e)[:100]
+        )
+        return False
+    except Exception as e:
+        structured_logger.error(
+            "Token验证异常",
+            component="health_auth",
+            error=str(e)[:100]
+        )
+        return False
+
+
+@router.get("/")
+async def public_health_check():
+    """
+    公开健康检查端点
+    
+    安全加固：Requirements 9.1, 9.3
+    仅返回基本状态，不暴露敏感信息
+    
+    Returns:
+        dict: 基本健康状态
             - status: healthy, unhealthy, degraded
-            - version: 系统版本
-            - components: 各组件状态
-            - metrics: 性能指标
-            - auth_enabled: 认证是否启用
+            - timestamp: 检查时间
     """
     # 注意：健康检查API不记录INFO日志，避免日志膨胀
     # 只在出错时记录ERROR日志
     try:
         start_time = asyncio.get_event_loop().time()
 
+        # 快速检查核心组件状态（不返回详细信息）
+        try:
+            components = await _check_all_components()
+            metrics = await _get_system_metrics()
+            overall_status = _calculate_overall_status(components, metrics)
+        except Exception:
+            overall_status = "degraded"
+
+        processing_time = asyncio.get_event_loop().time() - start_time
+        
+        # 记录指标（不记录日志）
+        try:
+            metrics_collector.get_metric("request_duration_seconds").observe(
+                processing_time,
+                labels={"endpoint": "/health", "method": "GET", "status": "200"}
+            )
+            metrics_collector.get_metric("requests_total").inc(
+                labels={"endpoint": "/health", "method": "GET", "status": "200"}
+            )
+        except Exception:
+            pass  # 指标收集失败不影响健康检查
+
+        # 安全加固：仅返回基本状态和时间戳
+        return {
+            "status": overall_status,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        # 只记录错误日志
+        structured_logger.error(
+            "健康检查失败",
+            error=str(e),
+            component="health_check"
+        )
+        
+        # 记录错误指标
+        try:
+            metrics_collector.get_metric("errors_total").inc(
+                labels={"error_type": "health_check_error", "component": "health_check"}
+            )
+        except Exception:
+            pass
+        
+        # 安全加固：错误时也只返回基本信息，不暴露错误详情
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.now().isoformat()
+        }
+
+
+@router.get("/detailed", response_model=ApiResponse[HealthResponse])
+async def detailed_health_check(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    详细健康检查（需要管理员认证）
+    
+    安全加固：Requirements 9.2
+    检查所有核心组件的状态，返回整体系统健康状况。
+    
+    Returns:
+        ApiResponse[HealthResponse]: 系统健康状态（过滤敏感信息）
+            - status: healthy, unhealthy, degraded
+            - version: 系统版本
+            - components: 各组件状态
+            - metrics: 性能指标
+            - auth_enabled: 认证是否启用
+    """
+    # 安全加固：验证管理员Token
+    if not _verify_admin_token(credentials):
+        raise HTTPException(
+            status_code=401, 
+            detail="Authentication required - Admin access only"
+        )
+    
+    try:
+        start_time = asyncio.get_event_loop().time()
+
         # 1. 基础信息
-        version = "2.1.0"
+        version = "2.2.0"
         timestamp = datetime.now()
         
         # 获取认证启用状态（安全加固：Requirements 6.4）
@@ -79,25 +281,29 @@ async def health_check():
         # 4. 计算整体状态
         overall_status = _calculate_overall_status(components, metrics)
 
-        # 5. 构建响应
+        # 5. 安全加固：过滤敏感信息
+        filtered_components = _filter_sensitive_data(components)
+        filtered_metrics = _filter_sensitive_data(metrics)
+
+        # 6. 构建响应
         health_response = HealthResponse(
             status=overall_status,
             version=version,
             timestamp=timestamp,
-            components=components,
-            metrics=metrics,
+            components=filtered_components,
+            metrics=filtered_metrics,
             auth_enabled=auth_enabled
         )
 
         processing_time = asyncio.get_event_loop().time() - start_time
         
-        # 记录指标（不记录日志）
+        # 记录指标
         metrics_collector.get_metric("request_duration_seconds").observe(
             processing_time,
-            labels={"endpoint": "/health", "method": "GET", "status": "200"}
+            labels={"endpoint": "/health/detailed", "method": "GET", "status": "200"}
         )
         metrics_collector.get_metric("requests_total").inc(
-            labels={"endpoint": "/health", "method": "GET", "status": "200"}
+            labels={"endpoint": "/health/detailed", "method": "GET", "status": "200"}
         )
 
         return ApiResponse.success(
@@ -105,35 +311,43 @@ async def health_check():
             msg="系统健康检查完成"
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        # 只记录错误日志
         structured_logger.error(
-            "健康检查失败",
+            "详细健康检查失败",
             error=str(e),
             component="health_check"
         )
         
-        # 记录错误指标
         metrics_collector.get_metric("errors_total").inc(
             labels={"error_type": "health_check_error", "component": "health_check"}
         )
         
         return ApiResponse.error(
             code=500,
-            msg=f"健康检查失败: {str(e)}"
+            msg="健康检查失败"  # 安全加固：不暴露错误详情
         )
 
 
 @router.get("/components")
-async def components_health():
+async def components_health(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
-    组件详细状态检查
-
-    返回各个组件的详细健康状态信息。
+    组件详细状态检查（需要管理员认证）
+    
+    安全加固：Requirements 9.2, 9.3
+    返回各个组件的详细健康状态信息，过滤敏感数据。
 
     Returns:
-        ApiResponse: 组件状态详情
+        ApiResponse: 组件状态详情（过滤敏感信息）
     """
+    # 安全加固：验证管理员Token
+    if not _verify_admin_token(credentials):
+        raise HTTPException(
+            status_code=401, 
+            detail="Authentication required - Admin access only"
+        )
+    
     try:
         components = await _check_all_components()
 
@@ -147,30 +361,42 @@ async def components_health():
             elif component_name == "databases":
                 component_status.update(await _check_database_details())
 
+        # 安全加固：过滤敏感信息
+        filtered_components = _filter_sensitive_data(components)
+
         return ApiResponse.success(
-            data=components,
+            data=filtered_components,
             msg="组件状态检查完成"
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"组件状态检查失败: {e}", exc_info=True)
         return ApiResponse.error(
             code=500,
-            msg=f"组件状态检查失败: {str(e)}"
+            msg="组件状态检查失败"  # 安全加固：不暴露错误详情
         )
 
 
 @router.get("/metrics")
-async def system_metrics():
+async def system_metrics(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
-    系统性能指标
-
-    返回详细的性能监控数据。
+    系统性能指标（需要管理员认证）
+    
+    安全加固：Requirements 9.2, 9.3
+    返回详细的性能监控数据，过滤敏感信息。
 
     Returns:
-        ApiResponse: 性能指标数据
+        ApiResponse: 性能指标数据（过滤敏感信息）
     """
-    # 注意：健康检查类API不记录INFO日志，避免日志膨胀
+    # 安全加固：验证管理员Token
+    if not _verify_admin_token(credentials):
+        raise HTTPException(
+            status_code=401, 
+            detail="Authentication required - Admin access only"
+        )
+    
     try:
         metrics = await _get_system_metrics()
         
@@ -188,11 +414,16 @@ async def system_metrics():
         
         metrics["collected_metrics"] = collected_metrics
 
+        # 安全加固：过滤敏感信息
+        filtered_metrics = _filter_sensitive_data(metrics)
+
         return ApiResponse.success(
-            data=metrics,
+            data=filtered_metrics,
             msg="性能指标获取完成"
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         structured_logger.error(
             "性能指标获取失败",
@@ -202,24 +433,32 @@ async def system_metrics():
         
         return ApiResponse.error(
             code=500,
-            msg=f"性能指标获取失败: {str(e)}"
+            msg="性能指标获取失败"  # 安全加固：不暴露错误详情
         )
 
 
 @router.get("/metrics/prometheus")
-async def prometheus_metrics():
+async def prometheus_metrics(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
-    Prometheus格式指标
-
+    Prometheus格式指标（需要管理员认证）
+    
+    安全加固：Requirements 9.2, 9.3
     返回Prometheus格式的性能指标，包括：
     - 系统基础指标（CPU、内存、请求等）
     - 流式输出指标（TTFB、生成速度、成功率等）
 
     Returns:
-        str: Prometheus格式文本
+        str: Prometheus格式文本（过滤敏感信息）
     """
     from fastapi.responses import PlainTextResponse
     from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+    
+    # 安全加固：验证管理员Token
+    if not _verify_admin_token(credentials):
+        raise HTTPException(
+            status_code=401, 
+            detail="Authentication required - Admin access only"
+        )
     
     try:
         # 导出所有Prometheus指标（包括streaming_metrics.py中定义的指标）
@@ -241,6 +480,8 @@ async def prometheus_metrics():
             content=prometheus_text,
             media_type=CONTENT_TYPE_LATEST
         )
+    except HTTPException:
+        raise
     except Exception as e:
         structured_logger.error(
             "Prometheus指标导出失败",
@@ -248,23 +489,27 @@ async def prometheus_metrics():
             component="metrics"
         )
         return PlainTextResponse(
-            content=f"# Error exporting metrics: {str(e)}",
+            content="# Error exporting metrics",  # 安全加固：不暴露错误详情
             status_code=500
         )
 
 
 @router.get("/metrics/streaming")
-async def streaming_metrics(time_window: int = 3600):
+async def streaming_metrics(
+    time_window: int = 3600,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
-    流式输出监控指标
-
+    流式输出监控指标（需要管理员认证）
+    
+    安全加固：Requirements 9.2, 9.3
     返回流式输出的性能统计数据。
 
     Args:
         time_window: 时间窗口（秒），默认1小时
 
     Returns:
-        ApiResponse: 流式监控统计数据
+        ApiResponse: 流式监控统计数据（过滤敏感信息）
             - total_sessions: 总会话数
             - success_rate: 成功率
             - avg_ttfb_ms: 平均首字节响应时间
@@ -272,20 +517,30 @@ async def streaming_metrics(time_window: int = 3600):
             - avg_tokens_per_second: 平均生成速度
             - error_distribution: 错误分布
     """
-    # 注意：健康检查类API不记录INFO日志，避免日志膨胀
+    # 安全加固：验证管理员Token
+    if not _verify_admin_token(credentials):
+        raise HTTPException(
+            status_code=401, 
+            detail="Authentication required - Admin access only"
+        )
+    
     try:
         from ...framework.monitoring.streaming_metrics import streaming_monitor
         
         # 获取统计数据
         statistics = streaming_monitor.get_statistics(time_window_seconds=time_window)
         
+        # 安全加固：过滤敏感信息
+        filtered_statistics = _filter_sensitive_data(statistics)
+        
         return ApiResponse.success(
-            data=statistics,
+            data=filtered_statistics,
             msg="流式监控指标获取完成"
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        # 只记录错误日志
         structured_logger.error(
             "流式监控指标获取失败",
             error=str(e),
@@ -294,39 +549,54 @@ async def streaming_metrics(time_window: int = 3600):
         
         return ApiResponse.error(
             code=500,
-            msg=f"流式监控指标获取失败: {str(e)}"
+            msg="流式监控指标获取失败"  # 安全加固：不暴露错误详情
         )
 
 
 @router.get("/metrics/streaming/recent")
-async def recent_streaming_metrics(limit: int = 100):
+async def recent_streaming_metrics(
+    limit: int = 100,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
-    最近的流式会话记录
-
-    返回最近的流式会话详细记录。
+    最近的流式会话记录（需要管理员认证）
+    
+    安全加固：Requirements 9.2, 9.3
+    返回最近的流式会话详细记录，过滤敏感信息。
 
     Args:
         limit: 返回的最大记录数，默认100
 
     Returns:
-        ApiResponse: 流式会话记录列表
+        ApiResponse: 流式会话记录列表（过滤敏感信息）
     """
-    # 注意：健康检查类API不记录INFO日志，避免日志膨胀
+    # 安全加固：验证管理员Token
+    if not _verify_admin_token(credentials):
+        raise HTTPException(
+            status_code=401, 
+            detail="Authentication required - Admin access only"
+        )
+    
     try:
         from ...framework.monitoring.streaming_metrics import streaming_monitor
         
         # 获取最近的记录
         recent_metrics = streaming_monitor.get_recent_metrics(limit=limit)
         
+        # 安全加固：过滤敏感信息
+        filtered_metrics = _filter_sensitive_data(recent_metrics)
+        
         return ApiResponse.success(
             data={
-                "metrics": recent_metrics,
+                "metrics": filtered_metrics,
                 "count": len(recent_metrics),
                 "limit": limit
             },
             msg=f"获取到{len(recent_metrics)}条流式会话记录"
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         structured_logger.error(
             "获取流式会话记录失败",
@@ -336,7 +606,7 @@ async def recent_streaming_metrics(limit: int = 100):
         
         return ApiResponse.error(
             code=500,
-            msg=f"获取流式会话记录失败: {str(e)}"
+            msg="获取流式会话记录失败"  # 安全加固：不暴露错误详情
         )
 
 
