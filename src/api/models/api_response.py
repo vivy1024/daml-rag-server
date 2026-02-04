@@ -234,6 +234,7 @@ class HealthResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now, description="检查时间")
     components: Dict[str, Any] = Field(..., description="各组件状态")
     metrics: Optional[Dict[str, Any]] = Field(default=None, description="性能指标")
+    auth_enabled: bool = Field(default=False, description="认证是否启用（安全加固）")
 
 
 # 导出所有模型

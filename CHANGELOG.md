@@ -1,8 +1,35 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.50.0
+**版本**: v9.51.0
 **更新日期**: 2026-02-02
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.51.0 (2026-02-02) - 安全加固：健康检查端点添加认证状态 ✅
+
+**变更类型**: 🔒 安全加固
+
+**功能描述**：
+- 在健康检查端点响应中添加 `auth_enabled` 字段
+- 从环境变量 `ENABLE_AUTH` 读取认证启用状态
+- 符合安全加固需求 Requirements 6.4
+
+**修改文件**：
+- `src/api/routes/health.py` - 在 `health_check()` 中添加 `auth_enabled` 字段
+- `src/api/models/api_response.py` - `HealthResponse` 模型添加 `auth_enabled` 字段
+
+**响应示例**：
+```json
+{
+  "status": "healthy",
+  "version": "2.1.0",
+  "timestamp": "2026-02-02T10:00:00",
+  "auth_enabled": true,
+  "components": {...},
+  "metrics": {...}
+}
+```
 
 ---
 
