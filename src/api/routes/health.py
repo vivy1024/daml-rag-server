@@ -56,6 +56,7 @@ async def health_check():
             - version: 系统版本
             - components: 各组件状态
             - metrics: 性能指标
+            - auth_enabled: 认证是否启用
     """
     # 注意：健康检查API不记录INFO日志，避免日志膨胀
     # 只在出错时记录ERROR日志
@@ -65,6 +66,9 @@ async def health_check():
         # 1. 基础信息
         version = "2.1.0"
         timestamp = datetime.now()
+        
+        # 获取认证启用状态（安全加固：Requirements 6.4）
+        auth_enabled = os.getenv('ENABLE_AUTH', 'false').lower() == 'true'
 
         # 2. 检查各组件状态
         components = await _check_all_components()
@@ -81,7 +85,8 @@ async def health_check():
             version=version,
             timestamp=timestamp,
             components=components,
-            metrics=metrics
+            metrics=metrics,
+            auth_enabled=auth_enabled
         )
 
         processing_time = asyncio.get_event_loop().time() - start_time
