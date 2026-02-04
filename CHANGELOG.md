@@ -1,8 +1,42 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.52.0
+**版本**: v9.53.0
 **更新日期**: 2026-02-02
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.53.0 (2026-02-02) - 安全加固：健康检查端点安全加固 ✅
+
+**变更类型**: 🔒 安全加固
+
+**功能描述**：
+- **公开端点安全**：`/api/health/` 仅返回 `status` 和 `timestamp`，不暴露敏感信息
+- **详细端点认证**：`/api/health/components`、`/api/health/metrics` 等详细端点需要管理员JWT认证
+- **敏感信息过滤**：添加 `_filter_sensitive_data()` 函数，过滤密码、密钥、Token等敏感字段
+- **管理员验证**：添加 `_verify_admin_token()` 函数，验证JWT Token中的管理员角色
+- **新增详细端点**：`/api/health/detailed` 提供完整健康检查（需认证）
+- 符合安全加固需求 Requirements 9.1, 9.2, 9.3, 9.4
+
+**修改文件**：
+- `src/api/routes/health.py` - 全面安全加固
+
+**端点变更**：
+| 端点 | 认证要求 | 返回内容 |
+|------|---------|---------|
+| `/api/health/` | 无需认证 | 仅 status + timestamp |
+| `/api/health/detailed` | 管理员JWT | 完整健康状态（过滤敏感信息） |
+| `/api/health/components` | 管理员JWT | 组件详情（过滤敏感信息） |
+| `/api/health/metrics` | 管理员JWT | 性能指标（过滤敏感信息） |
+| `/api/health/metrics/prometheus` | 管理员JWT | Prometheus格式指标 |
+| `/api/health/metrics/streaming` | 管理员JWT | 流式监控指标 |
+| `/api/health/metrics/streaming/recent` | 管理员JWT | 最近流式会话记录 |
+
+**敏感信息过滤列表**：
+- password, secret, key, token, credential, auth
+- connection_string, api_key, private_key
+- mysql_password, neo4j_password, redis_password
+- qdrant_api_key, deepseek_api_key, encryption_key
 
 ---
 
