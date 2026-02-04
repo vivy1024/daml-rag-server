@@ -636,12 +636,22 @@ async def _check_databases() -> Dict[str, Any]:
         except Exception as e:
             databases["mysql"] = f"error: {str(e)[:50]}"
 
-        # Redis检查
+        # Redis检查（安全加固：Requirements 8.3, 8.4）
         try:
             import redis
             redis_host = os.getenv('REDIS_HOST', 'redis')
             redis_port = int(os.getenv('REDIS_PORT', '6379'))
             redis_password = os.getenv('REDIS_PASSWORD', '')
+            
+            # 安全加固：记录Redis密码配置状态
+            if not redis_password:
+                structured_logger.warning(
+                    "Redis连接未配置密码",
+                    component="redis",
+                    host=redis_host,
+                    port=redis_port,
+                    security_warning="Redis connection without password authentication"
+                )
             
             r = redis.Redis(
                 host=redis_host,
@@ -651,6 +661,26 @@ async def _check_databases() -> Dict[str, Any]:
             )
             r.ping()
             databases["redis"] = "connected"
+        except redis.AuthenticationError as auth_error:
+            # 安全加固：认证失败时记录警告日志（Requirements 8.4）
+            structured_logger.warning(
+                "Redis认证失败",
+                component="redis",
+                host=redis_host,
+                port=redis_port,
+                error=str(auth_error)[:100],
+                security_warning="Redis authentication failed - check REDIS_PASSWORD configuration"
+            )
+            databases["redis"] = "auth_error"
+        except redis.ConnectionError as conn_error:
+            structured_logger.warning(
+                "Redis连接失败",
+                component="redis",
+                host=redis_host,
+                port=redis_port,
+                error=str(conn_error)[:100]
+            )
+            databases["redis"] = f"connection_error: {str(conn_error)[:30]}"
         except Exception as e:
             databases["redis"] = f"error: {str(e)[:50]}"
 
