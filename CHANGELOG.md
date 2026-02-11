@@ -1,8 +1,23 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.59.0
+**版本**: v9.60.0
 **更新日期**: 2026-02-12
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.60.0 (2026-02-12) - Dockerfile构建缓存优化 ⚡
+
+**变更类型**: ⚡ 性能优化
+
+**变更内容**：
+- 重构Dockerfile分层：requirements.txt → pip install → 模型下载 → 源代码复制
+- 模型下载层（~4.3GB GTE-Large-zh）移到源代码复制之前，代码变更不再触发模型重下载
+- Python依赖安装改为 `pip install -r requirements.txt`，仅requirements.txt变化时重建
+- 预计构建时间从10+分钟降至1-2分钟（仅代码变更时）
+
+**修改文件**：
+- `Dockerfile` - 重构分层顺序
 
 ---
 
