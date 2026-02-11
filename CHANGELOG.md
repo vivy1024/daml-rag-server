@@ -1,8 +1,19 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.58.0
+**版本**: v9.59.0
 **更新日期**: 2026-02-12
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.59.0 (2026-02-12) - 生产部署：权限系统重构推送+Zeabur环境变量 🚀
+
+**变更类型**: 🚀 部署
+
+**变更内容**：
+- 推送权限系统重构代码到Zeabur（Internal JWT验证 + fail-closed + 双认证模式）
+- Dockerfile添加PyJWT>=2.8.0依赖
+- Zeabur环境变量配置：INTERNAL_JWT_SECRET、INTERNAL_JWT_ISSUER、LEGACY_AUTH_ENABLED
 
 ---
 
