@@ -293,6 +293,31 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️ 安全中间件加载失败: {e}")
 
+# 添加双认证中间件（Internal JWT + X-Internal-Token）
+try:
+    from .middleware.auth_middleware import DualAuthMiddleware
+    from ..framework.auth.internal_jwt_verifier import InternalJwtVerifier
+
+    jwt_secret = os.getenv("INTERNAL_JWT_SECRET", "")
+    jwt_issuer = os.getenv("INTERNAL_JWT_ISSUER", "yuzhen-auth-gateway")
+    legacy_auth_enabled = os.getenv("LEGACY_AUTH_ENABLED", "true").lower() == "true"
+
+    jwt_verifier = InternalJwtVerifier(jwt_secret, jwt_issuer) if jwt_secret else None
+
+    app.add_middleware(
+        DualAuthMiddleware,
+        jwt_verifier=jwt_verifier,
+        legacy_auth_enabled=legacy_auth_enabled,
+    )
+
+    logger.info(
+        f"✅ 双认证中间件已启用: "
+        f"jwt={'有密钥' if jwt_secret else '无密钥'}, "
+        f"legacy_auth={legacy_auth_enabled}"
+    )
+except ImportError as e:
+    logger.warning(f"⚠️ 双认证中间件加载失败: {e}")
+
 
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):

@@ -498,6 +498,16 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 request_id=request_id
             )
             
+            # ========== 积分上报（Requirements 10.1） ==========
+            await self._report_credit_consumption(
+                user_id=user_id,
+                tokens_generated=tokens_generated,
+                mode=strategy,
+                template_name=state.get("dag_template_id"),
+                conversation_id=session_id,
+                request_id=request_id
+            )
+            
             # 发送完成事件
             yield {
                 "type": "done",
@@ -1074,6 +1084,82 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             
         except Exception as e:
             logger.error(f"❌ [{request_id}] 用量增加异常: {e}")
+            return False
+    
+    async def _report_credit_consumption(
+        self,
+        user_id: str,
+        tokens_generated: int,
+        mode: str,
+        template_name: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        request_id: str = "unknown"
+    ) -> bool:
+        """
+        上报积分消耗到后端
+        
+        Requirements: 10.1
+        
+        在DAG工作流完成后调用，将Token消耗上报到后端进行积分扣除。
+        使用try-except确保不阻塞主响应流程。
+        
+        Args:
+            user_id: 用户ID
+            tokens_generated: 生成的Token数量（作为总Token消耗的估算）
+            mode: 执行模式（dag或agent）
+            template_name: DAG模板名称
+            conversation_id: 会话ID
+            request_id: 请求ID（用于日志）
+            
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            # 导入积分上报服务
+            from ..services.credit_reporter import report_credit_consumption
+            
+            # 估算Token消耗（输出Token通常是主要消耗）
+            # 实际项目中可以从LLM响应中获取精确的Token统计
+            # 这里使用生成的Token数作为输出Token的估算
+            # 输入Token估算为输出Token的0.3倍（经验值）
+            output_tokens = tokens_generated
+            input_tokens = int(tokens_generated * 0.3)
+            total_tokens = input_tokens + output_tokens
+            
+            # 上报积分消耗
+            result = await report_credit_consumption(
+                user_id=int(user_id) if user_id.isdigit() else 0,
+                tokens=total_tokens,
+                mode=mode,
+                template_name=template_name,
+                conversation_id=conversation_id,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens
+            )
+            
+            if result.get("success"):
+                credits = result.get("credits", 0)
+                logger.info(
+                    f"💰 [{request_id}] 积分上报成功: "
+                    f"user_id={user_id}, credits={credits}, "
+                    f"tokens={total_tokens}, mode={mode}, "
+                    f"template={template_name}"
+                )
+                return True
+            else:
+                error = result.get("error", "未知错误")
+                logger.warning(
+                    f"⚠️ [{request_id}] 积分上报失败: "
+                    f"user_id={user_id}, error={error}"
+                )
+                return False
+                
+        except Exception as e:
+            # 积分上报失败不应阻塞主流程
+            logger.error(
+                f"❌ [{request_id}] 积分上报异常: {e}",
+                exc_info=True
+            )
             return False
 
 

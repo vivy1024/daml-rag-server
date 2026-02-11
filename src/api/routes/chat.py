@@ -27,7 +27,7 @@ import asyncio
 import uuid
 import time
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from typing import Optional, AsyncGenerator, Dict, Any
 from sse_starlette.sse import EventSourceResponse
@@ -36,15 +36,42 @@ from sse_starlette.sse import EventSourceResponse
 from ..models import ApiResponse, ApiError, ChatRequest, ChatResponse
 # 导入11步工作流程执行器
 from ...applications.fitness.workflow_executor import execute_eleven_step_workflow
+# 导入权限检查器
+from ...framework.auth.fail_closed_checker import FailClosedPermissionChecker
 
 logger = logging.getLogger(__name__)
+
+# 全局fail-closed权限检查器实例
+_permission_checker = FailClosedPermissionChecker()
+
+
+def _extract_user_id(request: Request, body_user_id: Optional[str] = None) -> str:
+    """
+    从请求中提取user_id（Property 4: JWT身份优先于请求体）
+    
+    优先级：
+    1. Internal JWT中的user_id（request.state.permission_claims）
+    2. 请求体中的user_id（旧模式兼容）
+    """
+    auth_mode = getattr(request.state, "auth_mode", None)
+    
+    if auth_mode == "internal_jwt":
+        claims = getattr(request.state, "permission_claims", None)
+        if claims:
+            return str(claims.user_id)
+    
+    # 旧模式或无认证：从请求体获取
+    if body_user_id:
+        return str(body_user_id) if not isinstance(body_user_id, str) else body_user_id
+    
+    return ""
 
 router = APIRouter()
 
 
 @router.post("/chat", response_model=ApiResponse[ChatResponse])
 @router.post("/v1/chat", response_model=ApiResponse[ChatResponse])
-async def chat(request: ChatRequest) -> ApiResponse[ChatResponse]:
+async def chat(request: Request, chat_request: ChatRequest) -> ApiResponse[ChatResponse]:
     """
     聊天接口 - 唯一的完整工作流程入口
 
@@ -82,9 +109,9 @@ async def chat(request: ChatRequest) -> ApiResponse[ChatResponse]:
     try:
         start_time = asyncio.get_event_loop().time()
 
-        # 1. 参数验证和输入清理
-        user_id = request.user_id
-        query_text = request.query
+        # 1. 参数验证和输入清理 - JWT身份优先于请求体（Property 4）
+        user_id = _extract_user_id(request, chat_request.user_id)
+        query_text = chat_request.query
 
         if not user_id or not query_text:
             raise ApiError(400, "缺少必需参数：user_id 和 query")
@@ -109,7 +136,7 @@ async def chat(request: ChatRequest) -> ApiResponse[ChatResponse]:
             raise ApiError(400, f"输入验证失败: {str(e)}")
 
         # 2. session_id处理：支持前端传入或自动生成
-        session_id = request.session_id or str(uuid.uuid4())
+        session_id = chat_request.session_id or str(uuid.uuid4())
 
         logger.info(
             f"📨 Chat request: user={user_id}, "
@@ -145,7 +172,7 @@ async def chat(request: ChatRequest) -> ApiResponse[ChatResponse]:
             workflow_result = await execute_eleven_step_workflow(
                 query_text=query_text,
                 user_id=user_id,
-                domain=request.domain,
+                domain=chat_request.domain,
                 user_profile=None,  # 工作流程会自动加载
                 session_id=session_id
             )
@@ -221,6 +248,18 @@ async def chat(request: ChatRequest) -> ApiResponse[ChatResponse]:
             f"time={processing_time:.2f}s, "
             f"request_id={eleven_step_data.get('request_id', 'unknown')}"
         )
+
+        # 7.5 异步用量上报（不阻塞响应）
+        try:
+            from ...framework.auth.usage_reporter import UsageReporter
+            reporter = UsageReporter()
+            asyncio.create_task(reporter.report_usage(
+                user_id=int(user_id) if user_id.isdigit() else 0,
+                mode="dag",
+                session_id=session_id,
+            ))
+        except Exception as e:
+            logger.warning(f"用量上报启动失败（不影响响应）: {e}")
 
         # 8. 返回成功响应（直接返回字典，避免Pydantic模型验证）
         from fastapi.responses import JSONResponse
@@ -339,7 +378,7 @@ async def stream_chat_response(
 
 
 @router.post("/v1/chat/stream")
-async def chat_stream(request: Dict[str, Any]):
+async def chat_stream(request: Request, body: Dict[str, Any]):
     """
     流式聊天接口（SSE - Server-Sent Events）- 真实流式输出版本（带降级机制和并发限制）
 
@@ -371,9 +410,10 @@ async def chat_stream(request: Dict[str, Any]):
           -d '{"user_id": "test", "query": "帮我设计一个完整的训练计划"}'
     """
     try:
-        # 1. 参数验证和类型转换
-        user_id = request.get("user_id")
-        query_text = request.get("query")
+        # 1. 参数验证和类型转换 - JWT身份优先于请求体（Property 4）
+        body_user_id = body.get("user_id")
+        user_id = _extract_user_id(request, body_user_id)
+        query_text = body.get("query")
 
         if not user_id or not query_text:
             raise HTTPException(status_code=400, detail="缺少必需参数：user_id 和 query")
@@ -386,11 +426,11 @@ async def chat_stream(request: Dict[str, Any]):
         if not isinstance(query_text, str):
             query_text = str(query_text)
 
-        session_id = request.get("session_id") or str(uuid.uuid4())
-        topic_id = request.get("topic_id")  # 话题ID，用于多轮对话
-        domain = request.get("domain", "fitness")
-        strategy = request.get("strategy", "dag")  # 执行策略：dag或agent
-        template_id = request.get("template_id")  # DAG模板ID（用户选择时强制使用）
+        session_id = body.get("session_id") or str(uuid.uuid4())
+        topic_id = body.get("topic_id")  # 话题ID，用于多轮对话
+        domain = body.get("domain", "fitness")
+        strategy = body.get("strategy", "dag")  # 执行策略：dag或agent
+        template_id = body.get("template_id")  # DAG模板ID（用户选择时强制使用）
 
         logger.info(
             f"📨 Chat stream request: user={user_id}, "

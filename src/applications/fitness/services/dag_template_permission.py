@@ -120,49 +120,27 @@ def check_template_permission(
     """
     检查用户是否有权使用指定的DAG模板
     
+    积分体系改造后，所有模板直接返回allowed=true，
+    权限控制改为积分消耗机制。
+    
     Args:
         template_id: DAG模板ID
         membership_info: 用户会员信息
         
     Returns:
-        PermissionCheckResult: 权限检查结果
+        PermissionCheckResult: 权限检查结果（始终允许）
     """
     user_tier = get_user_membership_tier(membership_info)
-    user_level = MEMBERSHIP_HIERARCHY.get(user_tier, 0)
     
-    # 获取模板所需的会员等级
-    required_tier = TEMPLATE_REQUIRED_TIER.get(template_id, "energy")  # 未知模板默认需要最高等级
-    required_level = MEMBERSHIP_HIERARCHY.get(required_tier, 2)
-    
-    # 检查权限
-    allowed = user_level >= required_level
-    
-    if allowed:
-        return PermissionCheckResult(
-            allowed=True,
-            template_id=template_id,
-            user_tier=user_tier,
-            required_tier=required_tier,
-            message=f"用户({user_tier})有权使用模板({template_id})"
-        )
-    else:
-        # 找到用户可用的最佳降级模板
-        fallback_template = _find_fallback_template(template_id, user_tier)
-        
-        tier_names = {
-            "free": "免费版",
-            "warmheart": "暖心会员",
-            "energy": "能量会员"
-        }
-        
-        return PermissionCheckResult(
-            allowed=False,
-            template_id=template_id,
-            user_tier=user_tier,
-            required_tier=required_tier,
-            message=f"该功能需要{tier_names.get(required_tier, required_tier)}，请升级会员解锁更多AI场景",
-            fallback_template_id=fallback_template
-        )
+    # 积分体系：所有模板直接允许访问
+    # 权限控制改为积分消耗机制
+    return PermissionCheckResult(
+        allowed=True,
+        template_id=template_id,
+        user_tier=user_tier,
+        required_tier="free",  # 所有模板对所有用户开放
+        message=f"用户({user_tier})有权使用模板({template_id})"
+    )
 
 
 def _find_fallback_template(original_template_id: str, user_tier: str) -> str:
@@ -260,6 +238,9 @@ def get_complexity_limit(user_tier: str, complexity: str) -> int:
     """
     获取用户对特定复杂度模板的每日使用限制
     
+    积分体系改造后，不再按复杂度限制使用次数，
+    改为统一的积分消耗机制。
+    
     Args:
         user_tier: 用户会员等级
         complexity: 复杂度级别
@@ -267,21 +248,24 @@ def get_complexity_limit(user_tier: str, complexity: str) -> int:
     Returns:
         int: 每日使用限制 (-1表示无限制)
     """
-    tier_limits = COMPLEXITY_LIMITS.get(user_tier, COMPLEXITY_LIMITS["free"])
-    return tier_limits.get(complexity, 1)
+    # 积分体系：不再限制使用次数，返回-1表示无限制
+    return -1
 
 
 def get_all_complexity_limits(user_tier: str) -> Dict[str, int]:
     """
     获取用户所有复杂度级别的限制
     
+    积分体系改造后，不再按复杂度限制使用次数。
+    
     Args:
         user_tier: 用户会员等级
         
     Returns:
-        Dict[str, int]: 各复杂度的限制
+        Dict[str, int]: 各复杂度的限制（全部为-1表示无限制）
     """
-    return COMPLEXITY_LIMITS.get(user_tier, COMPLEXITY_LIMITS["free"])
+    # 积分体系：不再限制使用次数
+    return {"simple": -1, "medium": -1, "complex": -1}
 
 
 def get_template_count_by_tier(user_tier: str) -> Tuple[int, int]:
