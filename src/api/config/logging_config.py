@@ -113,6 +113,32 @@ def configure_logging():
         print(f"   - 错误日志: {current_error_log}")
         print(f"   - 保留天数: 30天")
     
+    # 3. 审计日志处理器 - 独立文件，记录认证和权限相关事件
+    if ENABLE_FILE_LOGGING:
+        audit_log_base = LOG_DIR / 'audit.log'
+        audit_handler = TimedRotatingFileHandler(
+            audit_log_base,
+            when='midnight',
+            interval=1,
+            backupCount=90,  # 审计日志保留90天
+            encoding='utf-8'
+        )
+        audit_handler.suffix = '-%Y%m%d.log'
+        audit_handler.namer = lambda name: name.replace('.log-', '-').replace('.log', '')
+        audit_handler.setLevel(logging.WARNING)
+        audit_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        audit_handler.setFormatter(logging.Formatter(audit_format))
+
+        # 为 audit.* logger 添加独立handler
+        for audit_name in ['audit.auth', 'audit.permission']:
+            audit_logger = logging.getLogger(audit_name)
+            audit_logger.addHandler(audit_handler)
+            audit_logger.setLevel(logging.WARNING)
+            # 同时输出到控制台和主日志
+            audit_logger.propagate = True
+
+        print(f"   - 审计日志: {LOG_DIR / 'audit-YYYYMMDD.log'} (保留90天)")
+
     # 设置uvicorn日志级别（减少访问日志）
     logging.getLogger('uvicorn.access').setLevel(logging.WARNING)
     logging.getLogger('uvicorn.error').setLevel(logging.WARNING)

@@ -40,6 +40,12 @@ from .intensity_converter import (
     get_intensity_converter,
     reset_intensity_converter
 )
+from .credit_reporter import (
+    CreditReporter,
+    get_credit_reporter,
+    reset_credit_reporter,
+    report_credit_consumption
+)
 
 __all__ = [
     'TrainingLogAnalyzer', 
@@ -71,4 +77,9 @@ __all__ = [
     'TrainingGoal',
     'get_intensity_converter',
     'reset_intensity_converter',
+    # 积分上报服务
+    'CreditReporter',
+    'get_credit_reporter',
+    'reset_credit_reporter',
+    'report_credit_consumption',
 ]

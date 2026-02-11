@@ -1,8 +1,138 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.53.0
-**更新日期**: 2026-02-02
+**版本**: v9.58.0
+**更新日期**: 2026-02-12
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.58.0 (2026-02-12) - 集成接线：chat路由接入新认证+双认证中间件注册
+
+**变更类型**: ✨ 新功能
+
+**变更内容**：
+- chat/chat_stream端点从request.state获取用户身份（JWT优先于请求体，Property 4）
+- main.py注册DualAuthMiddleware，读取INTERNAL_JWT_SECRET/LEGACY_AUTH_ENABLED环境变量
+- chat完成后异步触发UsageReporter用量上报
+- .env和.env.production添加INTERNAL_JWT_SECRET/INTERNAL_JWT_ISSUER/LEGACY_AUTH_ENABLED配置
+
+**修改文件**：
+- `src/api/routes/chat.py` - 新认证模式集成+用量上报
+- `src/api/main.py` - DualAuthMiddleware注册
+- `.env` / `.env.production` - Internal JWT环境变量
+
+---
+
+### v9.57.0 (2026-02-12) - 权限系统重构：DAML-RAG端核心组件
+
+**变更类型**: ✨ 新功能
+
+**功能描述**：
+- **PermissionClaims**: Internal JWT权限声明数据类，支持from_jwt_payload/to_dict往返序列化
+- **InternalJwtVerifier**: Internal JWT验证器，HS256签名验证+过期检查+Claims提取
+- **FailClosedPermissionChecker**: 失败关闭权限检查器，所有异常路径默认拒绝
+- **DualAuthMiddleware**: 双认证中间件，优先Internal JWT，降级X-Internal-Token
+- **UsageReporter**: 异步用量上报客户端，带内存重试队列（3次重试+指数退避）
+- **审计日志**: 独立audit.log文件，记录认证失败和权限拒绝事件（保留90天）
+
+**新增文件**：
+- `src/framework/auth/permission_claims.py` - 权限声明数据类
+- `src/framework/auth/internal_jwt_verifier.py` - JWT验证器+异常类
+- `src/framework/auth/fail_closed_checker.py` - 失败关闭权限检查器
+- `src/framework/auth/usage_reporter.py` - 异步用量上报
+- `src/api/middleware/auth_middleware.py` - 双认证中间件
+
+**修改文件**：
+- `src/framework/auth/__init__.py` - 导出新组件
+- `src/api/config/logging_config.py` - 添加审计日志handler
+
+**关联Spec**: `.kiro/specs/permission-system-refactoring/tasks.md` 任务4.1-4.11
+
+---
+
+### v9.56.0 (2026-02-05) - 积分系统：完整集成与配置 ✅
+
+**变更类型**: ✨ 新功能
+
+**功能描述**：
+- **配置项添加**：
+  - `BACKEND_INTERNAL_URL` - 内部API基础URL
+  - `CREDIT_REPORT_ENABLED` - 积分上报开关
+- **DAG模板权限简化**：所有模板直接返回allowed=true，权限控制改为积分消耗机制
+- **复杂度限制移除**：不再按复杂度限制使用次数，统一使用积分机制
+
+**修改文件**：
+- `.env` - 添加积分系统配置
+- `.env.example` - 添加配置模板
+- `.env.production` - 添加生产环境配置
+- `src/applications/fitness/services/credit_reporter.py` - 使用BACKEND_INTERNAL_URL
+- `src/applications/fitness/services/dag_template_permission.py` - 简化权限检查
+
+**测试覆盖**：
+- 22 个单元测试用例，全部通过
+
+---
+
+### v9.55.0 (2026-02-05) - 积分系统：集成到DAG工作流完成处理 ✅
+
+**变更类型**: ✨ 新功能
+
+**功能描述**：
+- **工作流集成**：在DAG工作流完成后自动调用积分上报服务
+- **流式执行器**：在 `StreamWorkflowExecutor.execute_stream()` 中添加 `_report_credit_consumption()` 方法
+- **同步执行器**：在 `WorkflowExecutor.execute()` 中添加 `_report_credit_consumption()` 方法
+- **Token估算**：基于响应长度估算Token消耗（输出Token × 1.2，输入Token为输出的30%）
+- **错误处理**：使用try-except确保积分上报失败不阻塞主响应流程
+- 符合积分系统需求 Requirements 10.1
+
+**调用位置**：
+- 流式执行器：步骤12（三轨评分）之后、发送完成事件之前
+- 同步执行器：完成监控之后、返回结果之前
+
+**上报参数**：
+- `user_id`: 用户ID
+- `tokens`: 总Token消耗（估算）
+- `mode`: 执行模式（dag/agent）
+- `template_name`: DAG模板名称
+- `conversation_id`: 会话ID
+- `input_tokens`: 输入Token数量
+- `output_tokens`: 输出Token数量
+
+**修改文件**：
+- `src/applications/fitness/workflow/stream_executor.py` - 流式执行器添加积分上报
+- `src/applications/fitness/workflow/executor.py` - 同步执行器添加积分上报
+
+---
+
+### v9.54.0 (2026-02-05) - 积分系统：CreditReporter服务类 ✅
+
+**变更类型**: ✨ 新功能
+
+**功能描述**：
+- **积分计算**：实现 `calculate_credits()` 方法，支持DAG模式(1.0x)和Agent模式(1.5x)倍率
+- **异步上报**：实现 `report_consumption()` 异步方法，上报积分消耗到后端API
+- **错误处理**：完善的错误处理和日志记录，失败时不阻塞主响应流程
+- **单例模式**：提供 `get_credit_reporter()` 单例获取和 `reset_credit_reporter()` 重置
+- **便捷函数**：提供 `report_credit_consumption()` 便捷函数简化调用
+- 符合积分系统需求 Requirements 10.1, 10.2, 10.3, 10.4, 10.5
+
+**积分计算规则**：
+- 公式：`credits = ceil(tokens × multiplier / 1000)`
+- DAG模式：multiplier = 1.0
+- Agent模式：multiplier = 1.5
+- 最小消耗：1积分
+
+**新增文件**：
+- `src/applications/fitness/services/credit_reporter.py` - 积分上报服务
+- `tests/unit/services/test_credit_reporter.py` - 单元测试（22个测试用例）
+
+**修改文件**：
+- `src/applications/fitness/services/__init__.py` - 导出CreditReporter
+
+**环境变量**：
+- `BACKEND_API_URL` - 后端API基础URL
+- `INTERNAL_API_TOKEN` - 内部API认证Token
+- `CREDIT_REPORT_ENABLED` - 是否启用积分上报（默认true）
 
 ---
 

@@ -204,6 +204,16 @@ class WorkflowExecutor:
                     total_duration_ms=processing_time * 1000
                 )
             
+            # ========== 积分上报（Requirements 10.1） ==========
+            await self._report_credit_consumption(
+                user_id=user_id,
+                response_length=len(state.get("final_response", "")),
+                mode="dag",  # 同步执行器默认使用DAG模式
+                template_name=state.get("dag_template_id"),
+                conversation_id=session_id,
+                request_id=request_id
+            )
+            
             logger.info(f"🎉 [{request_id}] 工作流执行成功! 耗时: {processing_time:.2f}秒")
             return final_result
             
@@ -533,6 +543,81 @@ class WorkflowExecutor:
             kwargs["backend_client"] = backend_client
         
         return kwargs
+    
+    async def _report_credit_consumption(
+        self,
+        user_id: str,
+        response_length: int,
+        mode: str,
+        template_name: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        request_id: str = "unknown"
+    ) -> bool:
+        """
+        上报积分消耗到后端
+        
+        Requirements: 10.1
+        
+        在DAG工作流完成后调用，将Token消耗上报到后端进行积分扣除。
+        使用try-except确保不阻塞主响应流程。
+        
+        Args:
+            user_id: 用户ID
+            response_length: 响应文本长度（用于估算Token数）
+            mode: 执行模式（dag或agent）
+            template_name: DAG模板名称
+            conversation_id: 会话ID
+            request_id: 请求ID（用于日志）
+            
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            # 导入积分上报服务
+            from ..services.credit_reporter import report_credit_consumption
+            
+            # 估算Token消耗
+            # 中文字符约1.5个token，英文约0.25个token
+            # 这里简化为：响应长度 * 1.2 作为输出Token估算
+            output_tokens = int(response_length * 1.2)
+            input_tokens = int(output_tokens * 0.3)  # 输入Token估算为输出的30%
+            total_tokens = input_tokens + output_tokens
+            
+            # 上报积分消耗
+            result = await report_credit_consumption(
+                user_id=int(user_id) if user_id.isdigit() else 0,
+                tokens=total_tokens,
+                mode=mode,
+                template_name=template_name,
+                conversation_id=conversation_id,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens
+            )
+            
+            if result.get("success"):
+                credits = result.get("credits", 0)
+                logger.info(
+                    f"💰 [{request_id}] 积分上报成功: "
+                    f"user_id={user_id}, credits={credits}, "
+                    f"tokens={total_tokens}, mode={mode}, "
+                    f"template={template_name}"
+                )
+                return True
+            else:
+                error = result.get("error", "未知错误")
+                logger.warning(
+                    f"⚠️ [{request_id}] 积分上报失败: "
+                    f"user_id={user_id}, error={error}"
+                )
+                return False
+                
+        except Exception as e:
+            # 积分上报失败不应阻塞主流程
+            logger.error(
+                f"❌ [{request_id}] 积分上报异常: {e}",
+                exc_info=True
+            )
+            return False
 
 
 # ============ 便捷函数 ============
