@@ -1,8 +1,21 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.60.0
+**版本**: v9.61.0
 **更新日期**: 2026-02-12
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.61.0 (2026-02-12) - DualAuthMiddleware JWT无效降级修复 🔧
+
+**变更类型**: 🔧 修复
+
+**变更内容**：
+- `DualAuthMiddleware`：JWT签名/格式无效时不再直接返回401，改为降级尝试X-Internal-Token认证
+- 解决迁移期外部JWT误传导致认证链断裂的问题
+
+**修改文件**：
+- `src/api/middleware/auth_middleware.py` - JwtInvalidError降级到legacy token
 
 ---
 
