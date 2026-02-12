@@ -121,9 +121,9 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
                         "request_path": request.url.path,
                     },
                 )
-                return JSONResponse(
-                    status_code=401,
-                    content={"code": 401, "msg": "Internal JWT无效", "data": None},
+                # 迁移期：JWT无效时降级到X-Internal-Token（可能是外部JWT误传）
+                logger.info(
+                    f"JWT验证失败，尝试降级到X-Internal-Token: {e}"
                 )
 
             except ClaimsMissingError as e:
