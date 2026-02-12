@@ -1,8 +1,24 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.61.0
+**版本**: v9.62.0
 **更新日期**: 2026-02-12
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.62.0 (2026-02-12) - 预构建基础镜像加速Zeabur构建 ⚡
+
+**变更类型**: ⚡ 性能优化
+
+**变更内容**：
+- Dockerfile改为FROM预构建基础镜像（含系统依赖+Python包+GTE-Large-zh模型）
+- 基础镜像推送到阿里云个人版容器镜像服务：`crpi-32sc66smgb44ld25.cn-hangzhou.personal.cr.aliyuncs.com/yuzhenfitness/daml-rag-base:latest`
+- Zeabur构建时间预计从20分钟缩短到2-3分钟（跳过pip install和模型下载）
+- 新增Dockerfile.base定义基础镜像构建流程
+
+**修改文件**：
+- `Dockerfile` - FROM改为预构建基础镜像
+- `Dockerfile.base` - 新增基础镜像定义
 
 ---
 
