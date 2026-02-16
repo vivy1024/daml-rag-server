@@ -1,0 +1,135 @@
+# SimpleKGPipeline 配置文件
+# 版本: v1.0.0
+# 日期: 2026-02-16
+# 说明: 配置 LLM、Embedder 和 Pipeline 参数
+
+# ============= LLM 配置 =============
+llm:
+  # 使用 DeepSeek API（项目主要 LLM）
+  provider: deepseek
+  api_key_env: DEEPSEEK_API_KEY  # 从环境变量读取
+  base_url_env: DEEPSEEK_BASE_URL  # 从环境变量读取
+  model_env: DEEPSEEK_MODEL  # 从环境变量读取
+
+  # LLM 参数
+  temperature: 0.1  # 低温度，提高提取准确性
+  max_tokens: 4000  # 足够长的输出
+  timeout: 60.0  # 超时时间（秒）
+
+  # API Key 轮换配置（支持多个 Key）
+  api_keys:
+    - DEEPSEEK_API_KEY
+    - DEEPSEEK_API_KEY_2
+    - DEEPSEEK_API_KEY_3
+    - DEEPSEEK_API_KEY_4
+    - DEEPSEEK_API_KEY_5
+    - DEEPSEEK_API_KEY_6
+    - DEEPSEEK_API_KEY_7
+    - DEEPSEEK_API_KEY_8
+    - DEEPSEEK_API_KEY_9
+    - DEEPSEEK_API_KEY_10
+
+# ============= Embedder 配置 =============
+embedder:
+  # 使用 GTE-Large-zh（项目主要嵌入模型）
+  model: thenlper/gte-large-zh
+  dimension: 1024
+
+  # 嵌入参数
+  batch_size: 32  # 批量嵌入大小
+  normalize: true  # 归一化向量
+
+  # 模型缓存路径（可选）
+  cache_dir: /root/.cache/huggingface/hub
+
+# ============= Neo4j 配置 =============
+neo4j:
+  uri_env: NEO4J_URI  # 从环境变量读取
+  user_env: NEO4J_USER  # 从环境变量读取
+  password_env: NEO4J_PASSWORD  # 从环境变量读取
+  database: neo4j  # 默认数据库
+
+# ============= Text Splitter 配置 =============
+text_splitter:
+  type: fixed_size  # 固定大小分割器
+  chunk_size: 1000  # 每个 chunk 的字符数
+  chunk_overlap: 200  # chunk 之间的重叠字符数
+
+  # 分割策略
+  separators:
+    - "\n\n"  # 段落分隔符
+    - "\n"    # 行分隔符
+    - "。"    # 中文句号
+    - "."     # 英文句号
+    - " "     # 空格
+
+# ============= PDF Loader 配置 =============
+pdf_loader:
+  # PDF 解析参数
+  extract_images: false  # 不提取图片
+  extract_tables: true   # 提取表格
+
+  # OCR 配置（如果需要）
+  use_ocr: false
+  ocr_language: chi_sim  # 简体中文
+
+# ============= Knowledge Graph Writer 配置 =============
+kg_writer:
+  # 批量写入配置
+  batch_size: 100  # 每批写入的节点/关系数
+
+  # 实体解析配置
+  perform_entity_resolution: true  # 合并相同标签和名称的实体
+
+  # 错误处理
+  on_error: IGNORE  # 忽略提取失败的 chunk（可选：RAISE）
+
+# ============= Pipeline 参数 =============
+pipeline:
+  # 提取模式
+  from_pdf: true  # 从 PDF 提取（如果为 false，则从文本提取）
+
+  # Schema 配置
+  schema_file: config/kg_extraction_schema.yaml  # Schema 文件路径
+
+  # 提取提示模板（可选，使用默认模板）
+  # prompt_template: custom_template.txt
+
+  # 词汇图配置（可选）
+  lexical_graph:
+    enabled: false  # 是否创建词汇图
+    chunk_node_label: Chunk
+    document_node_label: Document
+    next_chunk_relationship_type: NEXT_CHUNK
+
+# ============= 断点续传配置 =============
+checkpoint:
+  enabled: true  # 启用断点续传
+  checkpoint_file: data/extraction_checkpoint.json  # 检查点文件路径
+  save_interval: 10  # 每处理 N 页保存一次检查点
+
+# ============= 日志配置 =============
+logging:
+  level: INFO  # 日志级别（DEBUG, INFO, WARNING, ERROR）
+  log_file: logs/kg_extraction.log  # 日志文件路径
+
+  # 统计信息
+  show_progress: true  # 显示进度条
+  show_statistics: true  # 显示提取统计
+
+# ============= 输出配置 =============
+output:
+  # 提取结果输出
+  save_extracted_entities: true  # 保存提取的实体
+  save_extracted_relations: true  # 保存提取的关系
+  output_dir: data/extraction_results  # 输出目录
+
+  # 质量指标
+  calculate_quality_metrics: true  # 计算质量指标
+  quality_metrics_file: data/extraction_quality.json  # 质量指标文件
+
+# ============= Dry-Run 模式 =============
+dry_run:
+  enabled: false  # 是否启用 dry-run 模式（不写入数据库）
+  max_chunks: 10  # dry-run 模式下最多处理的 chunk 数
+  output_file: data/dry_run_results.json  # dry-run 结果输出文件

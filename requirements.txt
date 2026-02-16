@@ -8,7 +8,7 @@ faiss-cpu>=1.7.4
 # 存储
 redis>=5.0.0
 aiosqlite>=0.19.0
-qdrant-client>=1.15.0  # 向量数据库（与服务器v1.15.1兼容）
+qdrant-client>=1.16.0  # 向量数据库（与服务器v1.15.1兼容，SimpleKGPipeline需要）
 aiomysql>=0.2.0  # MySQL异步连接池
 neo4j>=5.14.0  # Neo4j异步驱动
 
@@ -35,6 +35,15 @@ prometheus_client>=0.19.0  # Prometheus指标导出
 
 # JWT认证
 PyJWT>=2.8.0  # Internal JWT验证（权限系统重构）
+
+# GraphRAG检索（neo4j官方包，替代自研Layer1+Layer2）
+neo4j-graphrag[qdrant]>=1.13.0
+
+# PDF解析（SimpleKGPipeline教材知识提取）
+pypdf>=4.0.0
+
+# BGE Reranker（FlagEmbedding重排序模型）
+FlagEmbedding>=1.2.0
 
 # 开发依赖（可选）
 pytest>=7.4.0

@@ -17,9 +17,10 @@ MCO统一GraphRAG入口 - 为所有MCP提供Neo4j+Qdrant访问
 - 统一入口：所有MCP通过MCP协议调用MCO的GraphRAG
 - 多层次推理：图关系 + 专家知识 + 个性化
 
-版本：v2.4.0
-更新日期：2026-01-11
+版本：v2.5.0
+更新日期：2026-02-16
 重构说明：移除重复的三层检索实现，委托给TrueThreeLayerEngine
+v2.5.0: 新增 training_knowledge 集合并行查询，知识上下文增强
 """
 
 import logging
@@ -299,8 +300,8 @@ class GraphRAGQueryTool:
             raise
     
     async def _semantic_search(
-        self, 
-        query_text: str, 
+        self,
+        query_text: str,
         domain: str,
         top_k: int,
         min_similarity: float,
@@ -308,33 +309,69 @@ class GraphRAGQueryTool:
     ) -> List[Dict]:
         """
         纯向量语义搜索 (Qdrant)
-        
+
         使用场景：模糊查询、语义相似匹配
+        v2.5.0: 同时查询 training_knowledge 集合，返回知识上下文
         """
         if not self.vector_search:
             logger.warning("VectorSearchEngine未初始化，返回空结果")
             return []
-        
+
         try:
             # 向量化查询文本
             query_vector = self.vector_search.encode(query_text)
-            
+
             # 构建过滤条件（✅ 传递query_text用于智能过滤）
             qdrant_filters = self._build_qdrant_filters(domain, filters, query_text)
-            
-            # 向量检索
+
+            # 主集合检索（fitness-exercises）
             results = self.vector_search.search(
                 query_vector=query_vector,
                 top_k=top_k,
                 min_similarity=min_similarity,
                 filters=qdrant_filters
             )
-            
-            logger.debug(f"向量检索完成: {len(results)}个结果")
+
+            # ✅ v2.5.0: 并行查询 training_knowledge 知识库
+            knowledge_results = self._search_knowledge_context(query_vector, top_k=5)
+            if knowledge_results:
+                # 将知识上下文附加到结果中（标记source便于区分）
+                for kr in knowledge_results:
+                    kr.payload['_source_collection'] = 'training_knowledge'
+                    kr.payload['_is_knowledge_context'] = True
+                results.extend(knowledge_results)
+                logger.info(f"知识库补充: {len(knowledge_results)}条知识上下文")
+
+            logger.debug(f"向量检索完成: {len(results)}个结果（含知识上下文）")
             return results
-            
+
         except Exception as e:
             logger.error(f"向量检索失败: {e}")
+            return []
+
+    def _search_knowledge_context(
+        self,
+        query_vector,
+        top_k: int = 5,
+        min_similarity: float = 0.55
+    ) -> list:
+        """
+        查询 training_knowledge 集合获取知识上下文
+
+        返回教材/字幕中与查询相关的知识片段，
+        用于增强LLM综合阶段的回答质量。
+        """
+        if not self.vector_search:
+            return []
+        try:
+            return self.vector_search.search_collection(
+                collection_name="training_knowledge",
+                query_vector=query_vector,
+                top_k=top_k,
+                min_similarity=min_similarity
+            )
+        except Exception as e:
+            logger.debug(f"知识库查询失败（非致命）: {e}")
             return []
     
     async def _graph_query(

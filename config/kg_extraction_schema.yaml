@@ -1,0 +1,385 @@
+# 健身领域知识图谱提取 Schema
+# 版本: v1.0.0
+# 日期: 2026-02-16
+# 说明: 定义从健身教材中提取的节点和关系类型
+
+# 节点类型定义
+node_types:
+  # 运动科学概念（如"超补偿"、"渐进超负荷"、"SAID原则"）
+  - label: Concept
+    description: 运动科学和训练理论中的核心概念
+    properties:
+      - name: name
+        type: STRING
+        description: 概念名称
+        required: true
+      - name: definition
+        type: STRING
+        description: 概念定义
+        required: true
+      - name: category
+        type: STRING
+        description: 概念分类（如"训练理论"、"生理学"、"营养学"）
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+      - name: chapter
+        type: STRING
+        description: 章节
+        required: false
+      - name: page_range
+        type: STRING
+        description: 页码范围
+        required: false
+    additional_properties: true
+
+  # 训练原则（如"FITT原则"、"特异性原则"）
+  - label: Principle
+    description: 训练和运动处方的指导原则
+    properties:
+      - name: name
+        type: STRING
+        description: 原则名称
+        required: true
+      - name: description
+        type: STRING
+        description: 原则描述
+        required: true
+      - name: application
+        type: STRING
+        description: 应用场景
+        required: false
+      - name: evidence_level
+        type: STRING
+        description: 证据等级（如"A级"、"B级"、"C级"）
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+      - name: chapter
+        type: STRING
+        description: 章节
+        required: false
+      - name: page_range
+        type: STRING
+        description: 页码范围
+        required: false
+    additional_properties: true
+
+  # 生理机制（如"肌肉肥大机制"、"能量系统"）
+  - label: Mechanism
+    description: 运动和训练的生理学机制
+    properties:
+      - name: name
+        type: STRING
+        description: 机制名称
+        required: true
+      - name: description
+        type: STRING
+        description: 机制描述
+        required: true
+      - name: physiological_basis
+        type: STRING
+        description: 生理学基础
+        required: false
+      - name: time_course
+        type: STRING
+        description: 时间进程（如"即时"、"短期"、"长期"）
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+      - name: chapter
+        type: STRING
+        description: 章节
+        required: false
+      - name: page_range
+        type: STRING
+        description: 页码范围
+        required: false
+    additional_properties: true
+
+  # 训练指南（如"ACSM力量训练指南"）
+  - label: Guideline
+    description: 权威机构发布的训练指南和建议
+    properties:
+      - name: name
+        type: STRING
+        description: 指南名称
+        required: true
+      - name: organization
+        type: STRING
+        description: 发布机构（如"ACSM"、"NSCA"）
+        required: true
+      - name: year
+        type: INTEGER
+        description: 发布年份
+        required: false
+      - name: target_population
+        type: STRING
+        description: 目标人群
+        required: false
+      - name: recommendations
+        type: STRING
+        description: 核心建议
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+      - name: chapter
+        type: STRING
+        description: 章节
+        required: false
+      - name: page_range
+        type: STRING
+        description: 页码范围
+        required: false
+    additional_properties: true
+
+  # 研究发现（如"最佳训练频率研究"）
+  - label: ResearchFinding
+    description: 科学研究的发现和结论
+    properties:
+      - name: title
+        type: STRING
+        description: 研究标题或发现描述
+        required: true
+      - name: finding
+        type: STRING
+        description: 主要发现
+        required: true
+      - name: study_design
+        type: STRING
+        description: 研究设计（如"RCT"、"Meta分析"、"观察性研究"）
+        required: false
+      - name: sample_size
+        type: INTEGER
+        description: 样本量
+        required: false
+      - name: year
+        type: INTEGER
+        description: 发表年份
+        required: false
+      - name: authors
+        type: STRING
+        description: 作者
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+      - name: chapter
+        type: STRING
+        description: 章节
+        required: false
+      - name: page_range
+        type: STRING
+        description: 页码范围
+        required: false
+    additional_properties: true
+
+# 关系类型定义
+relationship_types:
+  # Concept → Mechanism（概念解释机制）
+  - label: EXPLAINS
+    description: 概念解释或说明某个生理机制
+    properties:
+      - name: explanation
+        type: STRING
+        description: 解释内容
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+    additional_properties: true
+
+  # Principle → Concept（原则基于概念）
+  - label: BASED_ON
+    description: 训练原则基于某个运动科学概念
+    properties:
+      - name: rationale
+        type: STRING
+        description: 理论依据
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+    additional_properties: true
+
+  # Guideline → Exercise/Principle（指南推荐）
+  - label: RECOMMENDS
+    description: 指南推荐某个动作或原则
+    properties:
+      - name: recommendation_level
+        type: STRING
+        description: 推荐等级（如"强烈推荐"、"推荐"、"可选"）
+        required: false
+      - name: conditions
+        type: STRING
+        description: 适用条件
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+    additional_properties: true
+
+  # ResearchFinding → Concept/Principle（研究支持）
+  - label: SUPPORTS
+    description: 研究发现支持某个概念或原则
+    properties:
+      - name: evidence_strength
+        type: STRING
+        description: 证据强度（如"强"、"中"、"弱"）
+        required: false
+      - name: confidence_level
+        type: STRING
+        description: 置信水平
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+    additional_properties: true
+
+  # Principle → Exercise/Muscle（原则应用于）
+  - label: APPLIES_TO
+    description: 训练原则应用于特定动作或肌肉群
+    properties:
+      - name: application_context
+        type: STRING
+        description: 应用场景
+        required: false
+      - name: effectiveness
+        type: STRING
+        description: 有效性评估
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+    additional_properties: true
+
+  # ResearchFinding → ResearchFinding（研究矛盾）
+  - label: CONTRADICTS
+    description: 研究发现之间存在矛盾或不一致
+    properties:
+      - name: contradiction_type
+        type: STRING
+        description: 矛盾类型
+        required: false
+      - name: explanation
+        type: STRING
+        description: 矛盾原因分析
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+    additional_properties: true
+
+  # ============================================
+  # 跨域关系：连接知识节点与现有数据模型
+  # 桥接 Concept/Principle/Mechanism/Guideline/ResearchFinding
+  # 与 Exercise/Muscle/Food/Equipment/Nutrient
+  # ============================================
+
+  # Principle/Guideline → Exercise（原则/指南应用于具体动作）
+  - label: APPLIES_TO_EXERCISE
+    description: 训练原则或权威指南推荐的具体训练动作
+    properties:
+      - name: application_context
+        type: STRING
+        description: 应用场景（如"力量训练"、"康复训练"）
+        required: false
+      - name: effectiveness
+        type: STRING
+        description: 有效性评估（如"高效"、"中等"、"辅助"）
+        required: false
+      - name: sets_reps_recommendation
+        type: STRING
+        description: 推荐组数/次数范围
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+    additional_properties: true
+
+  # Mechanism/Concept → Muscle（机制/概念影响肌肉群）
+  - label: AFFECTS_MUSCLE
+    description: 生理机制或运动科学概念对特定肌肉群的影响
+    properties:
+      - name: effect_type
+        type: STRING
+        description: 影响类型（如"肥大"、"力量增长"、"耐力提升"、"恢复"）
+        required: false
+      - name: mechanism_detail
+        type: STRING
+        description: 影响机制详情
+        required: false
+      - name: time_course
+        type: STRING
+        description: 影响时间进程（如"急性"、"慢性"、"长期适应"）
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+    additional_properties: true
+
+  # Guideline → Exercise（指南推荐动作，反向视角）
+  - label: RECOMMENDED_BY
+    description: 训练动作被权威指南推荐（Exercise ← Guideline视角）
+    properties:
+      - name: recommendation_level
+        type: STRING
+        description: 推荐等级（如"强烈推荐"、"推荐"、"可选"）
+        required: false
+      - name: target_population
+        type: STRING
+        description: 适用人群（如"初学者"、"中级"、"高级"、"康复人群"）
+        required: false
+      - name: contraindications
+        type: STRING
+        description: 禁忌条件
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+    additional_properties: true
+
+  # Concept/Mechanism → Exercise（概念/机制解释动作原理）
+  - label: EXPLAINED_BY
+    description: 训练动作的科学原理由概念或机制解释（Exercise ← Concept/Mechanism视角）
+    properties:
+      - name: explanation_aspect
+        type: STRING
+        description: 解释维度（如"生物力学"、"神经适应"、"代谢机制"、"肌肉激活"）
+        required: false
+      - name: key_insight
+        type: STRING
+        description: 核心洞察
+        required: false
+      - name: practical_implication
+        type: STRING
+        description: 实践意义（对训练的指导作用）
+        required: false
+      - name: source_textbook
+        type: STRING
+        description: 来源教材
+        required: false
+    additional_properties: true
+
+# Schema 配置
+additional_node_types: true  # 允许提取额外的节点类型
+additional_relationship_types: true  # 允许提取额外的关系类型
+additional_patterns: true  # 允许额外的模式
