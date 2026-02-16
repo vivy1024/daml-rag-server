@@ -1,8 +1,43 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.68.0
+**版本**: v9.69.0
 **更新日期**: 2026-02-17
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.69.0 (2026-02-17) - Phase 2.5 P2全量完成：增量更新 + BM25全文检索 + 引用溯源 🚀
+
+**变更类型**: 🚀 重大更新
+
+**变更内容**:
+
+**P2-8 增量更新机制**:
+- 新增 `scripts/incremental_updater.py`: 基于MD5 hash的增量入库管理器
+- 支持 --scan（变更检测）/ --update（增量入库）/ --rebuild（全量重建）
+- 支持 --update-file / --delete-file 单文档操作
+- MySQL file_hash字段追踪，Qdrant按source过滤删除
+
+**P2-9 BM25全文检索层**:
+- 新增 `src/framework/retrieval/bm25_engine.py`: BM25Okapi + jieba中文分词
+- 新增 `src/framework/retrieval/hybrid_search.py`: 向量+BM25混合检索（RRF融合）
+- 从Qdrant scroll加载全量文档构建内存BM25索引
+- 精确关键词匹配场景显著提升
+
+**P2-10 引用溯源**:
+- 新增 `src/framework/retrieval/citation_tracker.py`: 引用格式化（LLM/前端双格式）
+- 新增 `scripts/enrich_chunk_positions.py`: chunk位置元数据增强
+- 新增 `scripts/test_citations.py`: 引用溯源测试脚本
+- 支持 [1][2][3] 引用标记 + 前端JSON展示接口
+
+**影响范围**:
+- 检索管道（BM25第四层）
+- 入库流程（增量更新）
+- LLM综合阶段（引用标记）
+- 新增7个文件
+
+**相关文档**:
+- [tasks.md](../../.kiro/specs/daml-rag-migration/tasks.md)
 
 ---
 
