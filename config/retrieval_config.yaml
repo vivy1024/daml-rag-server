@@ -1,0 +1,32 @@
+# GraphRAG 检索配置
+# 版本: v1.0.0
+# 日期: 2026-02-16
+# 说明: neo4j-graphrag-python 替代自研 Layer1+Layer2
+
+retrieval:
+  # 默认检索模式: hybrid(混合) / vector(纯向量) / cypher(图遍历)
+  default_mode: hybrid
+
+  # 混合检索权重（BM25全文 + 向量语义）
+  hybrid_weights:
+    bm25: 0.3
+    vector: 0.7
+
+  # 默认返回结果数
+  top_k: 15
+
+  # Qdrant 向量库配置
+  qdrant:
+    collection_name: fitness-exercises
+    id_property_external: neo4j_id  # Qdrant payload 中的 Neo4j ID 字段名
+    embedding_dim: 1024  # GTE-Large-zh 维度
+
+  # Neo4j 图数据库索引配置
+  neo4j:
+    vector_index_name: exercise-embeddings
+    fulltext_index_name: exercise-fulltext
+
+  # 降级配置：新检索失败时回退到旧引擎
+  fallback:
+    enabled: true
+    engine: true_three_layer_engine

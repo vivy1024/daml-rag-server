@@ -861,15 +861,21 @@ async def node_execute_dag(
 
 async def node_retrieve_context(
     state: WorkflowState,
-    three_layer_engine=None
+    three_layer_engine=None,
+    graphrag_retriever=None,
 ) -> StateUpdate:
     """
-    步骤8：三层检索（Vector→Graph→Constraint）
-    
+    步骤8：GraphRAG检索（替代旧三层检索）
+
+    优先使用 neo4j-graphrag-python 的 FitnessGraphRAGRetriever，
+    如果不可用则降级到旧的 three_layer_engine。
+    Layer3 安全约束在后续步骤中独立执行，不受检索层替换影响。
+
     Args:
         state: 当前工作流状态
-        three_layer_engine: 三层检索引擎（可选）
-        
+        three_layer_engine: 旧三层检索引擎（降级用）
+        graphrag_retriever: 新 GraphRAG 检索器（优先使用）
+
     Returns:
         StateUpdate: 状态更新，包含 retrieval_results
     """
@@ -877,10 +883,10 @@ async def node_retrieve_context(
     query_text = state.get("query_text", "")
     domain = state.get("domain", "fitness")
     dag_results = state.get("dag_results")
-    
+
     # 如果DAG已经返回结果，可能不需要额外检索
     if dag_results:
-        logger.info(f"✅ [{request_id}] 步骤8完成: 使用DAG结果，跳过三层检索")
+        logger.info(f"✅ [{request_id}] 步骤8完成: 使用DAG结果，跳过检索")
         return StateUpdate(updates={
             "retrieval_results": {
                 "results": _convert_dag_results_to_list(dag_results),
@@ -889,34 +895,37 @@ async def node_retrieve_context(
                 "count": len(dag_results)
             }
         })
-    
-    # 执行三层检索
+
+    # 优先使用新的 GraphRAG 检索器
+    retriever = graphrag_retriever or three_layer_engine
+
     try:
-        if three_layer_engine:
-            retrieval_results = await three_layer_engine.search(
+        if retriever:
+            retrieval_results = await retriever.search(
                 query=query_text,
                 domain=domain,
                 top_k=10
             )
-            
+
+            retriever_name = getattr(retriever, '__class__', type(retriever)).__name__
             logger.info(
                 f"✅ [{request_id}] 步骤8完成: "
-                f"三层检索返回 {len(retrieval_results.get('results', []))} 个结果"
+                f"{retriever_name} 返回 {len(retrieval_results.get('results', []))} 个结果"
             )
-            
+
             return StateUpdate(updates={"retrieval_results": retrieval_results})
         else:
-            logger.warning(f"⚠️ [{request_id}] 步骤8: 无三层检索引擎")
+            logger.warning(f"⚠️ [{request_id}] 步骤8: 无检索引擎")
             return StateUpdate(
                 updates={"retrieval_results": {"results": [], "count": 0}},
-                warning="无三层检索引擎"
+                warning="无检索引擎"
             )
-            
+
     except Exception as e:
-        logger.error(f"❌ [{request_id}] 步骤8: 三层检索异常: {e}")
+        logger.error(f"❌ [{request_id}] 步骤8: 检索异常: {e}")
         return StateUpdate(
             updates={"retrieval_results": {"results": [], "count": 0}},
-            error=f"三层检索异常: {str(e)}"
+            error=f"检索异常: {str(e)}"
         )
 
 

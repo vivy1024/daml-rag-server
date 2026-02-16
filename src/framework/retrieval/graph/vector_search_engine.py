@@ -379,7 +379,53 @@ class VectorSearchEngine:
         
         # 执行向量搜索
         return self.search(query_vector, top_k, filter)
-    
+
+    def search_collection(
+        self,
+        collection_name: str,
+        query_vector: np.ndarray,
+        top_k: int = 5,
+        min_similarity: float = 0.5
+    ) -> List[SearchResult]:
+        """
+        跨集合向量搜索 - 查询指定集合（非默认集合）
+
+        用于查询 training_knowledge 等知识库集合
+
+        Args:
+            collection_name: 目标集合名称
+            query_vector: 查询向量
+            top_k: 返回结果数量
+            min_similarity: 最小相似度阈值
+        """
+        try:
+            results = self.client.query_points(
+                collection_name=collection_name,
+                query=query_vector.tolist(),
+                limit=top_k
+            )
+
+            search_results = []
+            points = results.points if hasattr(results, 'points') else results
+
+            for r in points:
+                score = r.score if hasattr(r, 'score') else 0.0
+                if score < min_similarity:
+                    continue
+                payload = r.payload if hasattr(r, 'payload') else {}
+                search_results.append(SearchResult(
+                    id=str(r.id) if hasattr(r, 'id') else "",
+                    score=score,
+                    payload=payload
+                ))
+
+            logger.debug(f"跨集合检索 {collection_name}: {len(search_results)}个结果")
+            return search_results
+
+        except Exception as e:
+            logger.warning(f"跨集合检索 {collection_name} 失败: {e}")
+            return []
+
     def batch_search(
         self,
         query_vectors: np.ndarray,
