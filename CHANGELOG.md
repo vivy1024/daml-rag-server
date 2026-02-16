@@ -1,8 +1,54 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.67.0
+**版本**: v9.68.0
 **更新日期**: 2026-02-17
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.68.0 (2026-02-17) - Phase 2.5 P1全量完成：Reranker + 社区检测 + 元数据增强 + 实体去重 🚀
+
+**变更类型**: 🚀 重大更新
+
+**变更内容**:
+
+**P1-4 Reranker重排序**:
+- 新增 `src/framework/retrieval/reranker.py`: GTE-Large-zh语义重排序器（单例+GPU加速）
+- `FitnessReranker.rerank()`: 对检索结果计算query-doc余弦相似度重排序
+- `FitnessReranker.rrf_fusion()`: RRF多路结果融合（k=60）
+- 集成到 `true_three_layer_engine.py` 第1685行，三层结果合并后自动重排
+- 环境变量 `ENABLE_RERANKER=true/false` 控制开关，失败自动降级
+
+**P1-5 Leiden社区检测**:
+- 新增 `scripts/community_detection.py`: Louvain社区检测（networkx实现）
+- 新增 `src/framework/retrieval/community_retriever.py`: 社区上下文检索器
+- 新增 `data/community_summaries.json`: 社区摘要数据
+- 从Neo4j导出Exercise-Muscle图 → networkx社区检测 → 社区摘要生成
+- 社区ID写回Neo4j节点属性（community_id, community_name）
+
+**P1-6 Chunk元数据增强**:
+- 新增 `scripts/enrich_chunk_metadata.py`: 批量元数据增强脚本
+- 新增 `scripts/verify_metadata_enrichment.py`: 增强结果验证脚本
+- 4585个向量全部增强：doc_title, keywords(jieba TF-IDF), content_type, language, char_count
+- 内容类型分布: exercise 34.8%, general 35.8%, anatomy 20.6%, nutrition 7.0%
+- Qdrant payload索引: content_type, keywords, language
+
+**P1-7 实体去重（dry-run）**:
+- 新增 `scripts/entity_dedup.py`: 双重确认去重脚本
+- Phase 1 精确重复: 50组（Exercise 23 + Food 27）
+- Phase 2 编辑距离候选: 98对确认重复
+- Phase 3 Embedding确认（GTE-Large-zh, 阈值0.95）
+- 合并计划: 152个节点待合并（需人工确认后执行）
+- 支持 --dry-run / --execute / --entity 参数
+
+**影响范围**:
+- 检索管道（Reranker集成）
+- Neo4j图数据库（社区标签）
+- Qdrant向量库（元数据增强）
+- 新增8个文件，修改1个文件
+
+**相关文档**:
+- [tasks.md](../../.kiro/specs/daml-rag-migration/tasks.md)
 
 ---
 
