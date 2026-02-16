@@ -1,8 +1,142 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.62.0
-**更新日期**: 2026-02-12
+**版本**: v9.67.0
+**更新日期**: 2026-02-17
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.67.0 (2026-02-17) - 语义Chunk管道 + 摄入状态追踪 ✨
+
+**变更类型**: ✨ 新功能
+
+**变更内容**:
+- 新增 `semantic_splitter.py`: 基于GTE-Large-zh embedding余弦相似度的语义分割器
+  - 参考LlamaIndex SemanticSplitter算法，在语义断点处切分
+  - `_hard_split` 安全网 + `split_with_metadata` 返回前强制检查，确保所有chunk ≤ max_chunk_size
+- 新增 `reingest_with_semantic_chunks.py`: 语义chunk重新入库脚本
+  - 支持 --dry-run / --source / --threshold 参数
+  - 正式入库: 2127 → 4585 vectors (+115.6%)，平均chunk 463字符，最大1501字符
+- 新增 `compare_chunk_quality.py`: 5查询检索质量对比测试
+  - 平均相似度 0.6789，关键词命中率 60%，平均延迟 43.3ms
+- 新增 `ingestion_tracker.py`: MySQL摄入状态追踪器（借鉴R2R IngestionStatus模式）
+  - 支持 processing/completed/failed 状态流转
+  - backfill 从Qdrant回填历史记录
+- 修复 `compare_chunk_quality.py`: qdrant-client 1.16.2 API兼容（search → query_points）
+
+**影响范围**:
+- Qdrant `training_knowledge` 集合（4585 vectors）
+- MySQL `knowledge_ingestion_status` 表（5条记录）
+
+**相关文档**:
+- [tasks.md](.kiro/specs/daml-rag-migration/tasks.md)
+
+---
+
+### v9.66.0 (2026-02-16) - 知识库入库 + 检索层知识上下文增强 🚀
+
+**变更类型**: 🚀 重大更新
+
+**变更内容**:
+- 73个B站字幕Markdown → 195 chunks 向量化入库 Qdrant `training_knowledge`
+- 4本PDF教材(665页) → 1889 chunks 向量化入库 Qdrant `training_knowledge`
+- 集合总量: 2127 vectors (1024维 GTE-Large-zh)
+- `graphrag.py` v2.5.0: `_semantic_search` 并行查询 `training_knowledge` 知识库
+- `vector_search_engine.py`: 新增 `search_collection()` 跨集合查询方法
+- `true_three_layer_engine.py`: 新增 `_fetch_knowledge_context()` 知识上下文检索
+- 三层检索结果 `metadata.knowledge_context` 携带教材/字幕知识片段
+- 新增入库脚本: `ingest_markdown_knowledge.py`, `ingest_pdf_chunks.py`, `parse_pdf_textbooks.py`
+- 新增跨域关系Schema: APPLIES_TO_EXERCISE, AFFECTS_MUSCLE, RECOMMENDED_BY, EXPLAINED_BY
+
+**影响范围**:
+- 检索层（Layer1增强）
+- Qdrant `training_knowledge` 集合
+- LLM综合阶段（可获取知识上下文）
+
+**测试结果**:
+- 16项单元测试全通过
+- 13项回归测试全通过（1 skipped）
+
+**相关文档**:
+- docs/04-开发指南/62-检索层知识图谱扩展设计.md
+
+---
+
+### v9.65.0 (2026-02-16) - GraphRAG检索层文档更新 📚
+
+**变更类型**: 📚 文档更新
+
+**变更内容**:
+- 更新 CHANGELOG.md 记录 GraphRAG 检索层替换
+- 更新 05-三层检索与MCP集成架构.md，添加 GraphRAG 检索层说明
+- 新增 FitnessGraphRAGRetriever 架构说明
+- 新增检索引擎切换机制说明
+- 新增降级策略说明
+
+**影响范围**:
+- 文档层
+
+**相关文档**:
+- docs/02-核心架构/05-三层检索与MCP集成架构.md (v2.1.0 → v2.2.0)
+
+---
+
+### v9.64.0 (2026-02-16) - GraphRAG检索层替换（Phase 1）🚀
+
+**变更类型**: 🚀 重大更新
+
+**变更内容**：
+- 引入 neo4j-graphrag-python 官方包替代自研 Layer1+Layer2
+- 创建 FitnessGraphRAGRetriever 统一检索接口
+- 支持 QdrantNeo4jRetriever（向量搜索→Neo4j节点关联一步完成）
+- 支持 HybridRetriever（BM25全文 + 向量语义混合检索）
+- 修改 node_retrieve_context 支持新旧检索器切换
+- 添加降级机制：新检索失败自动回退到旧引擎
+- Layer3 安全约束完整保留，不受检索层替换影响
+
+**新增文件**：
+- `src/framework/retrieval/graphrag_retriever.py` - GraphRAG统一检索器
+- `config/retrieval_config.yaml` - 检索配置（权重、索引名、降级开关）
+
+**修改文件**：
+- `requirements.txt` - 添加 neo4j-graphrag[qdrant]>=1.0.0
+- `src/applications/fitness/workflow/nodes.py` - 步骤8支持 graphrag_retriever 参数
+
+**影响范围**：
+- 检索层（Layer1+Layer2）→ neo4j-graphrag-python
+- 工作流步骤8（node_retrieve_context）
+- 不影响 Layer3 安全约束、DAG编排器、MCP工具
+
+**⚠️ 部署注意**：
+- 需要重建Docker镜像安装 neo4j-graphrag 依赖
+- 需要在 Neo4j 中创建 fulltext index（exercise-fulltext）
+- 降级模式默认开启，新检索失败自动回退
+
+---
+
+### v9.63.0 (2026-02-16) - 添加InternalJwtVerifier属性测试 ✅
+
+**变更类型**: ✅ 测试
+
+**变更内容**：
+- 添加InternalJwtVerifier属性测试（Property 2: 无效JWT全部拒绝）
+- 覆盖20+种无效JWT场景：过期JWT、签名错误、缺少必要字段、格式错误、签发者不匹配、字段类型错误
+- 验证各种无效JWT都能抛出正确的异常类型（JwtExpiredError/JwtInvalidError/ClaimsMissingError）
+- 验证有效JWT正确返回PermissionClaims（3种会员等级）
+- 验证包含中文字符的权限正常工作
+
+**新增文件**：
+- `tests/test_internal_jwt_verifier_property.py` - InternalJwtVerifier属性测试
+
+**测试覆盖**：
+- 过期JWT → JwtExpiredError
+- 签名错误JWT（3种错误密钥）→ JwtInvalidError
+- 缺少必要字段（6个字段）→ ClaimsMissingError
+- 格式错误JWT（7种无效格式）→ JwtInvalidError
+- 签发者不匹配（3种错误签发者）→ JwtInvalidError
+- 字段类型错误（2种类型错误）→ ClaimsMissingError
+
+**Requirements**: 1.3, 1.4
 
 ---
 
