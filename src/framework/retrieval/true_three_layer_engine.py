@@ -32,6 +32,7 @@ import aiohttp
 
 # 导入超时管理器
 from .timeout_manager import TimeoutManager, get_timeout_manager
+from .reranker import get_reranker
 
 logger = logging.getLogger(__name__)
 
@@ -395,6 +396,9 @@ class TrueThreeLayerEngine:
                 return final_result
 
             # ============ Layer 2: 图谱关系推理 ============
+            # ✅ v2.5.0: 并行查询知识库上下文（不阻塞主流程）
+            knowledge_context = await self._fetch_knowledge_context(query)
+
             # ✅ 根据Layer1质量动态调整Layer2召回倍数
             if layer1_result.metadata.get("is_low_quality", False):
                 logger.info("  → Layer1质量偏低，Layer2增加召回倍数")
@@ -434,7 +438,8 @@ class TrueThreeLayerEngine:
                 layer1=layer1_result,
                 layer2=layer2_result,
                 layer3=layer3_result,
-                start_time=start_time
+                start_time=start_time,
+                knowledge_context=knowledge_context
             )
 
             logger.info(f"✅ 三层检索完成: {len(final_result.final_results)}个结果, 耗时{final_result.total_execution_time_ms:.0f}ms")
@@ -1583,6 +1588,75 @@ class TrueThreeLayerEngine:
             error=error
         )
 
+    async def _fetch_knowledge_context(
+        self,
+        query: str,
+        top_k: int = 5,
+        min_similarity: float = 0.55
+    ) -> List[Dict[str, Any]]:
+        """
+        查询 training_knowledge 集合获取知识上下文
+
+        从教材PDF和B站字幕中检索与查询相关的知识片段，
+        作为补充上下文传递给LLM综合阶段。
+
+        v2.5.0 新增
+        """
+        try:
+            # 延迟初始化（单例缓存）
+            if not hasattr(self, '_knowledge_qdrant'):
+                from qdrant_client import QdrantClient
+                qdrant_host = os.getenv("QDRANT_HOST", "qdrant")
+                qdrant_port = int(os.getenv("QDRANT_PORT", "6333"))
+                self._knowledge_qdrant = QdrantClient(host=qdrant_host, port=qdrant_port, timeout=5)
+
+                # 检查集合是否存在
+                collections = [c.name for c in self._knowledge_qdrant.get_collections().collections]
+                self._knowledge_available = "training_knowledge" in collections
+                if self._knowledge_available:
+                    info = self._knowledge_qdrant.get_collection("training_knowledge")
+                    logger.info(f"  📚 知识库已连接: training_knowledge ({info.points_count} points)")
+
+            if not self._knowledge_available:
+                return []
+
+            if not hasattr(self, '_knowledge_encoder'):
+                from sentence_transformers import SentenceTransformer
+                self._knowledge_encoder = SentenceTransformer("thenlper/gte-large-zh")
+
+            query_vector = self._knowledge_encoder.encode(query).tolist()
+
+            results = self._knowledge_qdrant.query_points(
+                collection_name="training_knowledge",
+                query=query_vector,
+                limit=top_k
+            )
+
+            points = results.points if hasattr(results, 'points') else results
+            knowledge = []
+            for p in points:
+                score = p.score if hasattr(p, 'score') else 0.0
+                if score < min_similarity:
+                    continue
+                payload = p.payload if hasattr(p, 'payload') else {}
+                knowledge.append({
+                    "text": payload.get("chunk_text", ""),
+                    "source": payload.get("source", "unknown"),
+                    "title": payload.get("title", ""),
+                    "score": round(score, 3),
+                    "filename": payload.get("filename", payload.get("bvid", "")),
+                    "chapter": payload.get("chapter", ""),
+                })
+
+            if knowledge:
+                logger.info(f"  📚 知识上下文: {len(knowledge)}条 (来源: {set(k['source'] for k in knowledge)})")
+
+            return knowledge
+
+        except Exception as e:
+            logger.debug(f"知识上下文查询失败（非致命）: {e}")
+            return []
+
     def _build_final_result(
         self,
         query: str,
@@ -1590,7 +1664,8 @@ class TrueThreeLayerEngine:
         layer1: LayerExecutionResult,
         layer2: LayerExecutionResult,
         layer3: LayerExecutionResult,
-        start_time: datetime
+        start_time: datetime,
+        knowledge_context: Optional[List[Dict[str, Any]]] = None
     ) -> ThreeLayerResult:
         """构建最终结果"""
         # 确定最终结果来源
@@ -1607,6 +1682,23 @@ class TrueThreeLayerEngine:
             final_results = []
             reasoning = "检索失败: 未找到任何结果"
 
+        # ✅ Reranker 重排序（如果启用且有结果）
+        enable_reranker = os.getenv("ENABLE_RERANKER", "true").lower() == "true"
+        if enable_reranker and final_results and len(final_results) > 1:
+            try:
+                reranker = get_reranker()
+                original_count = len(final_results)
+                final_results = reranker.rerank(
+                    query=query,
+                    documents=final_results,
+                    top_k=min(10, len(final_results)),
+                    score_threshold=0.0
+                )
+                reasoning += f" → Reranker重排序({original_count}→{len(final_results)})"
+                logger.info(f"Reranker重排序: {original_count} → {len(final_results)} 结果")
+            except Exception as e:
+                logger.warning(f"Reranker重排序失败，使用原始结果: {e}")
+
         # 计算总置信度
         layer_confidences = [
             layer1.confidence * 0.3,
@@ -1618,6 +1710,22 @@ class TrueThreeLayerEngine:
         # 计算总耗时
         total_time = (datetime.now() - start_time).total_seconds() * 1000
 
+        # ✅ v2.5.0: 构建metadata，包含知识上下文
+        metadata = {
+            "neo4j_direct_used": layer2.metadata.get("source") == "neo4j_direct",
+            "layer_execution_times": {
+                "layer1": layer1.execution_time_ms,
+                "layer2": layer2.execution_time_ms,
+                "layer3": layer3.execution_time_ms
+            },
+            "stats": self.get_stats()
+        }
+
+        if knowledge_context:
+            metadata["knowledge_context"] = knowledge_context
+            metadata["knowledge_context_count"] = len(knowledge_context)
+            reasoning += f" + 知识上下文({len(knowledge_context)}条)"
+
         return ThreeLayerResult(
             query=query,
             domain=domain,
@@ -1628,15 +1736,7 @@ class TrueThreeLayerEngine:
             total_confidence=total_confidence,
             total_execution_time_ms=total_time,
             reasoning=reasoning,
-            metadata={
-                "neo4j_direct_used": layer2.metadata.get("source") == "neo4j_direct",
-                "layer_execution_times": {
-                    "layer1": layer1.execution_time_ms,
-                    "layer2": layer2.execution_time_ms,
-                    "layer3": layer3.execution_time_ms
-                },
-                "stats": self.get_stats()
-            }
+            metadata=metadata
         )
 
     def get_stats(self) -> Dict[str, Any]:

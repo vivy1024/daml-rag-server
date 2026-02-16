@@ -1,0 +1,641 @@
+[
+  {
+    "community_id": 0,
+    "name": "推力-单关节动作动作群",
+    "exercise_count": 34,
+    "muscle_count": 1,
+    "primary_muscles": [
+      "胸部"
+    ],
+    "force_distribution": {
+      "推力": 19,
+      "保持": 9
+    },
+    "mechanic_distribution": {
+      "复合动作": 10,
+      "单关节动作": 18
+    },
+    "difficulty_distribution": {
+      "初级": 17,
+      "零基础": 13,
+      "中级": 4
+    },
+    "common_equipment": [
+      "瑜伽",
+      "拉伸",
+      "恢复"
+    ],
+    "sample_exercises": [
+      "药球胸前猛砸",
+      "波速球前锯肌激活平板支撑",
+      "维特鲁威 卧推",
+      "弹力带内旋飞鸟",
+      "弓式"
+    ],
+    "summary": "包含34个动作和1个肌肉的训练群，主要特征为推力类单关节动作动作"
+  },
+  {
+    "community_id": 1,
+    "name": "保持-单关节动作动作群",
+    "exercise_count": 39,
+    "muscle_count": 1,
+    "primary_muscles": [
+      "未知"
+    ],
+    "force_distribution": {
+      "拉力": 14,
+      "保持": 20,
+      "推力": 5
+    },
+    "mechanic_distribution": {
+      "单关节动作": 39
+    },
+    "difficulty_distribution": {
+      "零基础": 33,
+      "中级": 2,
+      "初级": 4
+    },
+    "common_equipment": [
+      "恢复"
+    ],
+    "sample_exercises": [
+      "坐姿弹力带颈部侧屈",
+      "波速球 球 单腿平衡",
+      "颈部伸展弹力带",
+      "颈部伸展保持",
+      "壶铃行走肩屈曲（弯肘保持）"
+    ],
+    "summary": "包含39个动作和1个肌肉的训练群，主要特征为保持类单关节动作动作"
+  },
+  {
+    "community_id": 2,
+    "name": "拉力-单关节动作动作群",
+    "exercise_count": 145,
+    "muscle_count": 2,
+    "primary_muscles": [
+      "腹斜肌",
+      "腹直肌"
+    ],
+    "force_distribution": {
+      "推力": 36,
+      "保持": 36,
+      "拉力": 57,
+      "拉": 2
+    },
+    "mechanic_distribution": {
+      "复合动作": 51,
+      "单关节动作": 78,
+      "孤立": 2
+    },
+    "difficulty_distribution": {
+      "初级": 54,
+      "中级": 48,
+      "高级": 17,
+      "零基础": 17
+    },
+    "common_equipment": [
+      "徒手训练",
+      "哑铃",
+      "壶铃"
+    ],
+    "sample_exercises": [
+      "壶铃前架深蹲",
+      "平板支撑抬臂",
+      "跪姿哑铃劈木",
+      "合十侧弯",
+      "缆绳半跪式高到低劈木"
+    ],
+    "summary": "包含145个动作和2个肌肉的训练群，主要特征为拉力类单关节动作动作"
+  },
+  {
+    "community_id": 3,
+    "name": "保持-单关节动作动作群",
+    "exercise_count": 10,
+    "muscle_count": 1,
+    "primary_muscles": [
+      "双脚"
+    ],
+    "force_distribution": {
+      "拉力": 4,
+      "保持": 5,
+      "推力": 1
+    },
+    "mechanic_distribution": {
+      "单关节动作": 10
+    },
+    "difficulty_distribution": {
+      "零基础": 6,
+      "高级": 1,
+      "初级": 2,
+      "中级": 1
+    },
+    "common_equipment": [
+      "恢复"
+    ],
+    "sample_exercises": [
+      "站立拱足",
+      "单腿波速球球平衡 2",
+      "站立倒置保持",
+      "字母表",
+      "坐姿拱足"
+    ],
+    "summary": "包含10个动作和1个肌肉的训练群，主要特征为保持类单关节动作动作"
+  },
+  {
+    "community_id": 4,
+    "name": "拉力-单关节动作动作群",
+    "exercise_count": 64,
+    "muscle_count": 2,
+    "primary_muscles": [
+      "上腹肌",
+      "下腹部"
+    ],
+    "force_distribution": {
+      "拉力": 32,
+      "推力": 20,
+      "保持": 6
+    },
+    "mechanic_distribution": {
+      "单关节动作": 44,
+      "复合动作": 14
+    },
+    "difficulty_distribution": {
+      "中级": 17,
+      "零基础": 13,
+      "高级": 6,
+      "初级": 26
+    },
+    "common_equipment": [
+      "徒手训练",
+      "器械",
+      "绳索训练"
+    ],
+    "sample_exercises": [
+      "划船机屈髋",
+      "盘片负重卷腹机",
+      "站姿绳索卷腹",
+      "划船机屈膝收腹",
+      "器械卷腹"
+    ],
+    "summary": "包含64个动作和2个肌肉的训练群，主要特征为拉力类单关节动作动作"
+  },
+  {
+    "community_id": 5,
+    "name": "保持-单关节动作动作群",
+    "exercise_count": 36,
+    "muscle_count": 1,
+    "primary_muscles": [
+      "前臂肌群"
+    ],
+    "force_distribution": {
+      "拉力": 12,
+      "保持": 13,
+      "推力": 1
+    },
+    "mechanic_distribution": {
+      "单关节动作": 20,
+      "复合动作": 6
+    },
+    "difficulty_distribution": {
+      "零基础": 14,
+      "初级": 18,
+      "中级": 4
+    },
+    "common_equipment": [
+      "恢复",
+      "壶铃",
+      "哑铃"
+    ],
+    "sample_exercises": [
+      "绳索直杆反握弯举",
+      "前臂拉伸（变体一）",
+      "手腕尺偏",
+      "绳索手腕伸展",
+      "桌面式变体3"
+    ],
+    "summary": "包含36个动作和1个肌肉的训练群，主要特征为保持类单关节动作动作"
+  },
+  {
+    "community_id": 6,
+    "name": "拉力-单关节动作动作群",
+    "exercise_count": 3,
+    "muscle_count": 1,
+    "primary_muscles": [
+      "腕伸肌群"
+    ],
+    "force_distribution": {
+      "拉力": 2,
+      "推力": 1
+    },
+    "mechanic_distribution": {
+      "单关节动作": 3
+    },
+    "difficulty_distribution": {
+      "零基础": 3
+    },
+    "common_equipment": [
+      "壶铃",
+      "哑铃",
+      "杠铃"
+    ],
+    "sample_exercises": [
+      "壶铃凳上手腕伸展",
+      "哑铃卧凳手腕伸展",
+      "杠铃反向腕弯举"
+    ],
+    "summary": "包含3个动作和1个肌肉的训练群，主要特征为拉力类单关节动作动作"
+  },
+  {
+    "community_id": 7,
+    "name": "推力-复合动作动作群",
+    "exercise_count": 159,
+    "muscle_count": 5,
+    "primary_muscles": [
+      "肱三头肌外侧头",
+      "上胸",
+      "肱三头肌",
+      "中胸与下胸",
+      "三头肌长头"
+    ],
+    "force_distribution": {
+      "保持": 5,
+      "推力": 120,
+      "推": 2
+    },
+    "mechanic_distribution": {
+      "复合动作": 76,
+      "单关节动作": 49,
+      "孤立": 2
+    },
+    "difficulty_distribution": {
+      "初级": 49,
+      "中级": 43,
+      "高级": 15,
+      "零基础": 31
+    },
+    "common_equipment": [
+      "哑铃",
+      "徒手训练",
+      "绳索训练"
+    ],
+    "sample_exercises": [
+      "儿童式：肘部放在瑜伽砖上",
+      "绳索单臂下压",
+      "壶铃仰卧臂屈伸",
+      "地雷仰卧三头肌伸展",
+      "反握杠铃卧推"
+    ],
+    "summary": "包含159个动作和5个肌肉的训练群，主要特征为推力类复合动作动作"
+  },
+  {
+    "community_id": 8,
+    "name": "推力-复合动作动作群",
+    "exercise_count": 243,
+    "muscle_count": 4,
+    "primary_muscles": [
+      "三角肌后束",
+      "三角肌前束",
+      "肩部",
+      "三角肌中束"
+    ],
+    "force_distribution": {
+      "拉力": 59,
+      "推力": 136,
+      "保持": 15,
+      "拉": 1
+    },
+    "mechanic_distribution": {
+      "单关节动作": 89,
+      "复合动作": 121,
+      "复合": 1
+    },
+    "difficulty_distribution": {
+      "初级": 82,
+      "中级": 59,
+      "高级": 22,
+      "零基础": 56
+    },
+    "common_equipment": [
+      "哑铃",
+      "杠铃",
+      "绳索训练"
+    ],
+    "sample_exercises": [
+      "TRX I 上举",
+      "杠铃前平举",
+      "哑铃全幅侧平举",
+      "缆绳单臂高位内旋反向飞鸟",
+      "杠铃推举蹲"
+    ],
+    "summary": "包含243个动作和4个肌肉的训练群，主要特征为推力类复合动作动作"
+  },
+  {
+    "community_id": 9,
+    "name": "推力-复合动作动作群",
+    "exercise_count": 342,
+    "muscle_count": 3,
+    "primary_muscles": [
+      "股直肌",
+      "臀部",
+      "股四头肌"
+    ],
+    "force_distribution": {
+      "推力": 264,
+      "保持": 38,
+      "拉力": 8,
+      "推": 3
+    },
+    "mechanic_distribution": {
+      "复合动作": 240,
+      "单关节动作": 70,
+      "复合": 3
+    },
+    "difficulty_distribution": {
+      "高级": 52,
+      "中级": 91,
+      "零基础": 71,
+      "初级": 114
+    },
+    "common_equipment": [
+      "哑铃",
+      "徒手训练",
+      "恢复"
+    ],
+    "sample_exercises": [
+      "维特鲁威 四字臀桥",
+      "哑铃单腿后跟抬高臀桥",
+      "波速球 球 分腿下蹲",
+      "器械臀推",
+      "史密斯机腿推"
+    ],
+    "summary": "包含342个动作和3个肌肉的训练群，主要特征为推力类复合动作动作"
+  },
+  {
+    "community_id": 10,
+    "name": "推力-复合动作动作群",
+    "exercise_count": 41,
+    "muscle_count": 4,
+    "primary_muscles": [
+      "大腿内侧",
+      "股四头肌内侧",
+      "臀中肌",
+      "腹股沟"
+    ],
+    "force_distribution": {
+      "拉力": 8,
+      "推力": 26,
+      "保持": 5,
+      "推": 1
+    },
+    "mechanic_distribution": {
+      "单关节动作": 15,
+      "复合动作": 24,
+      "孤立": 1
+    },
+    "difficulty_distribution": {
+      "零基础": 4,
+      "中级": 15,
+      "高级": 6,
+      "初级": 15
+    },
+    "common_equipment": [
+      "恢复",
+      "徒手训练",
+      "壶铃"
+    ],
+    "sample_exercises": [
+      "器械髋/臀内收",
+      "前箭步蹲",
+      "弹力带大腿内收",
+      "壶铃单臂交叉后弓步",
+      "侧卧长力臂内收抬腿"
+    ],
+    "summary": "包含41个动作和4个肌肉的训练群，主要特征为推力类复合动作动作"
+  },
+  {
+    "community_id": 11,
+    "name": "拉力-单关节动作动作群",
+    "exercise_count": 64,
+    "muscle_count": 3,
+    "primary_muscles": [
+      "斜方肌（中背）",
+      "斜方肌",
+      "上斜方肌"
+    ],
+    "force_distribution": {
+      "拉力": 40,
+      "保持": 11,
+      "拉": 1,
+      "推力": 3
+    },
+    "mechanic_distribution": {
+      "单关节动作": 36,
+      "复合动作": 18,
+      "孤立": 1
+    },
+    "difficulty_distribution": {
+      "零基础": 22,
+      "初级": 25,
+      "高级": 3,
+      "中级": 12
+    },
+    "common_equipment": [
+      "瑜伽",
+      "徒手训练",
+      "哑铃"
+    ],
+    "sample_exercises": [
+      "弹力带耸肩",
+      "单手壶铃耸肩",
+      "绳索单臂30度耸肩",
+      "壶铃银背耸肩（单臂）",
+      "负重引体向上"
+    ],
+    "summary": "包含64个动作和3个肌肉的训练群，主要特征为拉力类单关节动作动作"
+  },
+  {
+    "community_id": 12,
+    "name": "拉力-单关节动作动作群",
+    "exercise_count": 228,
+    "muscle_count": 5,
+    "primary_muscles": [
+      "肱二头肌长头",
+      "肱二头肌短头",
+      "斜方肌下部",
+      "肱二头肌",
+      "背阔肌"
+    ],
+    "force_distribution": {
+      "拉力": 154,
+      "推力": 3,
+      "保持": 18,
+      "拉": 9
+    },
+    "mechanic_distribution": {
+      "单关节动作": 93,
+      "复合动作": 82,
+      "复合": 3,
+      "孤立": 6
+    },
+    "difficulty_distribution": {
+      "零基础": 79,
+      "初级": 62,
+      "中级": 43,
+      "高级": 9
+    },
+    "common_equipment": [
+      "哑铃",
+      "绳索训练",
+      "器械"
+    ],
+    "sample_exercises": [
+      "哑铃仰卧上拉（离心）",
+      "有氧 划船 划船机 划船器",
+      "壶铃肩部伸展",
+      "波速球 球 弯举",
+      "弹力带贝叶斯弯举"
+    ],
+    "summary": "包含228个动作和5个肌肉的训练群，主要特征为拉力类单关节动作动作"
+  },
+  {
+    "community_id": 13,
+    "name": "拉力-复合动作动作群",
+    "exercise_count": 228,
+    "muscle_count": 4,
+    "primary_muscles": [
+      "股二头肌（外侧）",
+      "下背部",
+      "腘绳肌内侧",
+      "腿后肌群"
+    ],
+    "force_distribution": {
+      "拉力": 127,
+      "保持": 31,
+      "推力": 37
+    },
+    "mechanic_distribution": {
+      "单关节动作": 67,
+      "复合动作": 127
+    },
+    "difficulty_distribution": {
+      "初级": 84,
+      "零基础": 27,
+      "高级": 38,
+      "中级": 57
+    },
+    "common_equipment": [
+      "杠铃",
+      "恢复",
+      "壶铃"
+    ],
+    "sample_exercises": [
+      "健身球腿弯举",
+      "单腿滑块腿弯举",
+      "史密斯机反握划船",
+      "坐姿绳索腿弯举",
+      "滑垫腿弯举"
+    ],
+    "summary": "包含228个动作和4个肌肉的训练群，主要特征为拉力类复合动作动作"
+  },
+  {
+    "community_id": 14,
+    "name": "推力-单关节动作动作群",
+    "exercise_count": 87,
+    "muscle_count": 1,
+    "primary_muscles": [
+      "小腿"
+    ],
+    "force_distribution": {
+      "推力": 68,
+      "保持": 13
+    },
+    "mechanic_distribution": {
+      "单关节动作": 60,
+      "复合动作": 20
+    },
+    "difficulty_distribution": {
+      "初级": 49,
+      "零基础": 27,
+      "中级": 9,
+      "高级": 2
+    },
+    "common_equipment": [
+      "恢复",
+      "有氧训练",
+      "器械"
+    ],
+    "sample_exercises": [
+      "坐姿提踵",
+      "哑铃提踵",
+      "小腿拉伸（变体一）",
+      "跑步机慢跑",
+      "杠铃脚尖朝上提踵"
+    ],
+    "summary": "包含87个动作和1个肌肉的训练群，主要特征为推力类单关节动作动作"
+  },
+  {
+    "community_id": 15,
+    "name": "拉力-单关节动作动作群",
+    "exercise_count": 7,
+    "muscle_count": 1,
+    "primary_muscles": [
+      "胫骨前肌"
+    ],
+    "force_distribution": {
+      "推力": 2,
+      "拉": 1,
+      "拉力": 3
+    },
+    "mechanic_distribution": {
+      "单关节动作": 6,
+      "孤立": 1
+    },
+    "difficulty_distribution": {
+      "零基础": 4,
+      "初级": 3
+    },
+    "common_equipment": [
+      "哑铃",
+      "恢复",
+      "徒手训练"
+    ],
+    "sample_exercises": [
+      "坐姿胫前肌抬举",
+      "壶铃胫骨前肌上提",
+      "哑铃站立提脚背",
+      "站姿胫前肌抬举",
+      "坐姿哑铃胫前肌抬举"
+    ],
+    "summary": "包含7个动作和1个肌肉的训练群，主要特征为拉力类单关节动作动作"
+  },
+  {
+    "community_id": 16,
+    "name": "拉力-单关节动作动作群",
+    "exercise_count": 7,
+    "muscle_count": 1,
+    "primary_muscles": [
+      "颈部"
+    ],
+    "force_distribution": {
+      "拉力": 5,
+      "推力": 2
+    },
+    "mechanic_distribution": {
+      "单关节动作": 7
+    },
+    "difficulty_distribution": {
+      "零基础": 7
+    },
+    "common_equipment": [
+      "恢复"
+    ],
+    "sample_exercises": [
+      "站姿颈部前屈",
+      "坐姿桡神经牵张",
+      "站立颈部绕圈",
+      "站立颈部侧屈",
+      "坐姿桡神经滑动"
+    ],
+    "summary": "包含7个动作和1个肌肉的训练群，主要特征为拉力类单关节动作动作"
+  }
+]
