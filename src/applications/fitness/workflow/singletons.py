@@ -339,8 +339,8 @@ def reset_all_singletons():
     global _cache_manager_instance, _connection_pool_manager_instance
     global _llm_degradation_manager_instance, _concurrency_limiter_instance
     global _performance_monitor_instance, _mcp_orchestrator_instance
-    global _mcp_tool_registry_instance
-    
+    global _mcp_tool_registry_instance, _hybrid_search_engine_instance
+
     _user_cache_instance = None
     _membership_cache_instance = None
     _workflow_monitor_instance = None
@@ -351,6 +351,7 @@ def reset_all_singletons():
     _performance_monitor_instance = None
     _mcp_orchestrator_instance = None
     _mcp_tool_registry_instance = None
+    _hybrid_search_engine_instance = None
     
     logger.info("🔄 所有单例实例已重置")
 
@@ -370,6 +371,32 @@ def get_workflow_caches():
         "user_cache": _user_cache_instance,
         "membership_cache": _membership_cache_instance
     }
+
+
+# ============ 混合检索引擎（BM25 + 向量 + RRF） ============
+
+_hybrid_search_engine_instance = None
+
+
+def get_hybrid_search_engine():
+    """
+    获取混合检索引擎单例（BM25 + 向量 + RRF融合）
+
+    初始化失败时静默降级返回 None，不影响主流程。
+
+    Returns:
+        HybridSearchEngine 实例，或 None（初始化失败时）
+    """
+    global _hybrid_search_engine_instance
+    if _hybrid_search_engine_instance is None:
+        try:
+            from ...framework.retrieval.hybrid_search import HybridSearchEngine
+            _hybrid_search_engine_instance = HybridSearchEngine()
+            logger.info("✅ HybridSearchEngine初始化完成（BM25 + 向量 + RRF）")
+        except Exception as e:
+            logger.warning(f"⚠️ HybridSearchEngine初始化失败，将降级到GraphRAG检索: {e}")
+            _hybrid_search_engine_instance = None
+    return _hybrid_search_engine_instance
 
 
 # ============ MCP工具注册表 ============
@@ -537,6 +564,8 @@ __all__ = [
     "get_connection_pool_manager",
     "get_llm_degradation_manager",
     "get_concurrency_limiter",
+    # 混合检索引擎
+    "get_hybrid_search_engine",
     # MCP编排器和工具注册表
     "get_mcp_orchestrator",
     "get_mcp_tool_registry",

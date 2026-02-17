@@ -658,22 +658,25 @@ class StreamWorkflowExecutor(WorkflowExecutor):
     async def _execute_steps_7_8(self, state: WorkflowState) -> WorkflowState:
         """执行步骤7-8"""
         from .nodes import node_execute_dag, node_retrieve_context
-        from .singletons import get_mcp_orchestrator
-        
+        from .singletons import get_mcp_orchestrator, get_hybrid_search_engine
+
         # 获取MCP编排器
         mcp_orchestrator = get_mcp_orchestrator()
-        
+
         # 执行DAG
         result = await node_execute_dag(state, mcp_tool_manager=mcp_orchestrator)
         if isinstance(result, StateUpdate):
             state = result.merge_into(state)
-        
-        # 如果DAG失败，执行三层检索
+
+        # 如果DAG失败，执行混合检索（BM25 + 向量 + RRF）
         if not state.get("dag_results"):
-            result = await node_retrieve_context(state)
+            result = await node_retrieve_context(
+                state,
+                hybrid_search_engine=get_hybrid_search_engine()
+            )
             if isinstance(result, StateUpdate):
                 state = result.merge_into(state)
-        
+
         return state
     
     async def _execute_step_9(self, state: WorkflowState) -> WorkflowState:

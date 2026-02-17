@@ -49,6 +49,10 @@ pypdf>=4.0.0
 # BGE Reranker（FlagEmbedding重排序模型）
 FlagEmbedding>=1.2.0
 
+# BM25混合检索（Phase 4A）
+rank_bm25>=0.2.2
+jieba>=0.42.1
+
 # 开发依赖（可选）
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
