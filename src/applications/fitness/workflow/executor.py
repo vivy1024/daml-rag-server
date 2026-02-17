@@ -540,6 +540,11 @@ class WorkflowExecutor:
             from .singletons import get_mcp_orchestrator
             kwargs["mcp_tool_manager"] = get_mcp_orchestrator()
         
+        elif node_name == "retrieve_context":
+            # 注入混合检索引擎（BM25 + 向量 + RRF）
+            from .singletons import get_hybrid_search_engine
+            kwargs["hybrid_search_engine"] = get_hybrid_search_engine()
+
         elif node_name == "store_session":
             # 注入 ConversationMemory 用于加载对话历史
             if self.conversation_memory:

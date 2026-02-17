@@ -901,18 +901,24 @@ async def node_retrieve_context(
     state: WorkflowState,
     three_layer_engine=None,
     graphrag_retriever=None,
+    hybrid_search_engine=None,
 ) -> StateUpdate:
     """
-    步骤8：GraphRAG检索（替代旧三层检索）
+    步骤8：混合检索（BM25 + 向量 + RRF融合）
 
-    优先使用 neo4j-graphrag-python 的 FitnessGraphRAGRetriever，
-    如果不可用则降级到旧的 three_layer_engine。
+    优先级链：
+    1. hybrid_search_engine（BM25 + 向量 + RRF融合）
+    2. graphrag_retriever（neo4j-graphrag-python）
+    3. three_layer_engine（旧三层检索）
+    4. 空结果（所有引擎不可用时）
+
     Layer3 安全约束在后续步骤中独立执行，不受检索层替换影响。
 
     Args:
         state: 当前工作流状态
         three_layer_engine: 旧三层检索引擎（降级用）
-        graphrag_retriever: 新 GraphRAG 检索器（优先使用）
+        graphrag_retriever: 新 GraphRAG 检索器
+        hybrid_search_engine: 混合检索引擎（优先使用）
 
     Returns:
         StateUpdate: 状态更新，包含 retrieval_results
@@ -934,7 +940,32 @@ async def node_retrieve_context(
             }
         })
 
-    # 优先使用新的 GraphRAG 检索器
+    # 优先级1：混合检索引擎（BM25 + 向量 + RRF）
+    if hybrid_search_engine:
+        try:
+            hybrid_results = await hybrid_search_engine.hybrid_search(
+                query=query_text,
+                domain=domain,
+                top_k=10
+            )
+            logger.info(
+                f"✅ [{request_id}] 步骤8完成: "
+                f"HybridSearch(BM25+向量+RRF) 返回 {len(hybrid_results)} 个结果"
+            )
+            return StateUpdate(updates={
+                "retrieval_results": {
+                    "results": hybrid_results,
+                    "query_type": "hybrid_search",
+                    "domain": domain,
+                    "count": len(hybrid_results)
+                }
+            })
+        except Exception as e:
+            logger.warning(
+                f"⚠️ [{request_id}] 步骤8: 混合检索失败，降级到GraphRAG: {e}"
+            )
+
+    # 优先级2/3：GraphRAG 或旧三层检索
     retriever = graphrag_retriever or three_layer_engine
 
     try:
