@@ -37,10 +37,11 @@ CYPHER_TEMPLATES: Dict[StructuredQueryType, str] = {
         LIMIT 20
     """,
 
-    # 肌肉 → 推荐动作
+    # 肌肉 → 推荐动作（支持 group 精确匹配 + CONTAINS 回退）
     StructuredQueryType.MUSCLE_EXERCISES: """
         MATCH (m:Muscle)<-[r:TARGETS_PRIMARY]-(e:Exercise)
-        WHERE m.name_zh CONTAINS $keyword
+        WHERE (CASE WHEN $group IS NOT NULL THEN m.group = $group ELSE true END)
+          AND (CASE WHEN $group IS NULL THEN m.name_zh CONTAINS $keyword ELSE true END)
         RETURN e.name_zh AS exercise,
                m.name_zh AS muscle,
                e.difficulty AS difficulty,
@@ -80,16 +81,19 @@ CYPHER_TEMPLATES: Dict[StructuredQueryType, str] = {
         LIMIT 10
     """,
 
-    # 肌肉训练容量（MEV/MAV/MRV）
+    # 肌肉训练容量（MEV/MAV/MRV）— 支持 group 精确匹配
     StructuredQueryType.MUSCLE_CAPACITY: """
         MATCH (m:Muscle)
-        WHERE m.name_zh CONTAINS $keyword
+        WHERE (CASE WHEN $group IS NOT NULL THEN m.group = $group ELSE true END)
+          AND (CASE WHEN $group IS NULL THEN m.name_zh CONTAINS $keyword ELSE true END)
         RETURN m.name_zh AS muscle,
-               m.MEV AS mev,
-               m.MAV AS mav,
-               m.MRV AS mrv,
-               m.training_frequency AS frequency,
-               m.recovery_time AS recovery_time
+               m.mev AS mev,
+               m.mav AS mav,
+               m.mrv AS mrv,
+               m.optimal_frequency AS frequency,
+               m.recovery_time AS recovery_time,
+               m.group AS muscle_group,
+               m.level AS level
         LIMIT 10
     """,
 
@@ -107,9 +111,39 @@ CYPHER_TEMPLATES: Dict[StructuredQueryType, str] = {
     """,
 }
 
-# ─── 实体同义词映射（用户常用名 → Neo4j 实际名称） ─────────
+# ─── 肌肉分组映射（用户常用名 → Neo4j group 字段值） ─────────
+# Neo4j Muscle 节点的 group 字段: chest/back/shoulder/arm/leg/core/hip/neck
+# 优先用 group 精确匹配，避免 CONTAINS 的模糊问题
 
-MUSCLE_SYNONYMS = {
+MUSCLE_GROUP_MAP: Dict[str, str] = {
+    # 胸部
+    "胸": "chest", "胸肌": "chest", "胸大肌": "chest", "胸小肌": "chest",
+    "上胸": "chest", "下胸": "chest", "中胸": "chest",
+    # 背部
+    "背": "back", "背肌": "back", "背阔肌": "back", "斜方肌": "back",
+    "下背": "back", "上背": "back", "中背": "back",
+    # 肩部
+    "肩": "shoulder", "肩膀": "shoulder", "三角肌": "shoulder",
+    "前束": "shoulder", "中束": "shoulder", "后束": "shoulder",
+    # 手臂
+    "手臂": "arm", "二头肌": "arm", "三头肌": "arm",
+    "肱二头肌": "arm", "肱三头肌": "arm", "前臂": "arm",
+    # 腿部
+    "腿": "leg", "大腿": "leg", "小腿": "leg",
+    "股四头肌": "leg", "腘绳肌": "leg", "股二头肌": "leg",
+    # 核心
+    "腹": "core", "腹肌": "core", "腹直肌": "core", "核心": "core",
+    "腹斜肌": "core",
+    # 臀部
+    "臀": "hip", "臀部": "hip", "臀大肌": "hip", "臀中肌": "hip",
+    # 颈部
+    "颈": "neck", "颈部": "neck",
+}
+
+# ─── 实体同义词映射（用于 CONTAINS 回退匹配） ─────────
+# 当 group 匹配不适用时（如动作查询），用 CONTAINS 模糊匹配
+
+MUSCLE_SYNONYMS: Dict[str, str] = {
     "胸肌": "胸",       # Neo4j: 上胸, 中胸与下胸, 胸部
     "胸大肌": "胸",
     "胸小肌": "胸",
@@ -183,12 +217,16 @@ class CypherQueryExecutor:
         # 同义词规范化：将用户常用名映射到 Neo4j 实际名称
         normalized_entity = MUSCLE_SYNONYMS.get(entity, entity)
 
+        # 肌肉分组匹配：优先用 group 字段精确匹配
+        muscle_group = MUSCLE_GROUP_MAP.get(entity)
+
         try:
             neo4j = self._get_neo4j()
-            raw_results = neo4j.execute_query(template, {"keyword": normalized_entity})
+            params = {"keyword": normalized_entity, "group": muscle_group}
+            raw_results = neo4j.execute_query(template, params)
 
             if not raw_results:
-                logger.info(f"Neo4j 查询无结果: {query_type.value}, entity='{entity}'→'{normalized_entity}'")
+                logger.info(f"Neo4j 查询无结果: {query_type.value}, entity='{entity}'→'{normalized_entity}', group={muscle_group}")
                 return []
 
             # 格式化为统一格式
