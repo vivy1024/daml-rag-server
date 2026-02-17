@@ -64,6 +64,7 @@ class WorkflowExecutor:
         self._cache_manager = None
         self._user_cache = None
         self._membership_cache = None
+        self.conversation_memory = None  # ConversationMemory 实例（可选注入）
     
     @property
     def workflow_monitor(self):
@@ -539,6 +540,11 @@ class WorkflowExecutor:
             from .singletons import get_mcp_orchestrator
             kwargs["mcp_tool_manager"] = get_mcp_orchestrator()
         
+        elif node_name == "store_session":
+            # 注入 ConversationMemory 用于加载对话历史
+            if self.conversation_memory:
+                kwargs["conversation_memory"] = self.conversation_memory
+
         elif node_name == "log_interaction":
             kwargs["backend_client"] = backend_client
         

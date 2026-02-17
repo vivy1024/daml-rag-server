@@ -573,7 +573,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 cache_manager=cache_manager,
                 user_cache=user_cache
             ),
-            node_store_session(state),
+            node_store_session(state, conversation_memory=self.conversation_memory),
             return_exceptions=True
         )
         
