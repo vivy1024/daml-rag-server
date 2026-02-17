@@ -1,12 +1,43 @@
-# 使用预构建基础镜像（包含系统依赖+Python包+GTE-Large-zh模型）
-# 基础镜像更新方式：修改requirements.txt后，本地运行：
-#   docker build -f Dockerfile.base -t crpi-32sc66smgb44ld25.cn-hangzhou.personal.cr.aliyuncs.com/yuzhenfitness/daml-rag-base:latest .
-#   docker push crpi-32sc66smgb44ld25.cn-hangzhou.personal.cr.aliyuncs.com/yuzhenfitness/daml-rag-base:latest
-FROM crpi-32sc66smgb44ld25.cn-hangzhou.personal.cr.aliyuncs.com/yuzhenfitness/daml-rag-base:latest
+# syntax=docker/dockerfile:1
+# 使用 BuildKit cache mount 持久化依赖和模型缓存
+# Zeabur 支持 BuildKit，后续构建命中缓存后只需几分钟
+#
+# 旧方案（已弃用）：FROM 阿里云预构建镜像(4.39GB) → 每次构建都要拉取
+# 新方案：FROM python:3.11-slim + --mount=type=cache → 首次慢，后续快
+
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# 只复制应用代码（依赖和模型已在基础镜像中）
+# 系统依赖（这层变化少，Docker layer cache 会缓存）
+RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python 依赖（--mount=type=cache 持久化 pip 下载缓存）
+COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --upgrade pip && \
+    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+
+# 下载 GTE-Large-zh 模型
+# cache mount 在 /tmp/hf_cache 持久化下载缓存，然后复制到镜像内的最终位置
+# 首次构建：下载 ~1.2GB → 复制到镜像
+# 后续构建：缓存命中 → 直接复制（秒级）
+ENV HF_ENDPOINT=https://hf-mirror.com
+RUN --mount=type=cache,target=/tmp/hf_cache \
+    HF_HOME=/tmp/hf_cache python -c "\
+from sentence_transformers import SentenceTransformer; \
+model = SentenceTransformer('thenlper/gte-large-zh'); \
+print('GTE-Large-zh ready')" && \
+    mkdir -p /root/.cache && \
+    cp -r /tmp/hf_cache /root/.cache/huggingface
+
+# 复制应用代码
 COPY . .
 
 # 创建数据目录和日志目录
