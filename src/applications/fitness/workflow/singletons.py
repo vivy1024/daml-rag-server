@@ -340,6 +340,7 @@ def reset_all_singletons():
     global _llm_degradation_manager_instance, _concurrency_limiter_instance
     global _performance_monitor_instance, _mcp_orchestrator_instance
     global _mcp_tool_registry_instance, _hybrid_search_engine_instance
+    global _cypher_executor_instance
 
     _user_cache_instance = None
     _membership_cache_instance = None
@@ -352,7 +353,8 @@ def reset_all_singletons():
     _mcp_orchestrator_instance = None
     _mcp_tool_registry_instance = None
     _hybrid_search_engine_instance = None
-    
+    _cypher_executor_instance = None
+
     logger.info("🔄 所有单例实例已重置")
 
 
@@ -371,6 +373,32 @@ def get_workflow_caches():
         "user_cache": _user_cache_instance,
         "membership_cache": _membership_cache_instance
     }
+
+
+# ============ Neo4j Cypher 直查执行器（Phase 4C 意图路由） ============
+
+_cypher_executor_instance = None
+
+
+def get_cypher_executor():
+    """
+    获取 CypherQueryExecutor 单例（Phase 4C 意图路由）
+
+    初始化失败时静默降级返回 None，不影响主流程。
+
+    Returns:
+        CypherQueryExecutor 实例，或 None（初始化失败时）
+    """
+    global _cypher_executor_instance
+    if _cypher_executor_instance is None:
+        try:
+            from ...framework.retrieval.cypher_templates import CypherQueryExecutor
+            _cypher_executor_instance = CypherQueryExecutor()
+            logger.info("✅ CypherQueryExecutor初始化完成（Neo4j意图路由）")
+        except Exception as e:
+            logger.warning(f"⚠️ CypherQueryExecutor初始化失败，结构化查询将降级到混合检索: {e}")
+            _cypher_executor_instance = None
+    return _cypher_executor_instance
 
 
 # ============ 混合检索引擎（BM25 + 向量 + RRF） ============
@@ -566,6 +594,8 @@ __all__ = [
     "get_concurrency_limiter",
     # 混合检索引擎
     "get_hybrid_search_engine",
+    # Neo4j Cypher 直查（Phase 4C）
+    "get_cypher_executor",
     # MCP编排器和工具注册表
     "get_mcp_orchestrator",
     "get_mcp_tool_registry",
