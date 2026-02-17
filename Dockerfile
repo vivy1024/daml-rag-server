@@ -18,10 +18,15 @@ RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.li
     npm \
     && rm -rf /var/lib/apt/lists/*
 
+# 先安装 PyTorch CPU 版（服务器无GPU，省掉~4GB CUDA依赖）
+# 必须在 requirements.txt 之前安装，否则 sentence-transformers/FlagEmbedding 会拉 GPU 版
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --upgrade pip && \
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
 # Python 依赖（--mount=type=cache 持久化 pip 下载缓存）
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --upgrade pip && \
     pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 # 下载 GTE-Large-zh 模型
