@@ -15,6 +15,7 @@ Layer3 业务规则引擎 - 增强版
 作者: 薛小川
 """
 
+import asyncio
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
@@ -232,7 +233,86 @@ class Layer3RuleEngine:
             self._body_type_preferences = {}
             self._joint_keywords = {}
             logger.warning("未配置domain_adapter，使用默认空配置")
-    
+
+    def _query_neo4j_postural_relations_sync(
+        self,
+        exercise_name: str,
+        postural_issues: list
+    ) -> dict:
+        """
+        同步查询Neo4j中动作与体态问题的CORRECTS/AGGRAVATES关系
+
+        此方法为同步方法，需要通过asyncio.to_thread()在async上下文中调用。
+
+        Args:
+            exercise_name: 动作中文名称
+            postural_issues: 用户体态问题列表（如["骨盆前倾", "圆肩"]）
+
+        Returns:
+            dict: {
+                "corrects": bool, "aggravates": bool,
+                "corrects_details": [...], "aggravates_details": [...]
+            }
+        """
+        empty_result = {
+            "corrects": False, "aggravates": False,
+            "corrects_details": [], "aggravates_details": []
+        }
+
+        if not self.neo4j_client or not hasattr(self.neo4j_client, 'get_session'):
+            return empty_result
+
+        try:
+            # 标准化体态问题名称
+            issue_names = []
+            for issue in postural_issues:
+                if isinstance(issue, str):
+                    issue_names.append(issue)
+                elif isinstance(issue, dict):
+                    issue_names.append(issue.get("name", ""))
+            issue_names = [n for n in issue_names if n]
+
+            if not issue_names or not exercise_name:
+                return empty_result
+
+            # 查询CORRECTS关系
+            corrects_query = """
+            MATCH (e:Exercise)-[r:CORRECTS]->(p:PosturalIssue)
+            WHERE (e.name_zh CONTAINS $exercise_name OR e.name CONTAINS $exercise_name)
+              AND (p.name_zh IN $issue_names OR p.name IN $issue_names)
+            RETURN p.name_zh AS issue_name, p.name AS issue_name_en,
+                   r.reason AS reason, e.name_zh AS exercise_name_zh
+            """
+
+            # 查询AGGRAVATES关系
+            aggravates_query = """
+            MATCH (e:Exercise)-[r:AGGRAVATES]->(p:PosturalIssue)
+            WHERE (e.name_zh CONTAINS $exercise_name OR e.name CONTAINS $exercise_name)
+              AND (p.name_zh IN $issue_names OR p.name IN $issue_names)
+            RETURN p.name_zh AS issue_name, p.name AS issue_name_en,
+                   r.reason AS reason, e.name_zh AS exercise_name_zh
+            """
+
+            params = {"exercise_name": exercise_name, "issue_names": issue_names}
+
+            with self.neo4j_client.get_session() as session:
+                corrects_result = session.run(corrects_query, params)
+                corrects_records = [record.data() for record in corrects_result]
+
+                aggravates_result = session.run(aggravates_query, params)
+                aggravates_records = [record.data() for record in aggravates_result]
+
+            return {
+                "corrects": bool(corrects_records),
+                "aggravates": bool(aggravates_records),
+                "corrects_details": corrects_records,
+                "aggravates_details": aggravates_records
+            }
+
+        except Exception as e:
+            logger.warning(f"Neo4j体态关系查询失败（降级到关键词匹配）: {e}")
+            return empty_result
+
     async def apply_all_rules(
         self,
         candidates: List[Dict[str, Any]],
@@ -601,71 +681,126 @@ class Layer3RuleEngine:
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """
         体态矫正规则 - 推荐矫正动作并避免加重动作
-        
+
         Requirements: 新增（体态矫正功能）
-        
+
         规则逻辑:
         - 获取用户体态问题
-        - 优先推荐矫正动作（CORRECTS关系）
-        - 降低或排除加重动作（AGGRAVATES关系）
-        
+        - 优先：查询Neo4j CORRECTS/AGGRAVATES关系进行精确分类
+        - 降级：使用domain_adapter关键词匹配
+
         框架层领域无关 - Requirements 6.1, 6.2:
         - 体态问题配置通过domain_adapter获取
+        - Neo4j关系数据作为优先数据源
         """
         health_profile = user_profile.get("health_profile", {})
         postural_issues = health_profile.get("postural_issues", [])
-        
+
         if not postural_issues:
             return candidates, {"skipped": True, "reason": "无体态问题"}
-        
-        # 使用实例变量（从domain_adapter加载）
-        postural_config = self._postural_issue_config
-        
-        if not postural_config:
-            return candidates, {"skipped": True, "reason": "未配置体态问题数据"}
-        
-        corrective_keywords = set()
-        aggravating_keywords = set()
-        
-        # 收集所有体态问题的关键词
-        for issue in postural_issues:
-            issue_name = issue if isinstance(issue, str) else issue.get("name", "")
-            if issue_name in postural_config:
-                config = postural_config[issue_name]
-                corrective_keywords.update(config.get("corrective_keywords", []))
-                aggravating_keywords.update(config.get("aggravating_keywords", []))
-        
+
         # 分类动作
         corrective = []
         neutral = []
         aggravating = []
-        
-        for candidate in candidates:
-            exercise_name = candidate.get("exercise_name_zh", "")
-            
-            # 检查是否为矫正动作
-            is_corrective = any(kw in exercise_name for kw in corrective_keywords)
-            # 检查是否为加重动作
-            is_aggravating = any(kw in exercise_name for kw in aggravating_keywords)
-            
-            if is_corrective and not is_aggravating:
-                candidate["postural_boost"] = 0.3
-                corrective.append(candidate)
-            elif is_aggravating:
-                candidate["postural_penalty"] = -0.2
-                aggravating.append(candidate)
-            else:
-                neutral.append(candidate)
-        
+        neo4j_used = False
+        neo4j_corrects_total = 0
+        neo4j_aggravates_total = 0
+
+        # ============ 优先：Neo4j CORRECTS/AGGRAVATES关系查询 ============
+        if self.neo4j_client and hasattr(self.neo4j_client, 'get_session'):
+            try:
+                for candidate in candidates:
+                    exercise_name = candidate.get("exercise_name_zh", "")
+                    if not exercise_name:
+                        neutral.append(candidate)
+                        continue
+
+                    # 通过asyncio.to_thread包装同步Neo4j查询
+                    relations = await asyncio.to_thread(
+                        self._query_neo4j_postural_relations_sync,
+                        exercise_name,
+                        postural_issues
+                    )
+
+                    if relations["corrects"] and not relations["aggravates"]:
+                        candidate["postural_boost"] = 0.3
+                        candidate["postural_neo4j_corrects"] = [
+                            d.get("issue_name", "") for d in relations["corrects_details"]
+                        ]
+                        corrective.append(candidate)
+                        neo4j_corrects_total += 1
+                    elif relations["aggravates"]:
+                        candidate["postural_penalty"] = -0.2
+                        candidate["postural_neo4j_aggravates"] = [
+                            d.get("issue_name", "") for d in relations["aggravates_details"]
+                        ]
+                        aggravating.append(candidate)
+                        neo4j_aggravates_total += 1
+                    else:
+                        neutral.append(candidate)
+
+                # 只要有任何Neo4j查询成功执行（即使没有匹配结果），标记为已使用
+                neo4j_used = True
+
+            except Exception as e:
+                logger.warning(f"Neo4j体态关系批量查询失败，降级到关键词匹配: {e}")
+                # 重置分类列表，准备用关键词方式重新分类
+                corrective = []
+                neutral = []
+                aggravating = []
+                neo4j_used = False
+
+        # ============ 降级：domain_adapter关键词匹配 ============
+        if not neo4j_used:
+            # 使用实例变量（从domain_adapter加载）
+            postural_config = self._postural_issue_config
+
+            if not postural_config:
+                return candidates, {"skipped": True, "reason": "未配置体态问题数据且Neo4j不可用"}
+
+            corrective_keywords = set()
+            aggravating_keywords = set()
+
+            # 收集所有体态问题的关键词
+            for issue in postural_issues:
+                issue_name = issue if isinstance(issue, str) else issue.get("name", "")
+                if issue_name in postural_config:
+                    config = postural_config[issue_name]
+                    corrective_keywords.update(config.get("corrective_keywords", []))
+                    aggravating_keywords.update(config.get("aggravating_keywords", []))
+
+            for candidate in candidates:
+                exercise_name = candidate.get("exercise_name_zh", "")
+
+                # 检查是否为矫正动作
+                is_corrective = any(kw in exercise_name for kw in corrective_keywords)
+                # 检查是否为加重动作
+                is_aggravating = any(kw in exercise_name for kw in aggravating_keywords)
+
+                if is_corrective and not is_aggravating:
+                    candidate["postural_boost"] = 0.3
+                    corrective.append(candidate)
+                elif is_aggravating:
+                    candidate["postural_penalty"] = -0.2
+                    aggravating.append(candidate)
+                else:
+                    neutral.append(candidate)
+
         # 矫正动作优先，加重动作放最后
         sorted_candidates = corrective + neutral + aggravating
-        
-        return sorted_candidates, {
+
+        metadata = {
             "postural_issues": postural_issues,
             "corrective_count": len(corrective),
             "aggravating_count": len(aggravating),
-            "corrective_keywords": list(corrective_keywords)[:5]
+            "data_source": "neo4j" if neo4j_used else "keyword_fallback"
         }
+        if neo4j_used:
+            metadata["neo4j_corrects_matched"] = neo4j_corrects_total
+            metadata["neo4j_aggravates_matched"] = neo4j_aggravates_total
+
+        return sorted_candidates, metadata
 
     
     # ============ 恢复规则 ============

@@ -153,6 +153,41 @@ CYPHER_TEMPLATES: Dict[StructuredQueryType, str] = {
         ORDER BY s.gender, s.bodyweight_kg, s.level
         LIMIT 20
     """,
+
+    # 健身水平查询（级别 → 适合的动作）
+    StructuredQueryType.EXERCISE_BY_LEVEL: """
+        MATCH (e:Exercise)-[r:SUITABLE_FOR_LEVEL]->(l:TrainingLevel)
+        WHERE l.name CONTAINS $keyword OR l.name_zh CONTAINS $keyword
+           OR l.name_en CONTAINS $keyword
+        RETURN e.name_zh AS exercise, l.name AS fitness_level,
+               l.name_zh AS level_zh, l.name_en AS level_en,
+               e.difficulty AS difficulty, e.equipment AS equipment,
+               e.primary_muscles AS primary_muscles
+        ORDER BY e.name_zh
+        LIMIT 25
+    """,
+
+    # 力类型查询（力类型 → 动作）
+    StructuredQueryType.EXERCISE_BY_FORCE: """
+        MATCH (e:Exercise)-[r:USES_FORCE]->(f:ForceType)
+        WHERE f.name CONTAINS $keyword OR f.name_zh CONTAINS $keyword
+        RETURN e.name_zh AS exercise, f.name AS force_type,
+               f.name_zh AS force_type_zh,
+               e.difficulty AS difficulty, e.equipment AS equipment
+        ORDER BY e.name_zh
+        LIMIT 25
+    """,
+
+    # 运动学机制查询（机制类型 → 动作）
+    StructuredQueryType.EXERCISE_BY_MECHANIC: """
+        MATCH (e:Exercise)-[r:HAS_MECHANIC]->(m:MechanicType)
+        WHERE m.name CONTAINS $keyword OR m.name_zh CONTAINS $keyword
+        RETURN e.name_zh AS exercise, m.name AS mechanic_type,
+               m.name_zh AS mechanic_type_zh,
+               e.difficulty AS difficulty, e.equipment AS equipment
+        ORDER BY e.name_zh
+        LIMIT 25
+    """,
 }
 
 # ─── 肌肉分组映射（用户常用名 → Neo4j group 字段值） ─────────
@@ -408,6 +443,29 @@ class CypherQueryExecutor:
                 f"{row.get('level', '未知')}水平 = "
                 f"{row.get('weight_kg', '?')}kg "
                 f"({row.get('weight_percentage', '?')}%体重)"
+            )
+
+        elif query_type == StructuredQueryType.EXERCISE_BY_LEVEL:
+            muscles = row.get('primary_muscles', '?')
+            return (
+                f"- {row.get('exercise', '?')} "
+                f"(级别: {row.get('level_zh', row.get('fitness_level', '?'))}, "
+                f"主要肌群: {muscles}, "
+                f"难度: {row.get('difficulty', '?')})"
+            )
+
+        elif query_type == StructuredQueryType.EXERCISE_BY_FORCE:
+            return (
+                f"- {row.get('exercise', '?')} "
+                f"(力类型: {row.get('force_type_zh', row.get('force_type', '?'))}, "
+                f"难度: {row.get('difficulty', '?')})"
+            )
+
+        elif query_type == StructuredQueryType.EXERCISE_BY_MECHANIC:
+            return (
+                f"- {row.get('exercise', '?')} "
+                f"(机制: {row.get('mechanic_type_zh', row.get('mechanic_type', '?'))}, "
+                f"难度: {row.get('difficulty', '?')})"
             )
 
         return str(row)

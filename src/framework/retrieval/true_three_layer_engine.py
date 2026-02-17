@@ -1198,7 +1198,7 @@ class TrueThreeLayerEngine:
 
                 # 规则2: 安全性检查
                 if safety_check:
-                    if not self._validate_safety(candidate, user_profile):
+                    if not await self._validate_safety(candidate, user_profile):
                         continue
 
                 # 规则3: 器械可用性
@@ -1288,6 +1288,79 @@ class TrueThreeLayerEngine:
 
     # ============ 业务规则方法 ============
 
+    def _query_neo4j_contraindications_sync(
+        self,
+        exercise_name: str,
+        user_conditions: list
+    ) -> list:
+        """
+        同步查询Neo4j中动作的禁忌症关系（CONTRAINDICATED_FOR）
+
+        通过exercise名称模糊匹配，返回与用户健康状况相关的禁忌信息。
+        此方法为同步方法，需要通过asyncio.to_thread()在async上下文中调用。
+        """
+        if not self.neo4j_available or not self.neo4j_manager:
+            return []
+
+        try:
+            # 查询该动作的所有禁忌症关系
+            query = """
+            MATCH (e:Exercise)-[r:CONTRAINDICATED_FOR]->(injury:InjuryType)
+            WHERE e.name_zh CONTAINS $exercise_name
+               OR e.name CONTAINS $exercise_name
+            RETURN
+              injury.name_zh AS injury_name_zh,
+              injury.name_en AS injury_name_en,
+              injury.category_zh AS category_zh,
+              r.severity AS severity,
+              r.risk_level AS risk_level,
+              r.reason AS reason,
+              r.severity_score AS severity_score,
+              injury.affected_body_parts AS body_parts
+            ORDER BY r.severity_score DESC
+            """
+
+            with self.neo4j_manager.get_session() as session:
+                result = session.run(query, {"exercise_name": exercise_name})
+                records = [record.data() for record in result]
+
+            if not records:
+                return []
+
+            # 过滤出与用户健康状况匹配的禁忌
+            matched = []
+            user_conditions_lower = [str(c).lower() for c in user_conditions if c]
+
+            for record in records:
+                if record.get("injury_name_zh") is None:
+                    continue
+
+                injury_name = (record.get("injury_name_zh") or "").lower()
+                injury_name_en = (record.get("injury_name_en") or "").lower()
+                category = (record.get("category_zh") or "").lower()
+                body_parts = record.get("body_parts") or []
+                if isinstance(body_parts, str):
+                    body_parts = [body_parts]
+                body_parts_lower = [bp.lower() for bp in body_parts]
+
+                # 检查用户健康状况是否匹配该禁忌
+                for cond in user_conditions_lower:
+                    if not cond:
+                        continue
+                    # 精确或模糊匹配：损伤名称、英文名、分类、受影响部位
+                    if (cond in injury_name or injury_name in cond or
+                        cond in injury_name_en or injury_name_en in cond or
+                        cond in category or category in cond or
+                        any(cond in bp or bp in cond for bp in body_parts_lower)):
+                        matched.append(record)
+                        break
+
+            return matched
+
+        except Exception as e:
+            logger.warning(f"Neo4j禁忌症查询失败（降级到payload方式）: {e}")
+            return []
+
     def _match_fitness_level(
         self,
         exercise: Dict[str, Any],
@@ -1311,21 +1384,22 @@ class TrueThreeLayerEngine:
         allowed_difficulties = level_hierarchy.get(user_level, ["intermediate", "中级"])
         return any(diff in exercise_difficulty for diff in allowed_difficulties)
 
-    def _validate_safety(
+    async def _validate_safety(
         self,
         exercise: Dict[str, Any],
         user_profile: Dict[str, Any]
     ) -> bool:
         """
         增强版安全性验证 (Requirements 4.3, 4.6)
-        
+
         检查项目：
-        1. 禁忌症匹配（绝对禁忌/相对禁忌/谨慎使用）
+        1. Neo4j禁忌症查询（优先，基于CONTRAINDICATED_FOR关系）
+        1b. Payload禁忌症匹配（Neo4j不可用时的降级方案）
         2. 年龄限制
         3. 健康状况检查（慢性病、损伤史）
         4. 关节损伤检查
         5. 体态问题检查
-        
+
         框架层领域无关（Requirements 6.1, 6.2）：
         - 安全规则数据从领域适配器获取
         - 如果没有适配器，跳过领域特定检查
@@ -1334,17 +1408,14 @@ class TrueThreeLayerEngine:
             return True
 
         exercise_name = exercise.get("exercise_name_zh", "") or exercise.get("name", "Unknown")
-        
-        # ============ 1. 禁忌症检查（支持severity级别）============
-        contraindications = exercise.get("contraindications", [])
-        user_conditions = user_profile.get("medical_conditions", [])
-        
+
         # 获取健康档案
         health_profile = user_profile.get("health_profile", {})
-        
+        user_conditions = user_profile.get("medical_conditions", [])
+
         # 整合所有健康状况
         all_conditions = set(user_conditions)
-        
+
         # 添加慢性病
         chronic_conditions = health_profile.get("chronic_conditions", [])
         for condition in chronic_conditions:
@@ -1352,25 +1423,67 @@ class TrueThreeLayerEngine:
                 all_conditions.add(condition.get("name", ""))
             else:
                 all_conditions.add(str(condition))
-        
+
         # 添加当前症状
         current_symptoms = health_profile.get("current_symptoms", [])
         for symptom in current_symptoms:
             all_conditions.add(str(symptom))
-        
-        # 检查禁忌症匹配
-        for condition in all_conditions:
-            if not condition:
-                continue
-            # 精确匹配
-            if condition in contraindications:
-                logger.debug(f"安全过滤: {exercise_name} - 禁忌症 {condition}")
-                return False
-            # 模糊匹配（部分包含）
-            for contra in contraindications:
-                if isinstance(contra, str) and (condition in contra or contra in condition):
-                    logger.debug(f"安全过滤: {exercise_name} - 禁忌症匹配 {condition} ~ {contra}")
+
+        # ============ 1. Neo4j禁忌症查询（优先）============
+        # 尝试从Neo4j CONTRAINDICATED_FOR关系获取精确禁忌数据
+        neo4j_checked = False
+        if self.neo4j_available and self.neo4j_manager and exercise_name and all_conditions:
+            try:
+                neo4j_contras = await asyncio.to_thread(
+                    self._query_neo4j_contraindications_sync,
+                    exercise_name,
+                    list(all_conditions)
+                )
+                if neo4j_contras:
+                    neo4j_checked = True
+                    for contra in neo4j_contras:
+                        severity = (contra.get("severity") or "relative").lower()
+                        if severity == "absolute":
+                            # 绝对禁忌：直接过滤
+                            logger.debug(
+                                f"安全过滤(Neo4j): {exercise_name} - 绝对禁忌 "
+                                f"{contra.get('injury_name_zh')} (severity_score={contra.get('severity_score')})"
+                            )
+                            return False
+                        elif severity == "relative":
+                            # 相对禁忌：高难度时过滤
+                            difficulty = (exercise.get("difficulty_zh") or exercise.get("difficulty_en") or "").lower()
+                            if "advanced" in difficulty or "高级" in difficulty or "elite" in difficulty:
+                                logger.debug(
+                                    f"安全过滤(Neo4j): {exercise_name} - 相对禁忌+高难度 "
+                                    f"{contra.get('injury_name_zh')}"
+                                )
+                                return False
+                        # caution级别：不过滤，仅记录
+                        elif severity == "caution":
+                            logger.debug(
+                                f"安全提示(Neo4j): {exercise_name} - 谨慎使用 "
+                                f"{contra.get('injury_name_zh')}"
+                            )
+            except Exception as e:
+                logger.warning(f"Neo4j禁忌症异步查询失败: {e}")
+
+        # ============ 1b. Fallback: Payload禁忌症匹配 ============
+        # Neo4j未返回结果时，使用exercise payload中的contraindications字段
+        if not neo4j_checked:
+            contraindications = exercise.get("contraindications", [])
+            for condition in all_conditions:
+                if not condition:
+                    continue
+                # 精确匹配
+                if condition in contraindications:
+                    logger.debug(f"安全过滤(payload): {exercise_name} - 禁忌症 {condition}")
                     return False
+                # 模糊匹配（部分包含）
+                for contra in contraindications:
+                    if isinstance(contra, str) and (condition in contra or contra in condition):
+                        logger.debug(f"安全过滤(payload): {exercise_name} - 禁忌症匹配 {condition} ~ {contra}")
+                        return False
 
         # ============ 2. 年龄限制检查 ============
         basic_info = user_profile.get("basic_info", {})

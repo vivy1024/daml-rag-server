@@ -31,7 +31,7 @@ import time
 import hashlib
 import json
 import asyncio
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple
 
 from .state import WorkflowState, StateUpdate, WorkflowStep
 
