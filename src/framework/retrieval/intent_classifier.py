@@ -38,6 +38,9 @@ class StructuredQueryType(Enum):
     EXERCISE_DETAILS = "exercise_details"       # 动作详情
     MUSCLE_CAPACITY = "muscle_capacity"         # 肌肉训练容量
     EXERCISE_BY_EQUIPMENT = "exercise_by_equipment"  # 器械→动作
+    SAFETY_CONTRAINDICATIONS = "safety_contraindications"  # 安全禁忌查询
+    POSTURAL_EXERCISES = "postural_exercises"              # 体态矫正动作查询
+    STRENGTH_STANDARDS = "strength_standards"              # 力量标准查询
 
 
 @dataclass
@@ -86,6 +89,29 @@ EQUIPMENT_KEYWORDS = [
     "自重", "徒手",
 ]
 
+# 安全禁忌相关关键词（损伤/疾病名）
+INJURY_KEYWORDS = [
+    "腰椎间盘突出", "膝盖损伤", "肩袖损伤", "高血压", "心脏病", "骨质疏松",
+    "下背部疼痛", "前交叉韧带", "膝盖受伤", "髌骨软化", "髂胫束",
+    "肩峰撞击", "肩部受伤", "腕管综合征", "腕部受伤",
+    "跟腱炎", "足底筋膜炎", "踝关节扭伤", "颈椎病", "颈部受伤",
+    "网球肘", "高尔夫球肘", "髋关节撞击", "髋滑囊炎", "髋部受伤",
+    "腰部损伤", "膝盖", "肩部", "手腕", "脚踝", "颈部", "肘部", "髋部",
+]
+
+# 体态问题关键词
+POSTURAL_KEYWORDS = [
+    "圆肩", "驼背", "骨盆前倾", "骨盆后倾", "头前伸", "脊柱侧弯",
+    "膝内扣", "膝超伸", "扁平足", "高弓足", "胸椎后凸", "腰椎前凸",
+    "膝内翻", "膝外翻", "X型腿", "O型腿",
+]
+
+# 力量标准相关关键词
+STRENGTH_STANDARD_KEYWORDS = [
+    "力量标准", "力量水平", "什么水平", "多少算", "strength standard",
+    "多少公斤", "多重算", "能推多少", "能蹲多少", "能拉多少",
+]
+
 
 # ─── 结构化查询模式 ─────────────────────────────────
 
@@ -129,6 +155,29 @@ MUSCLE_CAPACITY_PATTERNS = [
     r"(.+?)(?:的)?(?:MEV|MAV|MRV|训练频率|恢复时间)",
 ]
 
+# 模式：安全禁忌（"腰椎间盘突出不能做什么"、"膝盖损伤的禁忌动作"）
+SAFETY_CONTRAINDICATION_PATTERNS = [
+    r"(.+?)(?:不能做|不适合做|禁忌|不可以做)(?:什么|哪些?)?(?:动作|运动|训练)?",
+    r"(.+?)(?:的)?(?:禁忌|禁忌症|禁忌动作|危险动作|不宜做的动作)",
+    r"(?:有|患有|得了)(.+?)(?:能|可以|适合)(?:做|练)(?:什么|哪些?)?",
+    r"(.+?)(?:患者|人群)(?:不能|不适合|应该避免)(?:做|练)?(?:什么|哪些?)?(?:动作|运动)?",
+]
+
+# 模式：体态矫正（"圆肩怎么矫正"、"骨盆前倾做什么动作"）
+POSTURAL_EXERCISE_PATTERNS = [
+    r"(.+?)(?:怎么矫正|如何矫正|怎么改善|如何改善|怎么纠正|如何纠正|怎么缓解)",
+    r"(.+?)(?:矫正|改善|纠正|缓解)(?:动作|训练|方法|运动)",
+    r"(?:矫正|改善|纠正|缓解)(.+?)(?:的|用什么)?(?:动作|训练|方法|运动)",
+    r"(.+?)(?:做什么|练什么)(?:动作|运动)?(?:好|可以改善)?",
+]
+
+# 模式：力量标准（"深蹲多少公斤算中级"、"卧推力量标准"）
+STRENGTH_STANDARD_PATTERNS = [
+    r"(.+?)(?:的)?(?:力量标准|力量水平|什么水平)",
+    r"(.+?)(?:多少|多重)(?:公斤|kg|KG)?(?:算|是)(?:什么水平|初级|中级|高级|精英)?",
+    r"(.+?)(?:能|应该)(?:推|蹲|拉|举)(?:多少|多重)",
+]
+
 
 def classify_intent(query: str) -> IntentResult:
     """
@@ -156,8 +205,10 @@ def classify_intent(query: str) -> IntentResult:
     has_exercise = any(kw in query_clean for kw in EXERCISE_KEYWORDS)
     has_muscle = any(kw in query_clean for kw in MUSCLE_KEYWORDS)
     has_equipment = any(kw in query_clean for kw in EQUIPMENT_KEYWORDS)
+    has_injury = any(kw in query_clean for kw in INJURY_KEYWORDS)
+    has_postural = any(kw in query_clean for kw in POSTURAL_KEYWORDS)
 
-    if (has_exercise or has_muscle or has_equipment) and len(query_clean) > 10:
+    if (has_exercise or has_muscle or has_equipment or has_injury or has_postural) and len(query_clean) > 10:
         # 有实体但查询较长/复杂 → hybrid
         entity = _extract_first_entity(query_clean)
         logger.info(
@@ -267,6 +318,48 @@ def _match_structured_patterns(query: str) -> Optional[IntentResult]:
                     reason=f"肌肉训练容量查询: {entity}"
                 )
 
+    # 安全禁忌查询
+    for pattern in SAFETY_CONTRAINDICATION_PATTERNS:
+        m = re.search(pattern, query)
+        if m:
+            entity = m.group(1).strip()
+            if _is_valid_injury(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.9,
+                    structured_type=StructuredQueryType.SAFETY_CONTRAINDICATIONS,
+                    extracted_entity=entity,
+                    reason=f"安全禁忌查询: {entity}"
+                )
+
+    # 体态矫正动作查询
+    for pattern in POSTURAL_EXERCISE_PATTERNS:
+        m = re.search(pattern, query)
+        if m:
+            entity = m.group(1).strip()
+            if _is_valid_postural(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.9,
+                    structured_type=StructuredQueryType.POSTURAL_EXERCISES,
+                    extracted_entity=entity,
+                    reason=f"体态矫正查询: {entity}"
+                )
+
+    # 力量标准查询
+    for pattern in STRENGTH_STANDARD_PATTERNS:
+        m = re.search(pattern, query)
+        if m:
+            entity = m.group(1).strip()
+            if _is_valid_exercise(entity) or _is_valid_strength_query(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.85,
+                    structured_type=StructuredQueryType.STRENGTH_STANDARDS,
+                    extracted_entity=entity,
+                    reason=f"力量标准查询: {entity}"
+                )
+
     return None
 
 
@@ -291,6 +384,27 @@ def _is_valid_equipment(entity: str) -> bool:
     return any(kw in entity for kw in EQUIPMENT_KEYWORDS)
 
 
+def _is_valid_injury(entity: str) -> bool:
+    """检查是否是有效的损伤/疾病名"""
+    if not entity or len(entity) > 15:
+        return False
+    return any(kw in entity for kw in INJURY_KEYWORDS)
+
+
+def _is_valid_postural(entity: str) -> bool:
+    """检查是否是有效的体态问题名"""
+    if not entity or len(entity) > 15:
+        return False
+    return any(kw in entity for kw in POSTURAL_KEYWORDS)
+
+
+def _is_valid_strength_query(entity: str) -> bool:
+    """检查是否是有效的力量标准查询实体"""
+    if not entity or len(entity) > 15:
+        return False
+    return any(kw in entity for kw in STRENGTH_STANDARD_KEYWORDS)
+
+
 def _extract_first_entity(query: str) -> Optional[str]:
     """从查询中提取第一个匹配的实体"""
     for kw in EXERCISE_KEYWORDS:
@@ -300,6 +414,12 @@ def _extract_first_entity(query: str) -> Optional[str]:
         if kw in query:
             return kw
     for kw in EQUIPMENT_KEYWORDS:
+        if kw in query:
+            return kw
+    for kw in INJURY_KEYWORDS:
+        if kw in query:
+            return kw
+    for kw in POSTURAL_KEYWORDS:
         if kw in query:
             return kw
     return None

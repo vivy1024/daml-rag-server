@@ -109,6 +109,50 @@ CYPHER_TEMPLATES: Dict[StructuredQueryType, str] = {
         ORDER BY e.difficulty
         LIMIT 20
     """,
+
+    # 安全禁忌查询（损伤/疾病 → 禁忌动作）
+    StructuredQueryType.SAFETY_CONTRAINDICATIONS: """
+        MATCH (e:Exercise)-[r:CONTRAINDICATED_FOR]->(i:InjuryType)
+        WHERE i.name CONTAINS $keyword OR i.description CONTAINS $keyword
+           OR i.category CONTAINS $keyword
+        RETURN e.name_zh AS exercise, i.name AS injury_type,
+               i.category AS category, i.description AS description,
+               i.intensity_limit AS intensity_limit,
+               e.difficulty AS difficulty, e.safety_level AS safety_level
+        ORDER BY e.difficulty
+        LIMIT 20
+    """,
+
+    # 体态矫正动作查询（体态问题 → 矫正/加重动作）
+    StructuredQueryType.POSTURAL_EXERCISES: """
+        MATCH (e:Exercise)-[r:CORRECTS]->(p:PosturalIssue)
+        WHERE p.name_zh CONTAINS $keyword OR p.name CONTAINS $keyword
+        RETURN e.name_zh AS exercise, p.name_zh AS postural_issue,
+               'corrects' AS relation_type, p.category AS category,
+               e.difficulty AS difficulty
+        UNION ALL
+        MATCH (e:Exercise)-[r:AGGRAVATES]->(p:PosturalIssue)
+        WHERE p.name_zh CONTAINS $keyword OR p.name CONTAINS $keyword
+        RETURN e.name_zh AS exercise, p.name_zh AS postural_issue,
+               'aggravates' AS relation_type, p.category AS category,
+               e.difficulty AS difficulty
+        LIMIT 30
+    """,
+
+    # 力量标准查询（动作 → 各水平力量标准）
+    StructuredQueryType.STRENGTH_STANDARDS: """
+        MATCH (s:StrengthStandard)
+        WHERE s.exercise_name CONTAINS $keyword
+           OR s.exercise_name_zh CONTAINS $keyword
+        RETURN s.exercise_name_zh AS exercise,
+               s.gender AS gender,
+               s.bodyweight_kg AS body_weight,
+               s.level AS level,
+               s.weight_kg AS weight_kg,
+               s.weight_percentage AS weight_percentage
+        ORDER BY s.gender, s.bodyweight_kg, s.level
+        LIMIT 20
+    """,
 }
 
 # ─── 肌肉分组映射（用户常用名 → Neo4j group 字段值） ─────────
@@ -328,6 +372,42 @@ class CypherQueryExecutor:
                 f"「{row.get('exercise', '')}」"
                 f"（难度: {row.get('difficulty', '未知')}, "
                 f"目标肌肉: {muscles or '未知'}）"
+            )
+
+        elif query_type == StructuredQueryType.SAFETY_CONTRAINDICATIONS:
+            return (
+                f"⚠️ 动作「{row.get('exercise', '')}」"
+                f"对「{row.get('injury_type', '')}」"
+                f"（{row.get('category', '未知')}）存在禁忌。"
+                f"强度限制: {row.get('intensity_limit', '未知')}, "
+                f"安全等级: {row.get('safety_level', '未知')}"
+            )
+
+        elif query_type == StructuredQueryType.POSTURAL_EXERCISES:
+            rel = row.get("relation_type", "")
+            if rel == "corrects":
+                return (
+                    f"✅ 动作「{row.get('exercise', '')}」"
+                    f"可以矫正「{row.get('postural_issue', '')}」"
+                    f"（分类: {row.get('category', '未知')}, "
+                    f"难度: {row.get('difficulty', '未知')}）"
+                )
+            else:
+                return (
+                    f"⚠️ 动作「{row.get('exercise', '')}」"
+                    f"可能加重「{row.get('postural_issue', '')}」"
+                    f"（分类: {row.get('category', '未知')}, "
+                    f"难度: {row.get('difficulty', '未知')}）"
+                )
+
+        elif query_type == StructuredQueryType.STRENGTH_STANDARDS:
+            gender_zh = "男性" if row.get("gender") == "male" else "女性"
+            return (
+                f"「{row.get('exercise', '')}」力量标准 — "
+                f"{gender_zh}, 体重{row.get('body_weight', '?')}kg: "
+                f"{row.get('level', '未知')}水平 = "
+                f"{row.get('weight_kg', '?')}kg "
+                f"({row.get('weight_percentage', '?')}%体重)"
             )
 
         return str(row)
