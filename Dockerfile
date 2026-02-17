@@ -30,10 +30,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # 后续构建：缓存命中 → 直接复制（秒级）
 ENV HF_ENDPOINT=https://hf-mirror.com
 RUN --mount=type=cache,target=/tmp/hf_cache \
-    HF_HOME=/tmp/hf_cache python -c "\
-from sentence_transformers import SentenceTransformer; \
-model = SentenceTransformer('thenlper/gte-large-zh'); \
-print('GTE-Large-zh ready')" && \
+    HF_HOME=/tmp/hf_cache python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('thenlper/gte-large-zh'); print('GTE-Large-zh ready')" && \
     mkdir -p /root/.cache && \
     cp -r /tmp/hf_cache /root/.cache/huggingface
 
