@@ -13,6 +13,7 @@ Requirements: 7.1, 7.2
 
 import logging
 import os
+import hmac
 from typing import Optional
 
 from fastapi import Request
@@ -30,17 +31,17 @@ from ...framework.auth.permission_claims import PermissionClaims
 logger = logging.getLogger(__name__)
 audit_logger = logging.getLogger("audit.auth")
 
-# 不需要认证的路径
+# 不需要认证的路径（生产环境不暴露API文档）
+_is_production = os.getenv("APP_ENV", "production") == "production"
 PUBLIC_PATHS = [
-    "/docs",
-    "/redoc",
-    "/openapi.json",
     "/health",
     "/api/health",
     "/health/components",
     "/health/metrics",
     "/",
 ]
+if not _is_production:
+    PUBLIC_PATHS.extend(["/docs", "/redoc", "/openapi.json"])
 
 
 class DualAuthMiddleware(BaseHTTPMiddleware):
@@ -144,7 +145,7 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
         # 2. 降级到X-Internal-Token认证
         internal_token = request.headers.get("X-Internal-Token", "")
         if internal_token and self.legacy_auth_enabled:
-            if self.legacy_token and internal_token == self.legacy_token:
+            if self.legacy_token and hmac.compare_digest(internal_token, self.legacy_token):
                 # 旧模式认证成功，从请求体提取user_id
                 request.state.auth_mode = "legacy_token"
                 request.state.permission_claims = None
