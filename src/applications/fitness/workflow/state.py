@@ -54,6 +54,8 @@ class WorkflowState(TypedDict, total=False):
     # ========== 步骤1-2: 用户上下文 ==========
     user_profile: Optional[Dict[str, Any]]  # 用户档案
     session_id: Optional[str]  # 会话ID
+    conversation_history: Optional[List[Dict[str, str]]]  # 对话历史（LLM格式）
+    conversation_topic_id: Optional[str]  # 当前对话话题ID
     
     # ========== 步骤3: 会员权限 ==========
     membership_info: Optional[Dict[str, Any]]  # 会员信息
@@ -171,6 +173,8 @@ def create_initial_state(
         # 初始化为空/默认值
         "user_profile": None,
         "session_id": None,
+        "conversation_history": None,
+        "conversation_topic_id": None,
         "membership_info": None,
         "is_premium": False,
         "complexity_level": None,

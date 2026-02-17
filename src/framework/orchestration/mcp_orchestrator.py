@@ -60,6 +60,8 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .param_validation_middleware import MCPParamValidator
+
 logger = logging.getLogger(__name__)
 
 
@@ -177,6 +179,9 @@ class MCPOrchestrator:
 
         # MCP客户端池（仅支持Stdio模式）
         self.mcp_client_pool = mcp_client_pool
+
+        # 参数验证中间件
+        self.param_validator = MCPParamValidator()
 
         # 确定MCP模式
         if self.mcp_client_pool:
@@ -535,6 +540,20 @@ class MCPOrchestrator:
                     else:
                         # 对于其他类型，直接使用
                         serializable_params[key] = value
+
+                # Pydantic参数验证 + 自动修复（降级而非报错）
+                _validation_result = self.param_validator.validate_and_fix(
+                    task.tool_name, serializable_params
+                )
+                serializable_params = _validation_result.params
+                if _validation_result.warnings:
+                    self.logger.warning(
+                        f"参数验证警告 [{task.tool_name}]: {_validation_result.warnings}"
+                    )
+                if not _validation_result.is_valid:
+                    self.logger.error(
+                        f"参数验证失败，使用原始参数 [{task.tool_name}]: {_validation_result.errors}"
+                    )
 
                 result = await self._call_mcp_tool(
                     task.mcp_server,
