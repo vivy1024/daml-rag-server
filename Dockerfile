@@ -45,6 +45,10 @@ COPY . .
 # 创建数据目录和日志目录
 RUN mkdir -p /app/data /app/logs /app/mcp-servers
 
+# 创建非root用户运行应用
+RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser && \
+    chown -R appuser:appuser /app
+
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1 \
     LOG_LEVEL=INFO \
@@ -54,6 +58,9 @@ ENV PYTHONUNBUFFERED=1 \
     HF_HUB_OFFLINE=1
 
 EXPOSE 8001
+
+# 切换到非root用户
+USER appuser
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8001/health || exit 1
