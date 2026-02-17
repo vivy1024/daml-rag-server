@@ -9,10 +9,11 @@ API Routes Package
 - 系统健康检查
 - 食物数据查询接口
 - 用户预热接口
+- 对话历史管理接口
 
-版本：v2.2.0
-更新日期：2026-01-02
-重构说明：新增用户预热API
+版本：v2.3.0
+更新日期：2026-02-17
+重构说明：新增对话历史管理API
 """
 
 from fastapi import APIRouter
@@ -22,6 +23,7 @@ from .feedback import router as feedback_router
 from .health import router as health_router
 from .food import router as food_router
 from .user import router as user_router
+from .conversation import router as conversation_router
 
 # 创建主路由器
 api_router = APIRouter()
@@ -55,6 +57,11 @@ api_router.include_router(
 api_router.include_router(
     user_router,
     tags=["User"]
+)
+
+api_router.include_router(
+    conversation_router,
+    tags=["Conversation"]
 )
 
 # 导出路由

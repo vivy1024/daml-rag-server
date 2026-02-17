@@ -198,6 +198,8 @@ class ChatRequest(BaseModel):
     context: Optional[Dict[str, Any]] = Field(default=None, description="上下文信息")
     stream: bool = Field(default=False, description="是否流式返回")
     retrieval_mode: Optional[str] = Field(default="full_three_layer", description="检索模式")
+    mode: Optional[str] = Field(default="auto", description="执行模式: auto/dag/agent")
+    topic_id: Optional[str] = Field(default=None, description="对话话题ID（用于上下文连续性）")
 
 
 class ChatResponse(BaseModel):
