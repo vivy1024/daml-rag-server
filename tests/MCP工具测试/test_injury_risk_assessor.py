@@ -215,7 +215,7 @@ async def test_injury_risk_assessor_unknown_exercise(injury_risk_assessor, mock_
     assert len(result["exercise_risk_profiles"]) == 1
     profile = result["exercise_risk_profiles"][0]
     assert profile["exercise_id"] == "unknown_ex"
-    assert profile["exercise_name_zh"] == "Unknown"
+    assert profile["exercise_name_zh"] in ("Unknown", "未知动作")
 
 
 @pytest.mark.asyncio

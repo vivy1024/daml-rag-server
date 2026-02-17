@@ -28,6 +28,7 @@ TOOL_WHITELIST = {
     "get_user_profile",
     "intelligent_exercise_selector",
     "contraindications_checker",
+    "postural_assessor",
     "injury_risk_assessor",
     "muscle_group_volume_calculator",
     "tdee_calculator",

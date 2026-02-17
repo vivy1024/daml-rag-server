@@ -13,7 +13,7 @@ import time
 import uuid
 from typing import Dict, Any, Optional, AsyncIterator
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from .state import AgentState
 from .graph import build_agent_graph
@@ -49,6 +49,50 @@ class AgentExecutor:
         self.tool_schemas = tool_schemas
         self.graph = build_agent_graph(self.llm_client, mcp_orchestrator, tool_schemas)
 
+    def _build_initial_state(
+        self,
+        user_id: str,
+        query: str,
+        user_profile: Optional[Dict[str, Any]],
+        conversation_history: Optional[list],
+        membership_level: str,
+        max_iterations: int,
+        cost_limit: float,
+    ) -> AgentState:
+        """构建初始状态，将 conversation_history 正确注入 messages"""
+        request_id = str(uuid.uuid4())[:8]
+
+        # 构建消息列表：System → 对话历史 → 当前查询
+        messages = [SystemMessage(content=SYSTEM_PROMPT)]
+        for hist in (conversation_history or []):
+            role = hist.get("role", "")
+            content = hist.get("content", "")
+            if not content:
+                continue
+            if role == "user":
+                messages.append(HumanMessage(content=content))
+            elif role == "assistant":
+                messages.append(AIMessage(content=content))
+        messages.append(HumanMessage(content=query))
+
+        return {
+            "request_id": request_id,
+            "user_id": user_id,
+            "query": query,
+            "user_profile": user_profile,
+            "conversation_history": conversation_history or [],
+            "membership_level": membership_level,
+            "messages": messages,
+            "tool_calls_count": 0,
+            "total_cost": 0.0,
+            "tool_results": [],
+            "max_iterations": max_iterations,
+            "cost_limit": cost_limit,
+            "final_response": None,
+            "errors": [],
+            "step_timings": {},
+        }
+
     async def execute(
         self,
         user_id: str,
@@ -76,28 +120,12 @@ class AgentExecutor:
             包含 final_response, tool_results, step_timings 等的结果字典
         """
         start = time.time()
-        request_id = str(uuid.uuid4())[:8]
 
-        initial_state: AgentState = {
-            "request_id": request_id,
-            "user_id": user_id,
-            "query": query,
-            "user_profile": user_profile,
-            "conversation_history": conversation_history or [],
-            "membership_level": membership_level,
-            "messages": [
-                SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(content=query),
-            ],
-            "tool_calls_count": 0,
-            "total_cost": 0.0,
-            "tool_results": [],
-            "max_iterations": max_iterations,
-            "cost_limit": cost_limit,
-            "final_response": None,
-            "errors": [],
-            "step_timings": {},
-        }
+        initial_state = self._build_initial_state(
+            user_id, query, user_profile, conversation_history,
+            membership_level, max_iterations, cost_limit,
+        )
+        request_id = initial_state["request_id"]
 
         final_state = await self.graph.ainvoke(initial_state)
 
@@ -146,28 +174,10 @@ class AgentExecutor:
             每个节点执行后的状态增量，格式:
             {"node": "agent"|"tools"|"safety_check", "data": {...}}
         """
-        request_id = str(uuid.uuid4())[:8]
-
-        initial_state: AgentState = {
-            "request_id": request_id,
-            "user_id": user_id,
-            "query": query,
-            "user_profile": user_profile,
-            "conversation_history": conversation_history or [],
-            "membership_level": membership_level,
-            "messages": [
-                SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(content=query),
-            ],
-            "tool_calls_count": 0,
-            "total_cost": 0.0,
-            "tool_results": [],
-            "max_iterations": max_iterations,
-            "cost_limit": cost_limit,
-            "final_response": None,
-            "errors": [],
-            "step_timings": {},
-        }
+        initial_state = self._build_initial_state(
+            user_id, query, user_profile, conversation_history,
+            membership_level, max_iterations, cost_limit,
+        )
 
         async for event in self.graph.astream(initial_state):
             for node_name, node_output in event.items():

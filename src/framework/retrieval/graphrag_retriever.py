@@ -21,6 +21,7 @@ GraphRAG 统一检索器 - 基于 neo4j-graphrag-python 官方包
 作者: Carol-AI架构师 (Team Lead 接手完成)
 """
 
+import asyncio
 import logging
 import os
 from typing import Dict, List, Any, Optional
@@ -175,13 +176,15 @@ class FitnessGraphRAGRetriever:
         # 尝试使用新的 GraphRAG 检索
         try:
             if mode == "hybrid" and self._hybrid_retriever:
-                result = self._hybrid_retriever.search(
+                result = await asyncio.to_thread(
+                    self._hybrid_retriever.search,
                     query_text=query, top_k=top_k
                 )
                 return self._format_result(result, query, domain, "graphrag_hybrid", user_level)
 
             elif self._qdrant_retriever:
-                result = self._qdrant_retriever.search(
+                result = await asyncio.to_thread(
+                    self._qdrant_retriever.search,
                     query_text=query, top_k=top_k
                 )
                 return self._format_result(result, query, domain, "graphrag_vector", user_level)

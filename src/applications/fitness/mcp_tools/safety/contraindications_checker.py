@@ -778,7 +778,9 @@ class ContraindicationsChecker(BaseMCPTool):
         ]
         
         # 确定总体风险等级
-        if total_risk_score >= 20 or critical_issues:
+        if critical_issues:
+            risk_level = "CRITICAL"
+        elif total_risk_score >= 20:
             risk_level = "HIGH"
         elif total_risk_score >= 10:
             risk_level = "MODERATE"

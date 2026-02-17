@@ -130,13 +130,14 @@ CYPHER_TEMPLATES: Dict[StructuredQueryType, str] = {
         RETURN e.name_zh AS exercise, p.name_zh AS postural_issue,
                'corrects' AS relation_type, p.category AS category,
                e.difficulty AS difficulty
+        LIMIT 15
         UNION ALL
         MATCH (e:Exercise)-[r:AGGRAVATES]->(p:PosturalIssue)
         WHERE p.name_zh CONTAINS $keyword OR p.name CONTAINS $keyword
         RETURN e.name_zh AS exercise, p.name_zh AS postural_issue,
                'aggravates' AS relation_type, p.category AS category,
                e.difficulty AS difficulty
-        LIMIT 30
+        LIMIT 15
     """,
 
     # 力量标准查询（动作 → 各水平力量标准）
@@ -159,11 +160,11 @@ CYPHER_TEMPLATES: Dict[StructuredQueryType, str] = {
         MATCH (e:Exercise)-[r:SUITABLE_FOR_LEVEL]->(l:TrainingLevel)
         WHERE l.name CONTAINS $keyword OR l.name_zh CONTAINS $keyword
            OR l.name_en CONTAINS $keyword
-        RETURN e.name_zh AS exercise, l.name AS fitness_level,
-               l.name_zh AS level_zh, l.name_en AS level_en,
-               e.difficulty AS difficulty, e.equipment AS equipment,
-               e.primary_muscles AS primary_muscles
-        ORDER BY e.name_zh
+        RETURN e.name_en AS exercise, e.name_zh AS exercise_zh,
+               l.name AS fitness_level, l.name_zh AS level_zh, l.name_en AS level_en,
+               e.difficulty_en AS difficulty, e.equipment_en AS equipment,
+               e.muscles_primary_en AS primary_muscles
+        ORDER BY e.name_en
         LIMIT 25
     """,
 

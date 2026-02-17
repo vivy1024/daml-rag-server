@@ -9,6 +9,7 @@ LangGraph Agent 状态定义
 """
 
 from typing import TypedDict, Optional, List, Dict, Any, Annotated
+import operator
 from langgraph.graph.message import add_messages
 
 
@@ -35,7 +36,7 @@ class AgentState(TypedDict, total=False):
     # ========== 执行追踪 ==========
     tool_calls_count: int
     total_cost: float
-    tool_results: List[Dict[str, Any]]
+    tool_results: Annotated[List[Dict[str, Any]], operator.add]
 
     # ========== 安全限制 ==========
     max_iterations: int

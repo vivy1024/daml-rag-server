@@ -310,38 +310,36 @@ class NutritionPlanParams(BaseModel):
 # ============================================================
 
 class SafetyCheckParams(BaseModel):
-    """contraindications_checker 工具参数"""
+    """contraindications_checker 工具参数 — 对齐 ContraindicationsCheckerInput"""
 
-    exercise_name: str = Field(description="动作名称")
+    user_id: str = Field(description="用户ID，用于获取健康状况")
+    exercise_ids: List[str] = Field(description="要检查的动作ID列表")
     health_conditions: Optional[List[str]] = Field(
-        default=None, description="健康状况列表"
+        default=None, description="额外健康状况（可选）"
     )
-    injuries: Optional[List[str]] = Field(
-        default=None, description="伤病列表"
+    include_recommendations: bool = Field(
+        default=True, description="是否包含安全建议"
     )
-    fitness_level: Optional[FitnessLevelLiteral] = Field(
-        default=None, description="健身水平"
+    strict_mode: bool = Field(
+        default=False, description="严格模式：更保守的安全阈值"
+    )
+    injured_joints: Optional[List[str]] = Field(
+        default=None, description="受伤关节列表（可选）"
+    )
+    postural_issues: Optional[List[str]] = Field(
+        default=None, description="体态问题列表（可选）"
     )
 
-    @field_validator("exercise_name", mode="before")
+    @field_validator("exercise_ids", mode="before")
     @classmethod
-    def clean_exercise_name(cls, v):
-        if isinstance(v, str):
-            return v.strip()
-        return str(v) if v else ""
-
-    @field_validator("health_conditions", mode="before")
-    @classmethod
-    def normalize_conditions(cls, v):
-        if v is None:
-            return None
+    def normalize_exercise_ids(cls, v):
         if isinstance(v, str):
             return [s.strip() for s in v.split(",") if s.strip()]
         return v
 
-    @field_validator("injuries", mode="before")
+    @field_validator("health_conditions", mode="before")
     @classmethod
-    def normalize_injuries(cls, v):
+    def normalize_conditions(cls, v):
         if v is None:
             return None
         if isinstance(v, str):

@@ -1,51 +1,202 @@
 {
-  "test_time": "2026-01-12T23:56:39.017668",
-  "test_results": {
-    "sustained_load": {
-      "duration_seconds": 30.035016775131226,
-      "requests_sent": 970,
-      "requests_completed": 970,
-      "requests_failed": 970,
+  "test_time": "2026-02-18T01:58:42.958511",
+  "test_type": "压力测试 (Stress Test)",
+  "test_scenarios": {
+    "scenario_1": {
+      "test_name": "scenario_1_high_concurrency",
+      "duration_seconds": 120.01154899597168,
+      "requests_sent": 5449,
+      "requests_completed": 5449,
+      "requests_failed": 5449,
       "success_rate": 0.0,
-      "throughput_qps": 32.29563703134512,
-      "avg_response_time": 0.0,
-      "max_response_time": 0.0,
-      "min_response_time": 0.0,
-      "avg_cpu_percent": 0.3721649484536083,
-      "max_cpu_percent": 13.2,
-      "avg_memory_percent": 18.90000000000003,
-      "max_memory_percent": 18.9,
-      "top_errors": []
+      "throughput_qps": 45.40396358172914,
+      "response_time": {
+        "avg": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "system_resources": {
+        "avg_cpu_percent": 2.4092592592592594,
+        "max_cpu_percent": 23.3,
+        "avg_memory_percent": 30.190740740740743,
+        "max_memory_percent": 31.3
+      },
+      "errors": {
+        "total": 5449,
+        "timeout_count": 0,
+        "connection_errors": 0,
+        "top_errors": []
+      },
+      "status_codes": {}
     },
-    "burst_load": {
-      "duration_seconds": 20.696876049041748,
-      "requests_sent": 300,
-      "requests_completed": 300,
-      "requests_failed": 300,
+    "scenario_2": {
+      "test_name": "scenario_2_db_pool_exhaustion",
+      "duration_seconds": 0.29840922355651855,
+      "requests_sent": 100,
+      "requests_completed": 100,
+      "requests_failed": 100,
       "success_rate": 0.0,
-      "throughput_qps": 14.494941134552999,
-      "avg_response_time": 0.0,
-      "max_response_time": 0.0,
-      "min_response_time": 0.0,
-      "avg_cpu_percent": 0.39999999999999997,
-      "max_cpu_percent": 0.6,
-      "avg_memory_percent": 18.9,
-      "max_memory_percent": 18.9,
-      "top_errors": []
+      "throughput_qps": 335.1102851586625,
+      "response_time": {
+        "avg": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "system_resources": {
+        "avg_cpu_percent": 3.65,
+        "max_cpu_percent": 6.7,
+        "avg_memory_percent": 30.700000000000003,
+        "max_memory_percent": 31.3
+      },
+      "errors": {
+        "total": 100,
+        "timeout_count": 0,
+        "connection_errors": 0,
+        "top_errors": []
+      },
+      "status_codes": {}
+    },
+    "scenario_3": {
+      "test_name": "scenario_3_redis_unavailable",
+      "duration_seconds": 0.34105443954467773,
+      "requests_sent": 30,
+      "requests_completed": 30,
+      "requests_failed": 30,
+      "success_rate": 0.0,
+      "throughput_qps": 87.96249666197362,
+      "response_time": {
+        "avg": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "system_resources": {
+        "avg_cpu_percent": 2.3,
+        "max_cpu_percent": 5.6,
+        "avg_memory_percent": 30.133333333333333,
+        "max_memory_percent": 30.2
+      },
+      "errors": {
+        "total": 30,
+        "timeout_count": 0,
+        "connection_errors": 0,
+        "top_errors": []
+      },
+      "status_codes": {}
+    },
+    "scenario_4": {
+      "test_name": "scenario_4_llm_backend_failure",
+      "duration_seconds": 0.42902278900146484,
+      "requests_sent": 20,
+      "requests_completed": 20,
+      "requests_failed": 20,
+      "success_rate": 0.0,
+      "throughput_qps": 46.61757023805025,
+      "response_time": {
+        "avg": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "system_resources": {
+        "avg_cpu_percent": 0.44999999999999996,
+        "max_cpu_percent": 0.6,
+        "avg_memory_percent": 30.1,
+        "max_memory_percent": 30.1
+      },
+      "errors": {
+        "total": 20,
+        "timeout_count": 0,
+        "connection_errors": 0,
+        "top_errors": []
+      },
+      "status_codes": {}
+    },
+    "scenario_5": {
+      "test_name": "scenario_5_network_latency",
+      "duration_seconds": 15.386938571929932,
+      "requests_sent": 30,
+      "requests_completed": 30,
+      "requests_failed": 30,
+      "success_rate": 0.0,
+      "throughput_qps": 1.949705580467343,
+      "response_time": {
+        "avg": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "system_resources": {
+        "avg_cpu_percent": 5.6000000000000005,
+        "max_cpu_percent": 16.8,
+        "avg_memory_percent": 30.46666666666667,
+        "max_memory_percent": 31.2
+      },
+      "errors": {
+        "total": 30,
+        "timeout_count": 0,
+        "connection_errors": 0,
+        "top_errors": []
+      },
+      "status_codes": {}
     }
+  },
+  "overall_summary": {
+    "total_requests": 5629,
+    "total_failed": 5629,
+    "overall_success_rate": 0.0,
+    "avg_response_time": 0.0,
+    "scenarios_tested": 5,
+    "scenarios_passed": 0
   },
   "recommendations": [
     {
-      "test": "sustained_load",
+      "scenario": "scenario_1",
       "issue": "低成功率",
       "value": "0.0%",
-      "recommendation": "检查错误日志，优化错误处理机制"
+      "severity": "high",
+      "recommendation": "检查错误日志，优化错误处理机制，增加重试逻辑"
     },
     {
-      "test": "burst_load",
+      "scenario": "scenario_2",
       "issue": "低成功率",
       "value": "0.0%",
-      "recommendation": "检查错误日志，优化错误处理机制"
+      "severity": "high",
+      "recommendation": "检查错误日志，优化错误处理机制，增加重试逻辑"
+    },
+    {
+      "scenario": "scenario_3",
+      "issue": "低成功率",
+      "value": "0.0%",
+      "severity": "high",
+      "recommendation": "检查错误日志，优化错误处理机制，增加重试逻辑"
+    },
+    {
+      "scenario": "scenario_4",
+      "issue": "低成功率",
+      "value": "0.0%",
+      "severity": "high",
+      "recommendation": "检查错误日志，优化错误处理机制，增加重试逻辑"
+    },
+    {
+      "scenario": "scenario_5",
+      "issue": "低成功率",
+      "value": "0.0%",
+      "severity": "high",
+      "recommendation": "检查错误日志，优化错误处理机制，增加重试逻辑"
     }
-  ]
+  ],
+  "test_passed": false
 }
