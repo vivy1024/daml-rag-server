@@ -95,7 +95,7 @@ class MCPToolManager:
     def __init__(self, mcp_client=None, python_tool_registry=None):
         """
         初始化MCP工具管理器
-        
+
         Args:
             mcp_client: MCP客户端实例（可选，如果不提供则需要外部传入server_name和tool_name）
             python_tool_registry: Python内置工具注册表（可选，用于调用本地Python工具）
@@ -103,19 +103,15 @@ class MCPToolManager:
         # 设置环境变量，消除tokenizers并行化警告
         import os
         os.environ['TOKENIZERS_PARALLELISM'] = 'false'
-        
+
         self.mcp_client = mcp_client
         self.python_tool_registry = python_tool_registry
         self.tool_mapping = self._load_tool_mapping()
         self.logger = logger
         self.error_stats = ErrorStatistics()
-        
-        # 初始化缓存机制
-        self.tool_cache = {}  # 工具结果缓存
-        self.cache_ttl = 300  # 缓存5分钟（300秒）
-        self.cache_hits = 0  # 缓存命中次数
-        self.cache_misses = 0  # 缓存未命中次数
-        
+
+        # 缓存由MCPOrchestrator统一管理，此处不再重复缓存
+
         # 初始化性能监控
         self.performance_stats = {
             'total_calls': 0,
@@ -187,6 +183,21 @@ class MCPToolManager:
                     "health_conditions": "list",
                     "include_recommendations": "bool",
                     "strict_mode": "bool"
+                }
+            },
+
+            # PosturalAssessorInput: user_id
+            "postural_assessor": {
+                "server_name": "python_internal",
+                "tool_name": "postural_assessor",
+                "description": "体态评估与矫正建议",
+                "required_params": ["user_id"],
+                "optional_params": ["postural_issues", "include_exercises", "max_exercises_per_issue"],
+                "param_schema": {
+                    "user_id": "str",
+                    "postural_issues": "list",
+                    "include_exercises": "bool",
+                    "max_exercises_per_issue": "int"
                 }
             },
             
@@ -692,37 +703,25 @@ class MCPToolManager:
         context: Optional[Dict[str, Any]] = None
     ) -> MCPToolCallResult:
         """
-        调用MCP工具（带缓存和重试）
-        
-        这是主要的公共接口，提供缓存和重试功能。
-        
+        调用MCP工具（带重试）
+
+        这是主要的公共接口，提供重试功能。
+
         Args:
             task_name: 任务名称（如 "check_contraindications"）
             parameters: 工具参数
             mcp_client: MCP客户端实例（可选，如果初始化时未提供）
             context: 执行上下文（可选）
-        
+
         Returns:
             MCPToolCallResult: 标准化的工具调用结果
-        
+
         Raises:
             MCPToolNotFoundError: 工具不存在
         """
-        # 1. 检查缓存
-        cache_key = self._get_cache_key(task_name, parameters)
-        cached_result = self._get_from_cache(cache_key)
-        
-        if cached_result:
-            self.cache_hits += 1
-            self.logger.info(
-                f"✅ 使用缓存: {task_name} "
-                f"(缓存命中率: {self.get_cache_hit_rate():.1f}%)"
-            )
-            return cached_result
-        
-        self.cache_misses += 1
-        
-        # 2. 调用工具（带重试）
+        # 缓存由MCPOrchestrator统一管理，此处不再重复缓存
+
+        # 调用工具（带重试）
         result = await self.call_tool_with_retry(
             task_name=task_name,
             parameters=parameters,
@@ -730,12 +729,7 @@ class MCPToolManager:
             context=context,
             max_retries=2
         )
-        
-        # 3. 如果成功且可缓存，存入缓存
-        if result.success and self._is_cacheable(task_name):
-            self._put_to_cache(cache_key, result)
-            self.logger.debug(f"💾 结果已缓存: {task_name}")
-        
+
         return result
 
     def _handle_timeout_error(
@@ -1153,129 +1147,7 @@ class MCPToolManager:
         self.error_stats = ErrorStatistics()
         self.logger.info("🔄 错误统计已重置")
 
-    def _get_cache_key(self, task_name: str, parameters: Dict[str, Any]) -> str:
-        """
-        生成缓存键
-        
-        Args:
-            task_name: 任务名称
-            parameters: 参数字典
-        
-        Returns:
-            str: 缓存键
-        """
-        import json
-        import hashlib
-        
-        # 将参数转换为JSON字符串并排序，确保相同参数生成相同的键
-        param_str = json.dumps(parameters, sort_keys=True)
-        param_hash = hashlib.md5(param_str.encode()).hexdigest()
-        
-        return f"{task_name}:{param_hash}"
-
-    def _get_from_cache(self, cache_key: str) -> Optional[MCPToolCallResult]:
-        """
-        从缓存获取结果
-        
-        Args:
-            cache_key: 缓存键
-        
-        Returns:
-            Optional[MCPToolCallResult]: 缓存的结果，如果不存在或已过期则返回None
-        """
-        if cache_key not in self.tool_cache:
-            return None
-        
-        cached_result, cached_time = self.tool_cache[cache_key]
-        
-        # 检查是否过期
-        if datetime.now().timestamp() - cached_time > self.cache_ttl:
-            # 过期，删除缓存
-            del self.tool_cache[cache_key]
-            self.logger.debug(f"🗑️ 缓存已过期: {cache_key}")
-            return None
-        
-        return cached_result
-
-    def _put_to_cache(self, cache_key: str, result: MCPToolCallResult):
-        """
-        将结果存入缓存
-        
-        Args:
-            cache_key: 缓存键
-            result: 工具调用结果
-        """
-        self.tool_cache[cache_key] = (result, datetime.now().timestamp())
-
-    def _is_cacheable(self, task_name: str) -> bool:
-        """
-        判断工具结果是否可缓存
-        
-        Args:
-            task_name: 任务名称
-        
-        Returns:
-            bool: 是否可缓存
-        """
-        # 可缓存的工具列表（这些工具的结果在短时间内不会变化）
-        cacheable_tools = [
-            'get_user_profile',  # 用户档案
-            'intelligent_exercise_selector',  # 动作选择（基于相同参数）
-            'exercise_alternative_finder',  # 替代动作查找
-            'tdee_calculator',  # TDEE计算（基于相同用户档案）
-        ]
-        
-        return task_name in cacheable_tools
-
-    def get_cache_hit_rate(self) -> float:
-        """
-        获取缓存命中率
-        
-        Returns:
-            float: 缓存命中率（百分比）
-        """
-        total_requests = self.cache_hits + self.cache_misses
-        if total_requests == 0:
-            return 0.0
-        
-        return (self.cache_hits / total_requests) * 100
-
-    def clear_cache(self, task_name: Optional[str] = None):
-        """
-        清除缓存
-        
-        Args:
-            task_name: 任务名称（可选），如果提供则只清除该任务的缓存
-        """
-        if task_name:
-            # 清除特定任务的缓存
-            keys_to_delete = [
-                key for key in self.tool_cache.keys()
-                if key.startswith(f"{task_name}:")
-            ]
-            for key in keys_to_delete:
-                del self.tool_cache[key]
-            self.logger.info(f"🗑️ 已清除缓存: {task_name} ({len(keys_to_delete)}条)")
-        else:
-            # 清除所有缓存
-            cache_size = len(self.tool_cache)
-            self.tool_cache.clear()
-            self.logger.info(f"🗑️ 已清除所有缓存 ({cache_size}条)")
-
-    def get_cache_statistics(self) -> Dict[str, Any]:
-        """
-        获取缓存统计信息
-        
-        Returns:
-            Dict[str, Any]: 缓存统计
-        """
-        return {
-            "cache_size": len(self.tool_cache),
-            "cache_hits": self.cache_hits,
-            "cache_misses": self.cache_misses,
-            "cache_hit_rate": f"{self.get_cache_hit_rate():.2f}%",
-            "cache_ttl_seconds": self.cache_ttl
-        }
+    # 缓存由MCPOrchestrator统一管理，此处不再重复缓存
 
     def _record_performance(self, task_name: str, duration_ms: float, success: bool):
         """
@@ -1356,20 +1228,16 @@ class MCPToolManager:
                     'Total number of MCP tool calls',
                     ['tool_name', 'status']
                 )
-                
+
                 # MCP工具调用耗时
                 self.mcp_tool_duration_seconds = Histogram(
                     'mcp_tool_duration_seconds',
                     'MCP tool call duration in seconds',
                     ['tool_name']
                 )
-                
-                # 缓存命中率
-                self.mcp_cache_hit_rate = Gauge(
-                    'mcp_cache_hit_rate',
-                    'MCP tool cache hit rate'
-                )
-                
+
+                # 缓存由MCPOrchestrator统一管理，此处不再定义缓存指标
+
                 self._prometheus_metrics_defined = True
             
             # 更新指标
@@ -1390,10 +1258,9 @@ class MCPToolManager:
                 self.mcp_tool_duration_seconds.labels(
                     tool_name=tool_name
                 ).observe(avg_duration_seconds)
-            
-            # 更新缓存命中率
-            self.mcp_cache_hit_rate.set(self.get_cache_hit_rate())
-            
+
+            # 缓存由MCPOrchestrator统一管理，此处不再记录缓存命中率
+
             self.logger.debug("📊 已发送指标到Prometheus")
             
         except ImportError:

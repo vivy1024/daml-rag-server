@@ -208,9 +208,27 @@ class ContraindicationsChecker(BaseMCPTool):
             raise
     
     async def _get_user_profile(self, user_id: str) -> Dict[str, Any]:
-        """获取用户档案（可选）"""
-        # TODO: 如果有UserProfileClient，调用它
-        # 目前返回空字典
+        """获取用户档案"""
+        # 方式1: 通过BaseMCPTool注入的backend_client
+        if hasattr(self, 'backend_client') and self.backend_client:
+            try:
+                profile = await self.backend_client.get_user_profile(user_id)
+                if profile:
+                    return profile
+            except Exception as e:
+                self.logger.warning(f"Backend client获取用户档案失败: {e}")
+
+        # 方式2: 通过user_profile_provider
+        if hasattr(self, 'user_profile_provider') and self.user_profile_provider:
+            try:
+                profile = await self.user_profile_provider(user_id)
+                if profile:
+                    return profile
+            except Exception as e:
+                self.logger.warning(f"User profile provider获取用户档案失败: {e}")
+
+        # Fallback: 返回空字典
+        self.logger.info(f"无可用的用户档案获取方式，返回空档案: user_id={user_id}")
         return {}
     
     def _build_health_conditions(
@@ -710,7 +728,13 @@ class ContraindicationsChecker(BaseMCPTool):
             ])
         
         # 基于风险等级添加通用建议
-        if max_level == "HIGH":
+        if max_level == "CRITICAL":
+            recommendations["precautions"].extend([
+                "⛔ 避免执行此动作，风险等级极高",
+                "必须咨询医疗专业人员后再决定是否进行"
+            ])
+            recommendations["modifications"].append("寻找低风险替代动作")
+        elif max_level == "HIGH":
             recommendations["precautions"].extend([
                 "需要在专业人士指导下进行",
                 "充分热身，严格控制训练强度"

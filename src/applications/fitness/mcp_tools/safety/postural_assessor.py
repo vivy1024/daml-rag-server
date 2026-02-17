@@ -16,6 +16,7 @@ Requirements: 20.5, 20.6
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+import time
 
 from ..base_tool import BaseMCPTool
 
@@ -417,9 +418,27 @@ class PosturalAssessor(BaseMCPTool):
         return priority[:3]  # 最多返回3个优先问题
     
     async def _get_user_profile(self, user_id: str) -> Dict[str, Any]:
-        """获取用户档案（简化版）"""
-        # 这里应该调用用户档案服务
-        # 暂时返回空字典
+        """获取用户档案"""
+        # 方式1: 通过BaseMCPTool注入的backend_client
+        if hasattr(self, 'backend_client') and self.backend_client:
+            try:
+                profile = await self.backend_client.get_user_profile(user_id)
+                if profile:
+                    return profile
+            except Exception as e:
+                self.logger.warning(f"Backend client获取用户档案失败: {e}")
+
+        # 方式2: 通过user_profile_provider
+        if hasattr(self, 'user_profile_provider') and self.user_profile_provider:
+            try:
+                profile = await self.user_profile_provider(user_id)
+                if profile:
+                    return profile
+            except Exception as e:
+                self.logger.warning(f"User profile provider获取用户档案失败: {e}")
+
+        # Fallback: 返回空字典
+        self.logger.info(f"无可用的用户档案获取方式，返回空档案: user_id={user_id}")
         return {}
 
 

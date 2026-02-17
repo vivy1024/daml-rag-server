@@ -146,6 +146,7 @@ class FitnessGraphRAGRetriever:
         domain: str = "fitness",
         top_k: int = None,
         mode: str = None,
+        user_level: str = None,  # 新增：用户健身水平
     ) -> Dict[str, Any]:
         """
         执行检索（兼容 true_three_layer_engine.search 接口）
@@ -155,6 +156,7 @@ class FitnessGraphRAGRetriever:
             domain: 领域（默认 fitness）
             top_k: 返回结果数（默认从配置读取）
             mode: 检索模式 hybrid/vector/cypher（默认从配置读取）
+            user_level: 用户健身水平（beginner/intermediate/advanced等）
 
         Returns:
             Dict: {
@@ -176,13 +178,13 @@ class FitnessGraphRAGRetriever:
                 result = self._hybrid_retriever.search(
                     query_text=query, top_k=top_k
                 )
-                return self._format_result(result, query, domain, "graphrag_hybrid")
+                return self._format_result(result, query, domain, "graphrag_hybrid", user_level)
 
             elif self._qdrant_retriever:
                 result = self._qdrant_retriever.search(
                     query_text=query, top_k=top_k
                 )
-                return self._format_result(result, query, domain, "graphrag_vector")
+                return self._format_result(result, query, domain, "graphrag_vector", user_level)
 
         except Exception as e:
             logger.warning(f"⚠️ GraphRAG 检索失败，尝试降级: {e}")
@@ -199,7 +201,7 @@ class FitnessGraphRAGRetriever:
         return {"results": [], "count": 0, "domain": domain, "query_type": "none"}
 
     def _format_result(
-        self, raw_result, query: str, domain: str, query_type: str
+        self, raw_result, query: str, domain: str, query_type: str, user_level: str = None
     ) -> Dict[str, Any]:
         """将 neo4j-graphrag 结果格式化为兼容格式"""
         items = []
@@ -220,10 +222,16 @@ class FitnessGraphRAGRetriever:
                 else:
                     items.append({"content": str(item), "score": 0.0})
 
-        return {
+        result = {
             "results": items,
             "query_type": query_type,
             "domain": domain,
             "count": len(items),
             "retriever": "neo4j-graphrag-python",
         }
+
+        # 如果提供了user_level，添加到结果metadata中
+        if user_level:
+            result["user_level_filter"] = user_level
+
+        return result

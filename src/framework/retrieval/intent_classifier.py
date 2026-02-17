@@ -41,6 +41,9 @@ class StructuredQueryType(Enum):
     SAFETY_CONTRAINDICATIONS = "safety_contraindications"  # 安全禁忌查询
     POSTURAL_EXERCISES = "postural_exercises"              # 体态矫正动作查询
     STRENGTH_STANDARDS = "strength_standards"              # 力量标准查询
+    EXERCISE_BY_LEVEL = "exercise_by_level"                # 按难度级别查询
+    EXERCISE_BY_FORCE = "exercise_by_force"                # 按力类型分类
+    EXERCISE_BY_MECHANIC = "exercise_by_mechanic"          # 按运动学机制分类
 
 
 @dataclass
@@ -112,6 +115,26 @@ STRENGTH_STANDARD_KEYWORDS = [
     "多少公斤", "多重算", "能推多少", "能蹲多少", "能拉多少",
 ]
 
+# 健身水平关键词
+FITNESS_LEVEL_KEYWORDS = [
+    "新手", "初学者", "入门", "初级", "中级", "高级", "进阶", "专家",
+    "beginner", "novice", "intermediate", "advanced", "expert",
+    "适合新手", "新手动作", "初学者动作", "高级动作", "进阶动作",
+]
+
+# 力类型关键词
+FORCE_TYPE_KEYWORDS = [
+    "推", "拉", "push", "pull", "pressing", "pulling",
+    "推类", "拉类", "推举", "推的动作", "拉的动作",
+    "推力", "拉力", "水平推", "垂直推", "水平拉", "垂直拉",
+]
+
+# 运动学机制关键词
+MECHANIC_TYPE_KEYWORDS = [
+    "复合", "孤立", "compound", "isolation", "multi-joint", "single-joint",
+    "复合动作", "孤立动作", "多关节", "单关节", "复合训练", "孤立训练",
+]
+
 
 # ─── 结构化查询模式 ─────────────────────────────────
 
@@ -178,6 +201,27 @@ STRENGTH_STANDARD_PATTERNS = [
     r"(.+?)(?:能|应该)(?:推|蹲|拉|举)(?:多少|多重)",
 ]
 
+# 模式：健身水平（"适合新手的动作"、"初学者能做什么"）
+FITNESS_LEVEL_PATTERNS = [
+    re.compile(r"(适合|推荐给?)(新手|初学者|初级|中级|高级|进阶)", re.IGNORECASE),
+    re.compile(r"(新手|初学者|初级|中级|高级|进阶)(适合|能做|可以做|推荐)的?(动作|训练|运动)", re.IGNORECASE),
+    re.compile(r"(beginner|novice|intermediate|advanced|expert)\s*(exercise|workout|movement)", re.IGNORECASE),
+]
+
+# 模式：力类型（"推类动作"、"拉的训练"）
+FORCE_TYPE_PATTERNS = [
+    re.compile(r"(推|拉)(类|的|力)?(动作|训练|运动)", re.IGNORECASE),
+    re.compile(r"(push|pull)(ing)?\s*(exercise|movement|workout)", re.IGNORECASE),
+    re.compile(r"(水平|垂直)(推|拉)", re.IGNORECASE),
+]
+
+# 模式：运动学机制（"复合动作"、"孤立训练"）
+MECHANIC_TYPE_PATTERNS = [
+    re.compile(r"(复合|孤立)(动作|训练|运动)", re.IGNORECASE),
+    re.compile(r"(compound|isolation)\s*(exercise|movement|workout)", re.IGNORECASE),
+    re.compile(r"(多|单)关节(动作|训练)?", re.IGNORECASE),
+]
+
 
 def classify_intent(query: str) -> IntentResult:
     """
@@ -207,6 +251,8 @@ def classify_intent(query: str) -> IntentResult:
     has_equipment = any(kw in query_clean for kw in EQUIPMENT_KEYWORDS)
     has_injury = any(kw in query_clean for kw in INJURY_KEYWORDS)
     has_postural = any(kw in query_clean for kw in POSTURAL_KEYWORDS)
+    has_force = any(k in query_clean for k in FORCE_TYPE_KEYWORDS[:6])
+    has_mechanic = any(k in query_clean for k in MECHANIC_TYPE_KEYWORDS[:6])
 
     if (has_exercise or has_muscle or has_equipment or has_injury or has_postural) and len(query_clean) > 10:
         # 有实体但查询较长/复杂 → hybrid
@@ -360,6 +406,51 @@ def _match_structured_patterns(query: str) -> Optional[IntentResult]:
                     reason=f"力量标准查询: {entity}"
                 )
 
+    # 健身水平查询（"适合新手的动作"、"初学者能做什么"）
+    for pattern in FITNESS_LEVEL_PATTERNS:
+        m = pattern.search(query)
+        if m:
+            entity = m.group(1) if m.lastindex >= 1 else m.group(0)
+            entity = entity.strip()
+            if _is_valid_level_query(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.85,
+                    structured_type=StructuredQueryType.EXERCISE_BY_LEVEL,
+                    extracted_entity=entity,
+                    reason=f"健身水平查询: {entity}"
+                )
+
+    # 力类型查询（"推类动作"、"拉的训练"）
+    for pattern in FORCE_TYPE_PATTERNS:
+        m = pattern.search(query)
+        if m:
+            entity = m.group(1) if m.lastindex >= 1 else m.group(0)
+            entity = entity.strip()
+            if _is_valid_force_query(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.85,
+                    structured_type=StructuredQueryType.EXERCISE_BY_FORCE,
+                    extracted_entity=entity,
+                    reason=f"力类型查询: {entity}"
+                )
+
+    # 运动学机制查询（"复合动作"、"孤立训练"）
+    for pattern in MECHANIC_TYPE_PATTERNS:
+        m = pattern.search(query)
+        if m:
+            entity = m.group(1) if m.lastindex >= 1 else m.group(0)
+            entity = entity.strip()
+            if _is_valid_mechanic_query(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.85,
+                    structured_type=StructuredQueryType.EXERCISE_BY_MECHANIC,
+                    extracted_entity=entity,
+                    reason=f"运动学机制查询: {entity}"
+                )
+
     return None
 
 
@@ -405,6 +496,21 @@ def _is_valid_strength_query(entity: str) -> bool:
     return any(kw in entity for kw in STRENGTH_STANDARD_KEYWORDS)
 
 
+def _is_valid_level_query(keyword: str) -> bool:
+    """检查是否是有效的健身水平查询"""
+    return any(k in keyword for k in ["新手", "初学", "初级", "中级", "高级", "进阶", "beginner", "intermediate", "advanced"])
+
+
+def _is_valid_force_query(keyword: str) -> bool:
+    """检查是否是有效的力类型查询"""
+    return any(k in keyword for k in ["推", "拉", "push", "pull"])
+
+
+def _is_valid_mechanic_query(keyword: str) -> bool:
+    """检查是否是有效的运动学机制查询"""
+    return any(k in keyword for k in ["复合", "孤立", "compound", "isolation", "多关节", "单关节"])
+
+
 def _extract_first_entity(query: str) -> Optional[str]:
     """从查询中提取第一个匹配的实体"""
     for kw in EXERCISE_KEYWORDS:
@@ -420,6 +526,15 @@ def _extract_first_entity(query: str) -> Optional[str]:
         if kw in query:
             return kw
     for kw in POSTURAL_KEYWORDS:
+        if kw in query:
+            return kw
+    for kw in FITNESS_LEVEL_KEYWORDS:
+        if kw in query:
+            return kw
+    for kw in FORCE_TYPE_KEYWORDS:
+        if kw in query:
+            return kw
+    for kw in MECHANIC_TYPE_KEYWORDS:
         if kw in query:
             return kw
     return None

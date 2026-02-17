@@ -496,7 +496,11 @@ class TestExecuteIntegration:
                     "primary_muscle_zh": "股四头肌"
                 }
             ],
-            # 第二次调用：查询禁忌症（无结果）
+            # 第二次调用：查询损伤禁忌（无结果）
+            [],
+            # 第三次调用：查询关节禁忌（无结果）- Phase 5新增
+            [],
+            # 第四次调用：查询体态问题禁忌（无结果）- Phase 5新增
             []
         ]
         
@@ -530,7 +534,7 @@ class TestExecuteIntegration:
                     "primary_muscle_zh": "股四头肌"
                 }
             ],
-            # 第二次调用：查询禁忌症
+            # 第二次调用：查询损伤禁忌（CONTRAINDICATED_FOR）
             [
                 {
                     "injury_name_zh": "膝盖损伤",
@@ -542,7 +546,11 @@ class TestExecuteIntegration:
                     "body_parts": ["膝盖"],
                     "medical_source": "运动医学指南"
                 }
-            ]
+            ],
+            # 第三次调用：查询关节禁忌（INVOLVES_JOINT）- Phase 5新增
+            [],
+            # 第四次调用：查询体态问题禁忌（AGGRAVATES）- Phase 5新增
+            []
         ]
         
         input_data = {

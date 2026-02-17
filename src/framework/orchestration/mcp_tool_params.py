@@ -368,6 +368,137 @@ class UserProfileParams(BaseModel):
 
 
 # ============================================================
+# 6. 体态评估参数 - postural_assessor
+# ============================================================
+
+class PosturalAssessorParams(BaseModel):
+    """postural_assessor 工具参数"""
+
+    user_id: str = Field(description="用户ID")
+    postural_issues: Optional[List[str]] = Field(
+        default=None, description="体态问题列表"
+    )
+    include_exercises: Optional[bool] = Field(
+        default=True, description="是否包含矫正动作"
+    )
+    max_exercises_per_issue: Optional[int] = Field(
+        default=5, ge=1, le=20, description="每个问题最大动作数"
+    )
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def coerce_user_id(cls, v):
+        """确保user_id是字符串"""
+        if v is None:
+            return ""
+        return str(v).strip()
+
+    @field_validator("postural_issues", mode="before")
+    @classmethod
+    def normalize_postural_issues(cls, v):
+        """支持逗号分隔字符串"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return v
+
+    @field_validator("max_exercises_per_issue", mode="before")
+    @classmethod
+    def coerce_max_exercises(cls, v):
+        """类型转换"""
+        return _coerce_int(v, "max_exercises_per_issue")
+
+
+# ============================================================
+# 7. 伤病风险评估参数 - injury_risk_assessor
+# ============================================================
+
+class InjuryRiskAssessorParams(BaseModel):
+    """injury_risk_assessor 工具参数"""
+
+    user_id: str = Field(description="用户ID")
+    exercise_name: Optional[str] = Field(
+        default=None, description="动作名称"
+    )
+    health_conditions: Optional[List[str]] = Field(
+        default=None, description="健康状况"
+    )
+    training_history: Optional[str] = Field(
+        default=None, description="训练历史摘要"
+    )
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def coerce_user_id(cls, v):
+        """确保user_id是字符串"""
+        if v is None:
+            return ""
+        return str(v).strip()
+
+    @field_validator("exercise_name", mode="before")
+    @classmethod
+    def clean_exercise_name(cls, v):
+        """清理动作名称"""
+        if isinstance(v, str):
+            return v.strip()
+        return str(v) if v else None
+
+    @field_validator("health_conditions", mode="before")
+    @classmethod
+    def normalize_health_conditions(cls, v):
+        """支持逗号分隔字符串"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return v
+
+
+# ============================================================
+# 8. 动作模式平衡参数 - movement_pattern_balancer
+# ============================================================
+
+class MovementPatternBalancerParams(BaseModel):
+    """movement_pattern_balancer 工具参数"""
+
+    user_id: str = Field(description="用户ID")
+    current_exercises: Optional[List[str]] = Field(
+        default=None, description="当前训练动作列表"
+    )
+    training_goal: Optional[str] = Field(
+        default=None, description="训练目标"
+    )
+    days_per_week: Optional[int] = Field(
+        default=None, ge=1, le=7, description="每周训练天数"
+    )
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def coerce_user_id(cls, v):
+        """确保user_id是字符串"""
+        if v is None:
+            return ""
+        return str(v).strip()
+
+    @field_validator("current_exercises", mode="before")
+    @classmethod
+    def normalize_current_exercises(cls, v):
+        """支持逗号分隔字符串"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return v
+
+    @field_validator("days_per_week", mode="before")
+    @classmethod
+    def coerce_days(cls, v):
+        """类型转换"""
+        return _coerce_int(v, "days_per_week")
+
+
+# ============================================================
 # 工具名 → Pydantic模型 映射表
 # ============================================================
 
@@ -398,11 +529,18 @@ TOOL_PARAM_MODELS = {
     "contraindications-checker": SafetyCheckParams,
     "safe_exercise_modifier": SafetyCheckParams,
     "safe-exercise-modifier": SafetyCheckParams,
-    "injury_risk_assessor": SafetyCheckParams,
-    "injury-risk-assessor": SafetyCheckParams,
     # 用户档案
     "get_user_profile": UserProfileParams,
     "get-user-profile": UserProfileParams,
+    # 体态评估
+    "postural_assessor": PosturalAssessorParams,
+    "postural-assessor": PosturalAssessorParams,
+    # 伤病风险（使用专用模型）
+    "injury_risk_assessor": InjuryRiskAssessorParams,
+    "injury-risk-assessor": InjuryRiskAssessorParams,
+    # 动作模式平衡
+    "movement_pattern_balancer": MovementPatternBalancerParams,
+    "movement-pattern-balancer": MovementPatternBalancerParams,
 }
 
 
