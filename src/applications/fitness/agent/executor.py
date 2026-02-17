@@ -17,6 +17,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from .state import AgentState
 from .graph import build_agent_graph
+from .llm_adapter import ToolCallableLLM
 
 logger = logging.getLogger(__name__)
 
@@ -32,20 +33,21 @@ class AgentExecutor:
     LangGraph Agent 执行器
 
     用法:
-        executor = AgentExecutor(llm_client, mcp_orchestrator, tool_schemas)
+        executor = AgentExecutor(mcp_orchestrator, tool_schemas)
         result = await executor.execute(user_id="1", query="帮我制定胸肌训练计划")
     """
 
     def __init__(
         self,
-        llm_client,
         mcp_orchestrator,
         tool_schemas: list,
+        llm_client=None,
     ):
-        self.llm_client = llm_client
+        # 默认使用 ToolCallableLLM 适配器（桥接 APIPoolManager 与 function calling）
+        self.llm_client = llm_client or ToolCallableLLM()
         self.mcp_orchestrator = mcp_orchestrator
         self.tool_schemas = tool_schemas
-        self.graph = build_agent_graph(llm_client, mcp_orchestrator, tool_schemas)
+        self.graph = build_agent_graph(self.llm_client, mcp_orchestrator, tool_schemas)
 
     async def execute(
         self,
