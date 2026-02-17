@@ -1012,7 +1012,7 @@ class TrueThreeLayerEngine:
             matched_results = []
             
             for keyword, items in rule_based_recommendations.items():
-                if keyword in query:
+                if keyword in query_lower:
                     # 根据用户档案过滤难度
                     user_level = user_profile.get("fitness_level", "intermediate") if user_profile else "intermediate"
                     

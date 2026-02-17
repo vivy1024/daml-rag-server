@@ -17,6 +17,7 @@ Layer3 业务规则引擎 - 增强版
 
 import asyncio
 import logging
+from collections import deque
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -181,7 +182,7 @@ class Layer3RuleEngine:
         """
         self.neo4j_client = neo4j_client
         self.domain_adapter = domain_adapter
-        self.execution_logs: List[Layer3ExecutionLog] = []
+        self.execution_logs: deque = deque(maxlen=1000)
         
         # 从domain_adapter加载领域特定配置
         self._load_domain_config()
@@ -848,7 +849,7 @@ class Layer3RuleEngine:
             if isinstance(session_time, str):
                 try:
                     session_dt = datetime.fromisoformat(session_time.replace("Z", "+00:00"))
-                except:
+                except Exception:
                     continue
             elif isinstance(session_time, datetime):
                 session_dt = session_time
