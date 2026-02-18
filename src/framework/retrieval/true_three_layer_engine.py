@@ -215,6 +215,7 @@ class TrueThreeLayerEngine:
         # API配置
         self.graphrag_api_port = graphrag_api_port or os.getenv('API_PORT', '8001')
         self.graphrag_api_base = f"http://localhost:{self.graphrag_api_port}/api/graphrag"
+        self._internal_api_token = os.getenv('INTERNAL_API_TOKEN', '')
 
         # Neo4j配置
         self.neo4j_uri = neo4j_uri or os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
@@ -538,7 +539,10 @@ class TrueThreeLayerEngine:
                     await asyncio.sleep(retry_delay)
                 
                 # ✅ 使用超时管理器配置的超时时间
-                async with aiohttp.ClientSession() as session:
+                _headers = {}
+                if self._internal_api_token:
+                    _headers["X-Internal-Token"] = self._internal_api_token
+                async with aiohttp.ClientSession(headers=_headers) as session:
                     async with session.post(
                         f"{self.graphrag_api_base}/query",
                         json={
@@ -911,9 +915,12 @@ class TrueThreeLayerEngine:
     ) -> LayerExecutionResult:
         """通过GraphRAG API降级查询（无向量结果）"""
         start_time = datetime.now()
-        
+
         try:
-            async with aiohttp.ClientSession() as session:
+            _headers = {}
+            if self._internal_api_token:
+                _headers["X-Internal-Token"] = self._internal_api_token
+            async with aiohttp.ClientSession(headers=_headers) as session:
                 async with session.post(
                     f"{self.graphrag_api_base}/query",
                     json={
@@ -1084,7 +1091,10 @@ class TrueThreeLayerEngine:
         start_time = datetime.now()
 
         try:
-            async with aiohttp.ClientSession() as session:
+            _headers = {}
+            if self._internal_api_token:
+                _headers["X-Internal-Token"] = self._internal_api_token
+            async with aiohttp.ClientSession(headers=_headers) as session:
                 async with session.post(
                     f"{self.graphrag_api_base}/query",
                     json={
