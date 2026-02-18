@@ -1,8 +1,38 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.71.0
+**版本**: v9.72.0
 **更新日期**: 2026-02-19
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.72.0 (2026-02-19) - Phase 7 Batch 3: 性能与可观测性 🚀
+
+**变更类型**: 🚀 性能与可观测性
+
+**变更内容**:
+
+**Task 41: 多层缓存L1+L2**:
+- 新建 `framework/storage/multi_layer_cache.py`: L1进程内LRU缓存 + L2 Redis后端
+- `LRULocalCache`: OrderedDict实现，线程安全，max_items=10000，TTL支持
+- `MultiLayerCache`: L1→L2分层读取，L2命中自动回填L1，空值缓存防穿透
+- `MultiLayerCacheStats`: 分层统计（l1_hit_rate, l2_hit_rate, overall_hit_rate）
+- `framework/storage/__init__.py`: 导出新类
+
+**Task 42: 分布式追踪trace_id**:
+- 新建 `api/middleware/tracing.py`: TracingMiddleware + contextvars + TraceIdFilter
+- 每个请求生成唯一trace_id（UUID4），支持客户端传入X-Request-ID
+- `api/config/logging_config.py`: 日志格式添加 `%(trace_id)s`
+- 响应头添加 `X-Trace-ID`，全链路可追踪
+
+**Task 43: LLM输出验证器**:
+- 新建 `framework/validators/output_validator.py`: LLMOutputValidator
+- 禁忌症交叉检查：扫描LLM输出中是否推荐了用户禁忌动作（排除警告上下文）
+- 训练量范围检查：重量/次数/组数不超过用户能力的120%
+- 集成到 `llm_analysis_engine.py` 段3输出后验证
+- 验证失败：置信度降至0.3 + 附加安全警告 + 元数据标记
+
+**测试**: 新增46个测试全部通过，全量615 passed（0新增失败）
 
 ---
 

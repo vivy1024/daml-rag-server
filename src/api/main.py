@@ -293,6 +293,14 @@ app.add_middleware(
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+# 添加分布式追踪中间件（trace_id）
+try:
+    from .middleware.tracing import TracingMiddleware
+    app.add_middleware(TracingMiddleware)
+    logger.info("✅ 分布式追踪中间件已启用")
+except ImportError as e:
+    logger.warning(f"⚠️ 追踪中间件加载失败: {e}")
+
 # 添加安全中间件
 try:
     from .middleware.security import SecurityMiddleware

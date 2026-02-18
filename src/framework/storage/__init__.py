@@ -28,6 +28,12 @@ from .unified_cache import (
     CacheConfig as UnifiedCacheConfig,
     CacheStatistics as UnifiedCacheStatistics
 )
+from .multi_layer_cache import (
+    MultiLayerCache,
+    MultiLayerCacheConfig,
+    MultiLayerCacheStats,
+    LRULocalCache,
+)
 from .user_profile_cache import (
     UserProfileCache
 )
@@ -65,6 +71,10 @@ __all__ = [
     "UnifiedCache",
     "UnifiedCacheConfig",
     "UnifiedCacheStatistics",
+    "MultiLayerCache",
+    "MultiLayerCacheConfig",
+    "MultiLayerCacheStats",
+    "LRULocalCache",
     "UserProfileCache",
     "MembershipCache",
     "WarmupManager",
