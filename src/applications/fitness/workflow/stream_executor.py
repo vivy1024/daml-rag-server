@@ -773,8 +773,8 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             # 初始化LLM降级管理器
             from ....framework.clients.llm_fallback_manager import LLMFallbackManager, LLMRequest
             fallback_manager = LLMFallbackManager(
-                primary_backend="deepseek",
-                fallback_backends=["ollama", "template"],
+                primary_backend="anthropic",
+                fallback_backends=["deepseek", "template"],
                 max_retries=3,
                 timeout=30,
                 enable_health_check=True

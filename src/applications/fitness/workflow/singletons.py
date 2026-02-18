@@ -214,8 +214,8 @@ def initialize_performance_components():
     if _llm_degradation_manager_instance is None:
         from ....framework.clients.llm_fallback_manager import LLMFallbackManager
         _llm_degradation_manager_instance = LLMFallbackManager(
-            primary_backend="deepseek",
-            fallback_backends=["ollama", "template"],
+            primary_backend="anthropic",
+            fallback_backends=["deepseek", "template"],
             max_retries=3,
             timeout=30,
             enable_health_check=True

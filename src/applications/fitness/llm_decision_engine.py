@@ -394,8 +394,8 @@ class LLMDecisionEngine:
             
             # 初始化降级管理器
             fallback_manager = LLMFallbackManager(
-                primary_backend="deepseek",
-                fallback_backends=["ollama", "template"],
+                primary_backend="anthropic",
+                fallback_backends=["deepseek", "template"],
                 max_retries=3,
                 timeout=30,
                 enable_health_check=True

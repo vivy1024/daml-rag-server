@@ -100,8 +100,8 @@ class PerformanceConfigLoader:
                 }
             },
             "llm_fallback": {
-                "primary_backend": "deepseek",
-                "fallback_backends": ["ollama", "template"],
+                "primary_backend": "anthropic",
+                "fallback_backends": ["deepseek", "template"],
                 "max_retries": 3,
                 "timeout": 30,
                 "health_check_interval": 60
