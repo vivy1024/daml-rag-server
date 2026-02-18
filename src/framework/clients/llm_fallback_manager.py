@@ -696,6 +696,8 @@ class LLMFallbackManager:
                 is_healthy = await self._check_deepseek_health()
             elif backend == BackendType.OLLAMA:
                 is_healthy = await self._check_ollama_health()
+            elif backend == BackendType.ANTHROPIC:
+                is_healthy = await self._check_anthropic_health()
             elif backend == BackendType.TEMPLATE:
                 is_healthy = True  # 模板总是健康的
             else:
@@ -735,10 +737,28 @@ class LLMFallbackManager:
         """检查Ollama健康状态"""
         from .llm_client import LLMConfig
         import httpx
-        
+
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(f"{LLMConfig.OLLAMA_BASE_URL}/api/tags")
+                return response.status_code == 200
+        except Exception:
+            return False
+
+    async def _check_anthropic_health(self) -> bool:
+        """检查Anthropic Claude健康状态（通过Kiro RS）"""
+        from .llm_client import LLMConfig
+        import httpx
+
+        if not LLMConfig.ANTHROPIC_API_KEY or not LLMConfig.ANTHROPIC_ENABLED:
+            return False
+
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(
+                    f"{LLMConfig.ANTHROPIC_BASE_URL}/v1/models",
+                    headers={"Authorization": f"Bearer {LLMConfig.ANTHROPIC_API_KEY}"}
+                )
                 return response.status_code == 200
         except Exception:
             return False
