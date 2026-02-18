@@ -142,9 +142,10 @@ class TestWeeklyPlanGenerator:
         )
         
         # 验证 - Requirements: 10.2
-        assert "4周周期的第一周" in weekly_plan.cycle_explanation
+        # 术语已从"周"改为"训练周期"
+        assert "4个训练周期计划的第1训练周期" in weekly_plan.cycle_explanation
         assert "积累期" in weekly_plan.cycle_explanation
-        assert "后续每周根据您的完成反馈" in weekly_plan.cycle_explanation
+        assert "后续每个训练周期根据您的完成反馈" in weekly_plan.cycle_explanation
     
     def test_convert_to_output_format(self, generator, sample_full_program):
         """测试转换为输出格式"""

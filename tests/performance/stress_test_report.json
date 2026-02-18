@@ -1,15 +1,15 @@
 {
-  "test_time": "2026-02-18T01:58:42.958511",
+  "test_time": "2026-02-18T11:12:05.838164",
   "test_type": "压力测试 (Stress Test)",
   "test_scenarios": {
     "scenario_1": {
       "test_name": "scenario_1_high_concurrency",
-      "duration_seconds": 120.01154899597168,
-      "requests_sent": 5449,
-      "requests_completed": 5449,
-      "requests_failed": 5449,
+      "duration_seconds": 120.015949010849,
+      "requests_sent": 5427,
+      "requests_completed": 5427,
+      "requests_failed": 5427,
       "success_rate": 0.0,
-      "throughput_qps": 45.40396358172914,
+      "throughput_qps": 45.21899001531388,
       "response_time": {
         "avg": 0.0,
         "median": 0.0,
@@ -19,13 +19,13 @@
         "p99": 0.0
       },
       "system_resources": {
-        "avg_cpu_percent": 2.4092592592592594,
-        "max_cpu_percent": 23.3,
-        "avg_memory_percent": 30.190740740740743,
-        "max_memory_percent": 31.3
+        "avg_cpu_percent": 2.6240740740740742,
+        "max_cpu_percent": 24.0,
+        "avg_memory_percent": 47.73888888888889,
+        "max_memory_percent": 48.8
       },
       "errors": {
-        "total": 5449,
+        "total": 5427,
         "timeout_count": 0,
         "connection_errors": 0,
         "top_errors": []
@@ -34,12 +34,12 @@
     },
     "scenario_2": {
       "test_name": "scenario_2_db_pool_exhaustion",
-      "duration_seconds": 0.29840922355651855,
+      "duration_seconds": 0.47276830673217773,
       "requests_sent": 100,
       "requests_completed": 100,
       "requests_failed": 100,
       "success_rate": 0.0,
-      "throughput_qps": 335.1102851586625,
+      "throughput_qps": 211.5201010220209,
       "response_time": {
         "avg": 0.0,
         "median": 0.0,
@@ -49,10 +49,10 @@
         "p99": 0.0
       },
       "system_resources": {
-        "avg_cpu_percent": 3.65,
-        "max_cpu_percent": 6.7,
-        "avg_memory_percent": 30.700000000000003,
-        "max_memory_percent": 31.3
+        "avg_cpu_percent": 0.6,
+        "max_cpu_percent": 0.6,
+        "avg_memory_percent": 47.6,
+        "max_memory_percent": 47.6
       },
       "errors": {
         "total": 100,
@@ -64,12 +64,12 @@
     },
     "scenario_3": {
       "test_name": "scenario_3_redis_unavailable",
-      "duration_seconds": 0.34105443954467773,
+      "duration_seconds": 0.33390092849731445,
       "requests_sent": 30,
       "requests_completed": 30,
       "requests_failed": 30,
       "success_rate": 0.0,
-      "throughput_qps": 87.96249666197362,
+      "throughput_qps": 89.8470098151922,
       "response_time": {
         "avg": 0.0,
         "median": 0.0,
@@ -79,10 +79,10 @@
         "p99": 0.0
       },
       "system_resources": {
-        "avg_cpu_percent": 2.3,
-        "max_cpu_percent": 5.6,
-        "avg_memory_percent": 30.133333333333333,
-        "max_memory_percent": 30.2
+        "avg_cpu_percent": 2.2666666666666666,
+        "max_cpu_percent": 6.2,
+        "avg_memory_percent": 47.63333333333333,
+        "max_memory_percent": 47.7
       },
       "errors": {
         "total": 30,
@@ -94,12 +94,12 @@
     },
     "scenario_4": {
       "test_name": "scenario_4_llm_backend_failure",
-      "duration_seconds": 0.42902278900146484,
+      "duration_seconds": 0.4266984462738037,
       "requests_sent": 20,
       "requests_completed": 20,
       "requests_failed": 20,
       "success_rate": 0.0,
-      "throughput_qps": 46.61757023805025,
+      "throughput_qps": 46.87150884811614,
       "response_time": {
         "avg": 0.0,
         "median": 0.0,
@@ -109,10 +109,10 @@
         "p99": 0.0
       },
       "system_resources": {
-        "avg_cpu_percent": 0.44999999999999996,
-        "max_cpu_percent": 0.6,
-        "avg_memory_percent": 30.1,
-        "max_memory_percent": 30.1
+        "avg_cpu_percent": 0.6,
+        "max_cpu_percent": 1.2,
+        "avg_memory_percent": 47.6,
+        "max_memory_percent": 47.6
       },
       "errors": {
         "total": 20,
@@ -124,12 +124,12 @@
     },
     "scenario_5": {
       "test_name": "scenario_5_network_latency",
-      "duration_seconds": 15.386938571929932,
+      "duration_seconds": 15.3806791305542,
       "requests_sent": 30,
       "requests_completed": 30,
       "requests_failed": 30,
       "success_rate": 0.0,
-      "throughput_qps": 1.949705580467343,
+      "throughput_qps": 1.950499047886908,
       "response_time": {
         "avg": 0.0,
         "median": 0.0,
@@ -139,10 +139,10 @@
         "p99": 0.0
       },
       "system_resources": {
-        "avg_cpu_percent": 5.6000000000000005,
-        "max_cpu_percent": 16.8,
-        "avg_memory_percent": 30.46666666666667,
-        "max_memory_percent": 31.2
+        "avg_cpu_percent": 3.3666666666666667,
+        "max_cpu_percent": 7.0,
+        "avg_memory_percent": 39.86666666666667,
+        "max_memory_percent": 47.6
       },
       "errors": {
         "total": 30,
@@ -154,8 +154,8 @@
     }
   },
   "overall_summary": {
-    "total_requests": 5629,
-    "total_failed": 5629,
+    "total_requests": 5607,
+    "total_failed": 5607,
     "overall_success_rate": 0.0,
     "avg_response_time": 0.0,
     "scenarios_tested": 5,

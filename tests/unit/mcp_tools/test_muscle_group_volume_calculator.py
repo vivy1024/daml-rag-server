@@ -195,11 +195,11 @@ class TestMuscleGroupVolumeCalculator:
             "training_frequency_per_week": 3
         }
         
-        # Mock Neo4j查询结果
+        # Mock Neo4j查询结果 — matcher将"胸肌"映射为"胸部"后查询Neo4j
         mock_neo4j_client.execute_query.return_value = [
             {
-                "name_zh": "胸大肌",
-                "name_en": "Pectoralis Major",
+                "name_zh": "胸部",
+                "name_en": "Chest",
                 "training_frequency": "2-3次/周",
                 "recovery_time": "48小时",
                 "mev": 10,
@@ -209,15 +209,15 @@ class TestMuscleGroupVolumeCalculator:
                 "function": ["肩关节水平内收"]
             }
         ]
-        
+
         # 执行工具
         result = await calculator.execute(input_data)
-        
+
         # 验证名称匹配成功
         assert result["success"] is True
-        assert result["muscle_group"] == "胸大肌"  # 匹配到标准名称
+        assert result["muscle_group"] == "胸部"  # Neo4j节点使用通用分组名"胸部"
         assert result["original_input"] == "胸肌"  # 保留原始输入
-        assert result["matched_name"] == "胸大肌"  # 匹配结果
+        assert result["matched_name"] == "胸部"  # matcher匹配结果
     
     @pytest.mark.asyncio
     async def test_neo4j_query_failure_uses_default(self, calculator, mock_neo4j_client):

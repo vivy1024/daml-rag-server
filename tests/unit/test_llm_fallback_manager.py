@@ -29,10 +29,10 @@ class TestLLMFallbackManager:
     
     @pytest.fixture
     def manager(self):
-        """创建测试用的降级管理器"""
+        """创建测试用的降级管理器（Ollama已禁用，降级链: DeepSeek → Template）"""
         return LLMFallbackManager(
             primary_backend="deepseek",
-            fallback_backends=["ollama", "template"],
+            fallback_backends=["template"],
             max_retries=2,
             timeout=5,
             enable_health_check=False  # 测试时禁用健康检查
@@ -76,52 +76,43 @@ class TestLLMFallbackManager:
             mock_deepseek.assert_called_once()
     
     @pytest.mark.asyncio
-    async def test_fallback_to_ollama(self, manager, sample_request):
-        """测试降级到Ollama的情况"""
-        # Mock DeepSeek失败，Ollama成功
-        with patch.object(manager, '_call_deepseek', new_callable=AsyncMock) as mock_deepseek, \
-             patch.object(manager, '_call_ollama', new_callable=AsyncMock) as mock_ollama:
-            
+    async def test_fallback_to_template(self, manager, sample_request):
+        """测试DeepSeek失败后降级到模板响应（Ollama已禁用）"""
+        # Mock DeepSeek失败
+        with patch.object(manager, '_call_deepseek', new_callable=AsyncMock) as mock_deepseek:
+
             mock_deepseek.side_effect = Exception("DeepSeek服务不可用")
-            mock_ollama.return_value = "这是Ollama生成的训练计划..."
-            
+
             response = await manager.call_with_fallback(sample_request)
-            
-            # 验证响应
-            assert response.content == "这是Ollama生成的训练计划..."
-            assert response.backend_used == BackendType.OLLAMA
+
+            # 验证降级到模板响应
+            assert "抱歉，AI分析功能暂时不可用" in response.content
+            assert response.backend_used == BackendType.TEMPLATE
             assert response.fallback_used is True
             assert response.attempt_count > 1
-            assert response.error is None
-            
-            # 验证调用次数
+
+            # 验证DeepSeek被重试了max_retries次
             assert mock_deepseek.call_count == manager.max_retries
-            mock_ollama.assert_called_once()
     
     @pytest.mark.asyncio
-    async def test_fallback_to_template(self, manager, sample_request):
-        """测试降级到模板响应的情况"""
-        # Mock DeepSeek和Ollama都失败
-        with patch.object(manager, '_call_deepseek', new_callable=AsyncMock) as mock_deepseek, \
-             patch.object(manager, '_call_ollama', new_callable=AsyncMock) as mock_ollama:
-            
+    async def test_fallback_to_template_with_tool_results(self, manager, sample_request):
+        """测试降级到模板响应时包含工具结果信息"""
+        # Mock DeepSeek失败
+        with patch.object(manager, '_call_deepseek', new_callable=AsyncMock) as mock_deepseek:
+
             mock_deepseek.side_effect = Exception("DeepSeek服务不可用")
-            mock_ollama.side_effect = Exception("Ollama服务不可用")
-            
+
             response = await manager.call_with_fallback(sample_request)
-            
-            # 验证响应
+
+            # 验证模板响应包含用户档案信息
             assert "抱歉，AI分析功能暂时不可用" in response.content
             assert "您的查询：帮我设计一个训练计划" in response.content
             assert "用户档案" in response.content
             assert response.backend_used == BackendType.TEMPLATE
             assert response.fallback_used is True
-            # Template后端成功时，error字段应该包含失败原因
-            # 但由于template总是成功的，所以这里不检查error
-            
-            # 验证调用次数
+
+            # 验证DeepSeek被重试了max_retries次
             assert mock_deepseek.call_count == manager.max_retries
-            assert mock_ollama.call_count == manager.max_retries
     
     @pytest.mark.asyncio
     async def test_retry_mechanism(self, manager, sample_request):
@@ -152,46 +143,42 @@ class TestLLMFallbackManager:
     
     @pytest.mark.asyncio
     async def test_timeout_handling(self, manager, sample_request):
-        """测试超时控制"""
+        """测试超时控制（DeepSeek超时后降级到Template）"""
         # Mock DeepSeek超时
-        with patch.object(manager, '_call_deepseek', new_callable=AsyncMock) as mock_deepseek, \
-             patch.object(manager, '_call_ollama', new_callable=AsyncMock) as mock_ollama:
-            
+        with patch.object(manager, '_call_deepseek', new_callable=AsyncMock) as mock_deepseek:
+
             mock_deepseek.side_effect = asyncio.TimeoutError("请求超时")
-            mock_ollama.return_value = "Ollama响应"
-            
+
             response = await manager.call_with_fallback(sample_request)
-            
-            # 验证降级到Ollama
-            assert response.content == "Ollama响应"
-            assert response.backend_used == BackendType.OLLAMA
+
+            # 验证降级到Template
+            assert "抱歉，AI分析功能暂时不可用" in response.content
+            assert response.backend_used == BackendType.TEMPLATE
             assert response.fallback_used is True
-            
+
             # 验证DeepSeek被重试了max_retries次
             assert mock_deepseek.call_count == manager.max_retries
     
     @pytest.mark.asyncio
     async def test_non_retryable_error(self, manager, sample_request):
-        """测试不可重试的错误（如认证错误）"""
+        """测试不可重试的错误（如认证错误，直接降级到Template）"""
         import httpx
-        
+
         # Mock DeepSeek返回401错误
-        with patch.object(manager, '_call_deepseek', new_callable=AsyncMock) as mock_deepseek, \
-             patch.object(manager, '_call_ollama', new_callable=AsyncMock) as mock_ollama:
-            
+        with patch.object(manager, '_call_deepseek', new_callable=AsyncMock) as mock_deepseek:
+
             # 创建一个401错误
             response_mock = MagicMock()
             response_mock.status_code = 401
             http_error = httpx.HTTPStatusError("Unauthorized", request=MagicMock(), response=response_mock)
-            
+
             mock_deepseek.side_effect = http_error
-            mock_ollama.return_value = "Ollama响应"
-            
+
             response = await manager.call_with_fallback(sample_request)
-            
-            # 验证不会重试，直接降级
+
+            # 验证不会重试，直接降级到Template
             assert mock_deepseek.call_count == 1  # 只调用1次，不重试
-            assert response.backend_used == BackendType.OLLAMA
+            assert response.backend_used == BackendType.TEMPLATE
     
     def test_template_response_generation(self, manager):
         """测试模板化响应生成"""
@@ -312,33 +299,26 @@ class TestLLMFallbackManager:
             assert final_response.fallback_used is False
     
     @pytest.mark.asyncio
-    async def test_stream_fallback_to_ollama(self, manager, sample_request):
-        """测试流式调用降级到Ollama"""
+    async def test_stream_fallback_to_template(self, manager, sample_request):
+        """测试流式调用降级到Template（Ollama已禁用）"""
         sample_request.stream = True
-        
-        # Mock DeepSeek流式失败，Ollama成功
-        async def mock_stream_fail():
-            raise Exception("流式调用失败")
-            yield  # 永远不会执行
-        
-        with patch.object(manager, '_call_deepseek_stream', side_effect=Exception("流式调用失败")), \
-             patch.object(manager, '_call_ollama', new_callable=AsyncMock) as mock_ollama:
-            
-            mock_ollama.return_value = "Ollama非流式响应"
-            
+
+        # Mock DeepSeek流式失败
+        with patch.object(manager, '_call_deepseek_stream', side_effect=Exception("流式调用失败")):
+
             chunks = []
             final_response = None
-            
+
             async for chunk, response in manager.call_with_fallback_stream(sample_request):
                 if response:
                     final_response = response
                 else:
                     chunks.append(chunk)
-            
-            # 验证降级到Ollama（非流式）
-            assert "Ollama非流式响应" in chunks
+
+            # 验证降级到Template
+            assert any("抱歉，AI分析功能暂时不可用" in c for c in chunks)
             assert final_response is not None
-            assert final_response.backend_used == BackendType.OLLAMA
+            assert final_response.backend_used == BackendType.TEMPLATE
             assert final_response.fallback_used is True
     
     @pytest.mark.asyncio
@@ -372,22 +352,18 @@ class TestLLMFallbackManager:
     @pytest.mark.asyncio
     async def test_all_backends_fail_with_attempts(self, manager, sample_request):
         """测试所有后端都失败时的尝试次数"""
-        # Mock所有后端都失败
-        with patch.object(manager, '_call_deepseek', new_callable=AsyncMock) as mock_deepseek, \
-             patch.object(manager, '_call_ollama', new_callable=AsyncMock) as mock_ollama:
-            
+        # Mock DeepSeek失败（Ollama已禁用，降级链: DeepSeek → Template）
+        with patch.object(manager, '_call_deepseek', new_callable=AsyncMock) as mock_deepseek:
+
             mock_deepseek.side_effect = Exception("DeepSeek失败")
-            mock_ollama.side_effect = Exception("Ollama失败")
-            
+
             response = await manager.call_with_fallback(sample_request)
-            
+
             # 验证尝试次数
             # DeepSeek: 2次重试 = 2次
-            # Ollama: 2次重试 = 2次
             # Template: 1次 = 1次
-            # 总计: 5次
-            total_backend_attempts = mock_deepseek.call_count + mock_ollama.call_count
-            assert response.attempt_count == total_backend_attempts + 1  # +1 for template
+            # 总计: 3次
+            assert response.attempt_count == mock_deepseek.call_count + 1  # +1 for template
             assert response.backend_used == BackendType.TEMPLATE
 
 

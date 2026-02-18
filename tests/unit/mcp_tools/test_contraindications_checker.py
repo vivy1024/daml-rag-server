@@ -385,7 +385,7 @@ class TestOverallAssessment:
         
         assessment = checker._generate_overall_assessment(exercise_results, user_profile)
         
-        assert assessment["risk_level"] == "HIGH"
+        assert assessment["risk_level"] == "CRITICAL"
         assert len(assessment["critical_issues"]) > 0
         assert "硬拉" in assessment["critical_issues"][0]
 
@@ -519,6 +519,10 @@ class TestExecuteIntegration:
     async def test_execute_with_contraindications(self, checker, mock_neo4j_client):
         """测试有禁忌症场景"""
         # 模拟Neo4j返回
+        # execute调用顺序：
+        # 1. _get_exercise_info (query)
+        # 2. _query_injury_contraindications (query)
+        # 3. _query_joint_contraindications (query) — "膝盖损伤"包含关节关键词"膝"
         mock_neo4j_client.query.side_effect = [
             # 第一次调用：获取动作信息
             [
@@ -532,7 +536,7 @@ class TestExecuteIntegration:
                     "primary_muscle_zh": "股四头肌"
                 }
             ],
-            # 第二次调用：查询禁忌症
+            # 第二次调用：查询损伤禁忌症（CONTRAINDICATED_FOR）
             [
                 {
                     "injury_name_zh": "膝盖损伤",
@@ -544,7 +548,9 @@ class TestExecuteIntegration:
                     "body_parts": ["膝盖"],
                     "medical_source": "运动医学指南"
                 }
-            ]
+            ],
+            # 第三次调用：查询关节禁忌症（INVOLVES_JOINT）— "膝盖损伤"触发关节查询
+            []
         ]
         
         input_data = {

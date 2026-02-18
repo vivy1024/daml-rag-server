@@ -1,5 +1,5 @@
 {
-  "test_time": "2026-02-18T01:59:01.292677",
+  "test_time": "2026-02-18T11:12:23.955051",
   "test_type": "性能优化验收测试",
   "version": "v1.0.0",
   "categories": {
@@ -31,7 +31,7 @@
           "name": "并发处理能力 (QPS)",
           "passed": true,
           "expected": ">= 50 (目标: 200)",
-          "actual": "1358.38",
+          "actual": "1148.90",
           "details": "成功率: 0.0%"
         },
         {
