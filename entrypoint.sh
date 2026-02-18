@@ -38,7 +38,7 @@ if [ "$ENVIRONMENT" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
     # 如果存在.env.production，使用它
     if [ -f "/app/.env.production" ]; then
         log_info "Loading .env.production configuration..."
-        # 导出.env.production中的变量（不覆盖已存在的环境变量�?
+        # 导出.env.production中的变量（不覆盖已存在的环境变量�?
         set -a
         source /app/.env.production
         set +a
@@ -47,7 +47,7 @@ if [ "$ENVIRONMENT" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
         log_warn ".env.production not found, using Zeabur injected variables"
     fi
     
-    # 打印关键配置（调试用�?
+    # 打印关键配置（调试用�?
     log_info "REDIS_HOST: ${REDIS_HOST:-not set}"
     log_info "MYSQL_HOST: ${MYSQL_HOST:-not set}"
     log_info "NEO4J_URI: ${NEO4J_URI:-not set}"
@@ -128,6 +128,23 @@ for var in "${REQUIRED_VARS[@]}"; do
         log_info "  $var = ${!var}"
     fi
 done
+
+# 生产环境：检查安全关键环境变量（缺失则报错退出）
+if [ "${ENVIRONMENT}" = "production" ]; then
+    SECURITY_VARS=("NEO4J_PASSWORD" "MYSQL_PASSWORD" "INTERNAL_API_TOKEN")
+    MISSING=0
+    for var in "${SECURITY_VARS[@]}"; do
+        val="${!var}"
+        if [ -z "$val" ] || [[ "$val" == \$\{* ]]; then
+            log_warn "  ❌ 安全变量 $var 未设置或仍为占位符"
+            MISSING=1
+        fi
+    done
+    if [ "$MISSING" -eq 1 ]; then
+        log_warn "  ⚠️ 生产环境缺少安全变量，请在Zeabur控制台配置Secrets"
+        log_warn "  服务将继续启动，但部分功能可能不可用"
+    fi
+fi
 
 # Step 4: Start DAML-RAG service
 echo ""

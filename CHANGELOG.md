@@ -1,8 +1,36 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.70.0
+**版本**: v9.71.0
 **更新日期**: 2026-02-19
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.71.0 (2026-02-19) - Phase 7 Batch 2: 系统一致性 🔧
+
+**变更类型**: 🔧 系统一致性
+
+**变更内容**:
+
+**Task 37: 异常层级统一**:
+- `framework/exceptions.py`: 新增 `LegacyExceptionAdapter` 映射类（旧异常→DAMLRAGError子类）
+- `mcp_tools/exceptions.py`: 所有类添加 DeprecationWarning（将在v10.0删除）
+- `mcp/error_handler.py`: `MCPToolError` 添加 DeprecationWarning
+
+**Task 38: user_id类型统一 + query长度限制**:
+- `api/models/api_response.py`: ChatRequest/ThreeLayerRetrievalRequest/FeedbackRequest 的 user_id 从 str→int
+- `api/models/api_response.py`: ChatRequest.query 添加 max_length=2000
+- 添加 `field_validator` 自动将字符串 user_id 转为 int（向后兼容）
+
+**Task 39: 优雅关闭**:
+- `api/main.py`: lifespan关闭逻辑增强 — 等待进行中请求完成（最多30秒）再关闭连接池
+- `entrypoint.sh`: 确认 exec 前缀（SIGTERM正确传递）
+
+**Task 40: 敏感信息迁移**:
+- `.env.production`: 移除所有明文密码/token，改为 `${ZEABUR_SECRET}` 占位符
+- `entrypoint.sh`: 生产环境添加安全变量启动检查
+
+**测试**: 新增10个异常适配器测试，全部通过。全量719 passed。
 
 ---
 

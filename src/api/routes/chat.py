@@ -45,25 +45,28 @@ logger = logging.getLogger(__name__)
 _permission_checker = FailClosedPermissionChecker()
 
 
-def _extract_user_id(request: Request, body_user_id: Optional[str] = None) -> str:
+def _extract_user_id(request: Request, body_user_id=None) -> str:
     """
     从请求中提取user_id（Property 4: JWT身份优先于请求体）
-    
+
     优先级：
     1. Internal JWT中的user_id（request.state.permission_claims）
     2. 请求体中的user_id（旧模式兼容）
+
+    Returns:
+        str: user_id 字符串（内部统一为str传递给下游）
     """
     auth_mode = getattr(request.state, "auth_mode", None)
-    
+
     if auth_mode == "internal_jwt":
         claims = getattr(request.state, "permission_claims", None)
         if claims:
             return str(claims.user_id)
-    
-    # 旧模式或无认证：从请求体获取
-    if body_user_id:
-        return str(body_user_id) if not isinstance(body_user_id, str) else body_user_id
-    
+
+    # 请求体中的user_id（Pydantic已强制转为int）
+    if body_user_id is not None:
+        return str(body_user_id)
+
     return ""
 
 router = APIRouter()

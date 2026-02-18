@@ -2,18 +2,19 @@
 MCP工具统一错误处理器
 
 提供标准化的错误处理机制，包括：
-1. 统一的MCPToolError异常类
+1. 统一的MCPToolError异常类（⚠️ DEPRECATED - 将在v10.0删除）
 2. 标准错误码定义
 3. MCPErrorHandler统一处理器
 4. 错误日志和上下文管理
 
 Requirements: 6.1, 6.2, 6.3, 6.4
-Version: 1.0.0
+Version: 1.1.0
 """
 
 from typing import Dict, Any, Optional
 from enum import Enum
 import logging
+import warnings
 import traceback
 from datetime import datetime
 
@@ -34,25 +35,11 @@ class MCPErrorCode(str, Enum):
 class MCPToolError(Exception):
     """
     MCP工具统一错误类
-    
-    所有MCP工具错误都应该使用此类或其子类
-    
-    Attributes:
-        tool_name: 工具名称
-        error_code: 标准错误码
-        message: 错误消息
-        context: 错误上下文信息
-        cause: 原始异常（如果有）
-    
-    Example:
-        raise MCPToolError(
-            tool_name="intelligent_exercise_selector",
-            error_code=MCPErrorCode.INVALID_INPUT,
-            message="缺少必需参数: user_id",
-            context={"params": input_data}
-        )
+
+    ⚠️ DEPRECATED - 将在v10.0删除。
+    请使用 framework.exceptions.ToolExecutionError 替代。
     """
-    
+
     def __init__(
         self,
         tool_name: str,
@@ -61,16 +48,11 @@ class MCPToolError(Exception):
         context: Optional[Dict[str, Any]] = None,
         cause: Optional[Exception] = None
     ):
-        """
-        初始化MCP工具错误
-        
-        Args:
-            tool_name: 工具名称
-            error_code: 标准错误码
-            message: 错误消息
-            context: 错误上下文信息
-            cause: 原始异常
-        """
+        warnings.warn(
+            "MCPToolError已废弃，将在v10.0删除。请使用 framework.exceptions.ToolExecutionError",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(message)
         self.tool_name = tool_name
         self.error_code = error_code
@@ -78,8 +60,7 @@ class MCPToolError(Exception):
         self.context = context or {}
         self.cause = cause
         self.timestamp = datetime.now().isoformat()
-        
-        # 保留原始异常的堆栈跟踪
+
         if cause is not None:
             self.__cause__ = cause
     

@@ -196,31 +196,44 @@ async def lifespan(app: FastAPI):
         raise
 
     # 关闭时执行
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug("🔄 DAML-RAG API Server 关闭中...")
+    logger.warning("🔄 DAML-RAG API Server 关闭中...")
 
     try:
-        # 取消预热任务
+        # 1. 取消预热任务
         try:
             from src.framework.storage.warmup import get_warmup_manager
-            warmup_manager = get_warmup_manager()
-            if warmup_manager:
-                # 新预热系统暂时没有cancel方法，直接标记为停止
+            warmup_mgr = get_warmup_manager()
+            if warmup_mgr:
                 logger.info("✅ 预热系统已停止")
         except Exception as warmup_cancel_error:
             logger.debug(f"⚠️ 预热系统取消失败: {warmup_cancel_error}")
-        
-        # 清理框架资源 - 使用新的FrameworkInitializer
+
+        # 2. 等待进行中的请求完成（最多30秒）
+        import asyncio
+        try:
+            from src.framework.monitoring.concurrency_limiter import concurrency_limiter
+            if concurrency_limiter and hasattr(concurrency_limiter, 'active_count') and concurrency_limiter.active_count > 0:
+                logger.info(f"⏳ 等待 {concurrency_limiter.active_count} 个进行中的请求完成...")
+                for _ in range(30):
+                    if concurrency_limiter.active_count == 0:
+                        break
+                    await asyncio.sleep(1)
+                if concurrency_limiter.active_count > 0:
+                    logger.warning(f"⚠️ 仍有 {concurrency_limiter.active_count} 个请求未完成，强制关闭")
+        except Exception:
+            pass
+
+        # 3. 关闭框架资源（连接池、Redis、Neo4j）
         from src.framework.core.simple_framework_initializer import get_framework_initializer
         initializer = get_framework_initializer()
         if initializer:
             await initializer.shutdown()
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("✅ 资源清理完成")
+        logger.info("✅ 框架资源清理完成")
+
     except Exception as e:
         logger.error(f"❌ 资源清理失败: {e}")
 
-    logger.warning("✅ API Server 已关闭")  # 使用WARNING确保显示
+    logger.warning("✅ API Server 已关闭")
 
 
 # 创建FastAPI应用
