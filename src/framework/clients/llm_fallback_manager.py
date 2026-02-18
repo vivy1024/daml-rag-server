@@ -5,9 +5,9 @@ LLM降级管理器
 管理LLM调用的降级策略和错误恢复，确保系统在LLM服务不可用时仍能提供有意义的响应。
 
 降级策略（服务器环境）：
-1. 主要后端: DeepSeek API（支持API池轮询）
-2. 降级后端: 模板化响应
-3. 最终降级: 错误信息 + 部分结果
+1. 主要后端: Anthropic Claude（通过Kiro RS反向代理）
+2. 降级后端: DeepSeek API（支持API池轮询）
+3. 最终降级: 模板化响应 + 错误信息
 
 注意：Ollama已禁用（服务器无本地模型）
 
@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 class BackendType(Enum):
     """LLM后端类型"""
+    ANTHROPIC = "anthropic"  # Claude模型（通过Kiro RS反向代理）
     DEEPSEEK = "deepseek"
     OLLAMA = "ollama"  # 保留枚举值，但实际已禁用
     TEMPLATE = "template"
@@ -72,12 +73,12 @@ class LLMFallbackManager:
     - 模板化响应生成
     
     降级策略：
-    DeepSeek → Ollama → Template → Error
+    Anthropic → DeepSeek → Template → Error
     """
     
     def __init__(
         self,
-        primary_backend: str = "deepseek",
+        primary_backend: str = "anthropic",
         fallback_backends: Optional[List[str]] = None,
         max_retries: int = 3,
         timeout: int = 30,
@@ -97,14 +98,18 @@ class LLMFallbackManager:
         
         # ✅ 服务器环境：禁用Ollama，只保留template作为降级
         ollama_enabled = os.getenv("OLLAMA_ENABLED", "false").lower() == "true"
+        anthropic_enabled = os.getenv("ANTHROPIC_ENABLED", "true").lower() == "true"
         if fallback_backends:
             # 过滤掉ollama（如果禁用）
             if not ollama_enabled:
                 fallback_backends = [b for b in fallback_backends if b != "ollama"]
             self.fallback_backends = [BackendType(b) for b in fallback_backends]
         else:
-            # 默认只使用template
-            self.fallback_backends = [BackendType.TEMPLATE]
+            # 默认降级链：Anthropic主→DeepSeek→Template
+            if self.primary_backend == BackendType.ANTHROPIC:
+                self.fallback_backends = [BackendType.DEEPSEEK, BackendType.TEMPLATE]
+            else:
+                self.fallback_backends = [BackendType.TEMPLATE]
         
         self.max_retries = max_retries
         self.timeout = timeout
@@ -120,7 +125,8 @@ class LLMFallbackManager:
             f"fallbacks={[b.value for b in self.fallback_backends]}, "
             f"max_retries={self.max_retries}, "
             f"timeout={self.timeout}s, "
-            f"ollama_enabled={ollama_enabled}"
+            f"ollama_enabled={ollama_enabled}, "
+            f"anthropic_enabled={anthropic_enabled}"
         )
     
     async def call_with_fallback(
@@ -159,7 +165,9 @@ class LLMFallbackManager:
                     )
                     
                     # 根据后端类型调用不同的函数
-                    if backend == BackendType.DEEPSEEK:
+                    if backend == BackendType.ANTHROPIC:
+                        content = await self._call_anthropic(request)
+                    elif backend == BackendType.DEEPSEEK:
                         content = await self._call_deepseek(request)
                     elif backend == BackendType.OLLAMA:
                         content = await self._call_ollama(request)
@@ -326,8 +334,30 @@ class LLMFallbackManager:
                         f"attempt={attempt_count}, retry={retry + 1}/{self.max_retries}"
                     )
                     
-                    # 只有DeepSeek支持流式
-                    if backend == BackendType.DEEPSEEK:
+                    if backend == BackendType.ANTHROPIC:
+                        async for chunk in self._call_anthropic_stream(request):
+                            accumulated_content += chunk
+                            yield (chunk, None)
+
+                        duration_ms = (time.time() - start_time) * 1000
+                        fallback_used = backend != self.primary_backend
+
+                        logger.info(
+                            f"✅ LLM流式调用成功: backend={backend.value}, "
+                            f"fallback={fallback_used}, attempts={attempt_count}, "
+                            f"duration={duration_ms:.0f}ms, length={len(accumulated_content)}"
+                        )
+
+                        yield ("", LLMResponse(
+                            content=accumulated_content,
+                            backend_used=backend,
+                            fallback_used=fallback_used,
+                            attempt_count=attempt_count,
+                            duration_ms=duration_ms
+                        ))
+                        return
+
+                    elif backend == BackendType.DEEPSEEK:
                         async for chunk in self._call_deepseek_stream(request):
                             accumulated_content += chunk
                             yield (chunk, None)
@@ -508,7 +538,7 @@ class LLMFallbackManager:
     async def _call_ollama(self, request: LLMRequest) -> str:
         """调用Ollama API"""
         from .llm_client import call_ollama
-        
+
         return await asyncio.wait_for(
             call_ollama(
                 query=request.query,
@@ -520,6 +550,36 @@ class LLMFallbackManager:
             ),
             timeout=self.timeout
         )
+
+    async def _call_anthropic(self, request: LLMRequest) -> str:
+        """调用Anthropic Claude API（非流式）"""
+        from .llm_client import call_anthropic
+
+        return await asyncio.wait_for(
+            call_anthropic(
+                query=request.query,
+                few_shot_examples=request.few_shot_examples,
+                tool_results=request.tool_results,
+                system_prompt=request.system_prompt,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature
+            ),
+            timeout=self.timeout
+        )
+
+    async def _call_anthropic_stream(self, request: LLMRequest) -> AsyncIterator[str]:
+        """调用Anthropic Claude API（流式）"""
+        from .llm_client import call_anthropic_stream
+
+        messages = request.messages or self._build_messages(request)
+
+        async for chunk in call_anthropic_stream(
+            messages=messages,
+            max_tokens=request.max_tokens,
+            temperature=request.temperature,
+            timeout=self.timeout
+        ):
+            yield chunk
     
     def _build_messages(self, request: LLMRequest) -> List[Dict[str, str]]:
         """构建消息列表（用于流式调用）"""

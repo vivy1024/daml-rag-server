@@ -44,6 +44,12 @@ class LLMConfig:
     QWEN_BASE_URL = os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
     QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-turbo")
 
+    # Anthropic Claude (通过Kiro RS反向代理)
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+    ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://kirors.yuzhen-fitness.cn")
+    ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+    ANTHROPIC_ENABLED = os.getenv("ANTHROPIC_ENABLED", "true").lower() == "true"
+
     # 通用配置
     TIMEOUT = float(os.getenv("LLM_TIMEOUT", "120.0"))  # 增加到120秒，适应复杂查询
     MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2000"))
@@ -68,6 +74,10 @@ class LLMConfig:
             logger.warning("MOONSHOT_API_KEY未配置，Moonshot功能将不可用")
         if not cls.QWEN_API_KEY:
             logger.warning("QWEN_API_KEY未配置，通义千问功能将不可用")
+        if not cls.ANTHROPIC_API_KEY:
+            logger.warning("ANTHROPIC_API_KEY未配置，Anthropic Claude功能将不可用")
+        if cls.ANTHROPIC_ENABLED:
+            logger.info(f"Anthropic Claude已启用: model={cls.ANTHROPIC_MODEL}")
         if not cls.OLLAMA_ENABLED:
             logger.info("Ollama已禁用（服务器环境）")
         if cls.USE_API_POOL:
@@ -456,6 +466,95 @@ async def call_moonshot(
         )
 
 
+async def call_anthropic(
+    query: str,
+    few_shot_examples: List[Dict[str, Any]],
+    tool_results: Dict[str, Any],
+    system_prompt: str = "你是一位专业的健身教练，擅长根据用户档案提供个性化的训练建议。",
+    max_tokens: int = LLMConfig.MAX_TOKENS,
+    temperature: float = LLMConfig.TEMPERATURE
+) -> str:
+    """
+    调用Anthropic Claude API (通过Kiro RS反向代理)
+
+    使用Anthropic Messages API格式 (/v1/messages)
+    """
+    if not LLMConfig.ANTHROPIC_API_KEY:
+        raise ValueError("ANTHROPIC_API_KEY未配置")
+
+    # Anthropic格式: system是单独字段，不在messages中
+    messages = []
+    for example in few_shot_examples:
+        messages.append({"role": "user", "content": example.get("query", "")})
+        messages.append({"role": "assistant", "content": example.get("response", "")})
+
+    # 工具结果合并到用户消息中
+    tool_context = _format_tool_results(tool_results)
+    user_content = query
+    if tool_context:
+        user_content = f"工具调用结果:\n{tool_context}\n\n用户查询: {query}"
+    messages.append({"role": "user", "content": user_content})
+
+    last_error = None
+    for attempt in range(LLMConfig.MAX_RETRIES + 1):
+        try:
+            if attempt > 0:
+                logger.info(f"Anthropic重试 {attempt}/{LLMConfig.MAX_RETRIES}...")
+                await asyncio.sleep(LLMConfig.RETRY_DELAY * attempt)
+
+            timeout_config = httpx.Timeout(connect=10.0, read=LLMConfig.TIMEOUT, write=10.0, pool=5.0)
+
+            async with httpx.AsyncClient(timeout=timeout_config) as client:
+                response = await client.post(
+                    f"{LLMConfig.ANTHROPIC_BASE_URL}/v1/messages",
+                    headers={
+                        "x-api-key": LLMConfig.ANTHROPIC_API_KEY,
+                        "Content-Type": "application/json",
+                        "anthropic-version": "2023-06-01"
+                    },
+                    json={
+                        "model": LLMConfig.ANTHROPIC_MODEL,
+                        "system": system_prompt,
+                        "messages": messages,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature
+                    }
+                )
+                response.raise_for_status()
+                result = response.json()
+                answer = result["content"][0]["text"]
+
+                logger.info(
+                    f"Anthropic调用成功 (尝试{attempt + 1}): "
+                    f"model={result.get('model', 'N/A')}, "
+                    f"tokens={result.get('usage', {}).get('input_tokens', 0)}+"
+                    f"{result.get('usage', {}).get('output_tokens', 0)}, "
+                    f"length={len(answer)}"
+                )
+                return answer
+
+        except httpx.ReadTimeout as e:
+            last_error = e
+            logger.warning(f"Anthropic读取超时 (尝试{attempt + 1}/{LLMConfig.MAX_RETRIES + 1}): {e}")
+            if attempt >= LLMConfig.MAX_RETRIES:
+                break
+            continue
+        except httpx.HTTPError as e:
+            last_error = e
+            logger.error(f"Anthropic HTTP错误 (尝试{attempt + 1}): {e}", exc_info=True)
+            break
+        except Exception as e:
+            last_error = e
+            logger.error(f"Anthropic调用失败 (尝试{attempt + 1}): {e}", exc_info=True)
+            break
+
+    return get_fallback_response(
+        query=query,
+        tool_results=tool_results,
+        reason=f"Anthropic调用失败（已重试{LLMConfig.MAX_RETRIES}次）: {str(last_error)}"
+    )
+
+
 def _format_tool_results(tool_results: Dict[str, Any]) -> str:
     """
     格式化工具结果为可读文本
@@ -768,6 +867,111 @@ async def call_deepseek_stream(
     raise RuntimeError(error_msg) from last_error
 
 
+async def call_anthropic_stream(
+    messages: List[Dict[str, str]],
+    max_tokens: int = 8000,
+    temperature: float = 0.7,
+    timeout: float = 180.0
+) -> AsyncIterator[str]:
+    """
+    流式调用Anthropic Claude API
+
+    Args:
+        messages: 对话消息列表（OpenAI格式，自动转换为Anthropic格式）
+        max_tokens: 最大生成token数
+        temperature: 温度参数
+        timeout: 超时时间
+    """
+    if not LLMConfig.ANTHROPIC_API_KEY:
+        raise ValueError("ANTHROPIC_API_KEY未配置")
+
+    # 从OpenAI格式messages中提取system prompt
+    system_prompt = ""
+    anthropic_messages = []
+    for msg in messages:
+        if msg["role"] == "system":
+            if system_prompt:
+                system_prompt += "\n\n"
+            system_prompt += msg["content"]
+        else:
+            anthropic_messages.append(msg)
+
+    if not system_prompt:
+        system_prompt = "你是一位专业的健身教练。"
+
+    last_error = None
+    for attempt in range(LLMConfig.MAX_RETRIES + 1):
+        try:
+            if attempt > 0:
+                logger.info(f"Anthropic流式重试 {attempt}/{LLMConfig.MAX_RETRIES}...")
+                await asyncio.sleep(LLMConfig.RETRY_DELAY * attempt)
+
+            timeout_config = httpx.Timeout(connect=10.0, read=timeout, write=10.0, pool=5.0)
+
+            async with httpx.AsyncClient(timeout=timeout_config) as client:
+                async with client.stream(
+                    "POST",
+                    f"{LLMConfig.ANTHROPIC_BASE_URL}/v1/messages",
+                    headers={
+                        "x-api-key": LLMConfig.ANTHROPIC_API_KEY,
+                        "Content-Type": "application/json",
+                        "anthropic-version": "2023-06-01"
+                    },
+                    json={
+                        "model": LLMConfig.ANTHROPIC_MODEL,
+                        "system": system_prompt,
+                        "messages": anthropic_messages,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
+                        "stream": True
+                    }
+                ) as response:
+                    response.raise_for_status()
+
+                    async for line in response.aiter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        data = line[6:]
+                        if data == "[DONE]":
+                            return
+                        try:
+                            event = json.loads(data)
+                            event_type = event.get("type", "")
+                            if event_type == "content_block_delta":
+                                delta = event.get("delta", {})
+                                if delta.get("type") == "text_delta":
+                                    yield delta.get("text", "")
+                            elif event_type == "message_stop":
+                                return
+                        except (json.JSONDecodeError, KeyError):
+                            continue
+
+            return
+
+        except httpx.ReadTimeout as e:
+            last_error = e
+            logger.warning(f"Anthropic流式读取超时 (尝试{attempt + 1}): {e}")
+            if attempt >= LLMConfig.MAX_RETRIES:
+                break
+            continue
+        except httpx.HTTPError as e:
+            last_error = e
+            logger.error(f"Anthropic流式HTTP错误 (尝试{attempt + 1}): {e}", exc_info=True)
+            if isinstance(e, httpx.HTTPStatusError) and e.response.status_code in [401, 403, 404]:
+                break
+            if attempt >= LLMConfig.MAX_RETRIES:
+                break
+            continue
+        except Exception as e:
+            last_error = e
+            logger.error(f"Anthropic流式调用失败 (尝试{attempt + 1}): {e}", exc_info=True)
+            break
+
+    error_msg = f"Anthropic流式调用失败（已重试{LLMConfig.MAX_RETRIES}次）: {str(last_error)}"
+    logger.error(error_msg)
+    raise RuntimeError(error_msg) from last_error
+
+
 async def stream_deepseek(
     query: str,
     few_shot_examples: List[Dict[str, Any]],
@@ -846,7 +1050,7 @@ class LLMClient:
         初始化LLM客户端
         
         Args:
-            provider: LLM提供商，可选 "deepseek", "ollama", "moonshot"
+            provider: LLM提供商，可选 "deepseek", "ollama", "moonshot", "anthropic"
         """
         self.provider = provider
         LLMConfig.validate()
@@ -898,6 +1102,14 @@ class LLMClient:
                 tool_results=tool_results,
                 system_prompt=system_prompt
             )
+        elif self.provider == "anthropic":
+            return await call_anthropic(
+                query=query,
+                few_shot_examples=few_shot_examples,
+                tool_results=tool_results,
+                system_prompt=system_prompt,
+                **kwargs
+            )
         else:
             raise ValueError(f"不支持的LLM提供商: {self.provider}")
     
@@ -933,6 +1145,17 @@ class LLMClient:
                 system_prompt=system_prompt
             ):
                 yield chunk
+        elif self.provider == "anthropic":
+            msgs = [{"role": "system", "content": system_prompt}]
+            for example in few_shot_examples:
+                msgs.append({"role": "user", "content": example.get("query", "")})
+                msgs.append({"role": "assistant", "content": example.get("response", "")})
+            tool_context = _format_tool_results(tool_results)
+            if tool_context:
+                msgs.append({"role": "system", "content": f"工具调用结果:\n{tool_context}"})
+            msgs.append({"role": "user", "content": query})
+            async for chunk in call_anthropic_stream(msgs):
+                yield chunk
         else:
             # 其他提供商暂不支持流式，使用普通调用
             result = await self.call(
@@ -950,7 +1173,7 @@ def get_llm_client(provider: str = "deepseek") -> LLMClient:
     获取LLM客户端实例（工厂函数）
     
     Args:
-        provider: LLM提供商，可选 "deepseek", "ollama", "moonshot"
+        provider: LLM提供商，可选 "deepseek", "ollama", "moonshot", "anthropic"
     
     Returns:
         LLMClient: LLM客户端实例
