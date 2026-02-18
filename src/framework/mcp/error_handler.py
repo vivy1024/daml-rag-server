@@ -136,40 +136,28 @@ class MCPErrorHandler:
             raise error
     """
     
-    # 错误处理策略配置
+    # 错误处理策略配置（仅保留实际使用的字段：log_level + suggestion）
     ERROR_STRATEGIES = {
         MCPErrorCode.INVALID_INPUT: {
-            "action": "return_error",
             "log_level": "WARNING",
-            "retry": False,
-            "suggestion": "请检查输入参数是否符合要求"
+            "suggestion": "请检查输入参数是否符合要求",
         },
         MCPErrorCode.DATA_NOT_FOUND: {
-            "action": "return_empty",
             "log_level": "INFO",
-            "retry": False,
-            "suggestion": "未找到匹配的数据，请尝试调整查询条件"
+            "suggestion": "未找到匹配的数据，请尝试调整查询条件",
         },
         MCPErrorCode.DEPENDENCY_ERROR: {
-            "action": "use_fallback",
             "log_level": "ERROR",
-            "retry": True,
-            "max_retries": 2,
-            "suggestion": "依赖服务暂时不可用，请稍后重试"
+            "suggestion": "依赖服务暂时不可用，请稍后重试",
         },
         MCPErrorCode.TIMEOUT: {
-            "action": "retry_with_backoff",
             "log_level": "WARNING",
-            "retry": True,
-            "max_retries": 2,
-            "suggestion": "操作超时，系统将自动重试"
+            "suggestion": "操作超时，系统将自动重试",
         },
         MCPErrorCode.INTERNAL_ERROR: {
-            "action": "return_error",
             "log_level": "ERROR",
-            "retry": False,
-            "suggestion": "系统内部错误，请联系技术支持"
-        }
+            "suggestion": "系统内部错误，请联系技术支持",
+        },
     }
     
     def __init__(self, logger: Optional[logging.Logger] = None):
