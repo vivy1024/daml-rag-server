@@ -76,51 +76,77 @@ class TestExerciseAlternativeFinder:
     @pytest.mark.asyncio
     async def test_execute_with_valid_input(self, tool, mock_neo4j_client):
         """测试正常执行流程"""
-        # 模拟原动作查询结果
+        # 源码调用链（three_layer_engine=None，走Neo4j降级路径）：
+        # 1. _get_exercise_info -> execute_query (获取原动作+USES_GRIP)
+        # 2. _query_by_variation_of -> execute_query (VARIATION_OF关系)
+        # 3. _query_strict -> execute_query (reason=injury时不继续放宽)
         mock_neo4j_client.execute_query = AsyncMock(side_effect=[
-            # 第一次调用：获取原动作信息
+            # 第1次：_get_exercise_info - 返回格式需要 result["e"] 可 dict()
             [{
                 "e": {
                     "id": 1,
                     "name_zh": "杠铃卧推",
                     "name_en": "Barbell Bench Press",
-                    "movement_pattern_zh": "推",
-                    "difficulty": "intermediate",
+                    "mechanic_zh": "复合",
+                    "mechanic_en": "compound",
+                    "difficulty_zh": "中级",
+                    "difficulty_en": "intermediate",
                     "equipment_zh": ["杠铃", "卧推凳"],
-                    "force": "push",
-                    "mechanic": "compound"
+                    "force_zh": "推",
+                    "force_en": "push",
+                    "primary_muscle_zh": "胸"
                 },
-                "target_muscles": ["胸", "肩", "臂"]
+                "grip_types": []
             }],
-            # 第二次调用：查找替代动作
+            # 第2次：_query_by_variation_of - 返回格式需要 result["v"] 可 dict()
             [
                 {
-                    "e": {
+                    "v": {
                         "id": 2,
                         "name_zh": "哑铃卧推",
                         "name_en": "Dumbbell Press",
-                        "movement_pattern_zh": "推",
-                        "difficulty": "intermediate",
+                        "mechanic_zh": "复合",
+                        "mechanic_en": "compound",
+                        "difficulty_zh": "中级",
+                        "difficulty_en": "intermediate",
                         "equipment_zh": ["哑铃", "卧推凳"],
-                        "force": "push",
-                        "mechanic": "compound"
-                    },
-                    "target_muscles": ["胸", "肩", "臂"]
+                        "force_zh": "推",
+                        "force_en": "push",
+                        "primary_muscle_zh": "胸"
+                    }
                 },
                 {
-                    "e": {
+                    "v": {
                         "id": 3,
                         "name_zh": "器械推胸",
                         "name_en": "Machine Press",
-                        "movement_pattern_zh": "推",
-                        "difficulty": "beginner",
+                        "mechanic_zh": "复合",
+                        "mechanic_en": "compound",
+                        "difficulty_zh": "初级",
+                        "difficulty_en": "beginner",
                         "equipment_zh": ["器械"],
-                        "force": "push",
-                        "mechanic": "compound"
-                    },
-                    "target_muscles": ["胸", "肩"]
+                        "force_zh": "推",
+                        "force_en": "push",
+                        "primary_muscle_zh": "胸"
+                    }
+                },
+                {
+                    "v": {
+                        "id": 4,
+                        "name_zh": "上斜哑铃卧推",
+                        "name_en": "Incline Dumbbell Press",
+                        "mechanic_zh": "复合",
+                        "mechanic_en": "compound",
+                        "difficulty_zh": "中级",
+                        "difficulty_en": "intermediate",
+                        "equipment_zh": ["哑铃", "卧推凳"],
+                        "force_zh": "推",
+                        "force_en": "push",
+                        "primary_muscle_zh": "胸"
+                    }
                 }
-            ]
+            ],
+            # 第3次：不会调用（VARIATION_OF返回>=3个，直接返回）
         ])
         
         input_data = {
@@ -185,45 +211,51 @@ class TestExerciseAlternativeFinder:
     
     def test_calculate_similarity(self, tool):
         """测试相似度计算"""
+        # original 使用 _analyze_exercise_characteristics 输出的字段名
         original = {
             "target_muscles": ["胸", "肩", "臂"],
             "movement_pattern": "推",
             "equipment_type": ["杠铃", "卧推凳"],
-            "mechanic": "compound"
+            "mechanic": "复合",
+            "force_type": "推",
+            "grips": []
         }
-        
-        # 高度相似的候选
+
+        # 高度相似的候选 - 使用源码期望的字段名
         candidate_high = {
             "target_muscles": ["胸", "肩", "臂"],
-            "movement_pattern_zh": "推",
+            "mechanic_zh": "复合",
+            "force_zh": "推",
             "equipment_zh": ["哑铃", "卧推凳"],
-            "mechanic": "compound"
+            "difficulty_zh": "中级"
         }
-        
+
         similarity = tool._calculate_similarity(original, candidate_high)
         assert similarity > 0.8
-        
+
         # 中等相似的候选
         candidate_medium = {
             "target_muscles": ["胸", "肩"],
-            "movement_pattern_zh": "推",
+            "mechanic_zh": "复合",
+            "force_zh": "推",
             "equipment_zh": ["器械"],
-            "mechanic": "compound"
+            "difficulty_zh": "中级"
         }
-        
+
         similarity = tool._calculate_similarity(original, candidate_medium)
         assert 0.5 < similarity < 0.8
-        
+
         # 低相似度的候选
         candidate_low = {
             "target_muscles": ["背"],
-            "movement_pattern_zh": "拉",
+            "mechanic_zh": "复合",
+            "force_zh": "拉",
             "equipment_zh": ["杠铃"],
-            "mechanic": "compound"
+            "difficulty_zh": "中级"
         }
-        
+
         similarity = tool._calculate_similarity(original, candidate_low)
-        # 由于mechanic相同，相似度可能略高于0.5，调整阈值
+        # mechanic相同(+0.20)但force不同、肌群不同，相似度应较低
         assert similarity < 0.6
     
     def test_generate_match_reasons(self, tool):
@@ -232,20 +264,21 @@ class TestExerciseAlternativeFinder:
             "target_muscles": ["胸", "肩", "臂"],
             "movement_pattern": "推",
             "equipment_type": ["杠铃", "卧推凳"],
-            "mechanic": "compound"
+            "mechanic": "复合"
         }
-        
+
         candidate = {
             "target_muscles": ["胸", "肩", "臂"],
-            "movement_pattern_zh": "推",
-            "equipment_zh": ["哑铃", "卧推凳"],
-            "mechanic": "compound"
+            "mechanic": "推",  # 源码检查 candidate.get("mechanic")
+            "equipment_zh": ["哑铃", "卧推凳"]
         }
-        
+
         reasons = tool._generate_match_reasons(original, candidate)
-        
+
         assert len(reasons) > 0
+        # 肌群高度重叠 (Jaccard=1.0 > 0.7)
         assert any("肌群" in reason for reason in reasons)
+        # movement_pattern("推") == candidate mechanic("推")
         assert any("运动模式" in reason for reason in reasons)
     
     def test_generate_adjustments(self, tool):
@@ -254,20 +287,20 @@ class TestExerciseAlternativeFinder:
             "target_muscles": ["胸", "肩"],
             "movement_pattern": "推"
         }
-        
+
         candidate = {
-            "difficulty": "advanced",
+            "difficulty_en": "advanced",   # 源码: difficulty_zh or difficulty_en
             "equipment_zh": ["杠铃"]
         }
-        
+
         constraints = {
             "skill_level": "beginner",
             "injury_limitations": ["肩部"],
             "available_equipment": ["哑铃"]
         }
-        
+
         adjustments = tool._generate_adjustments(original, candidate, constraints)
-        
+
         assert len(adjustments) > 0
         assert any("降低训练强度" in adj for adj in adjustments)
         assert any("保护受伤部位" in adj for adj in adjustments)

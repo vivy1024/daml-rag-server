@@ -73,9 +73,12 @@ class TestMovementPatternBalancer:
     @pytest.mark.asyncio
     async def test_execute_basic_balance_analysis(self, balancer, mock_neo4j_client):
         """测试基本平衡分析"""
-        # 模拟Neo4j查询结果
+        # execute调用链：
+        # 1. _get_exercises_in_program -> execute_query
+        # 2. _get_muscle_synergy_relations -> execute_query
+        # 3. _analyze_force_type_balance -> execute_query
         mock_neo4j_client.execute_query = AsyncMock(side_effect=[
-            # _get_exercises_in_program的返回值
+            # 第1次：_get_exercises_in_program
             [
                 {
                     "e": {"exercise_id": "1", "name_zh": "卧推"},
@@ -86,7 +89,7 @@ class TestMovementPatternBalancer:
                     "target_muscles": ["背阔肌"]
                 }
             ],
-            # _get_muscle_synergy_relations的返回值
+            # 第2次：_get_muscle_synergy_relations
             [
                 {
                     "muscle": "胸大肌",
@@ -98,6 +101,11 @@ class TestMovementPatternBalancer:
                     "synergy_partners": ["斜方肌", "菱形肌"],
                     "antagonist_partners": ["胸大肌"]
                 }
+            ],
+            # 第3次：_analyze_force_type_balance
+            [
+                {"force_type": "push", "count": 1},
+                {"force_type": "pull", "count": 1}
             ]
         ])
         
@@ -130,35 +138,46 @@ class TestMovementPatternBalancer:
     @pytest.mark.asyncio
     async def test_execute_empty_program(self, balancer, mock_neo4j_client):
         """测试空计划"""
+        # 空program: _get_exercises_in_program直接返回[]不调query
+        # 空target_muscle_groups: _get_muscle_synergy_relations仍调query(1次)
+        # 空program: _analyze_force_type_balance直接返回不调query
         mock_neo4j_client.execute_query = AsyncMock(return_value=[])
-        
+
         input_data = {
             "user_id": "test_user_456",
             "current_program": [],
             "target_muscle_groups": []
         }
-        
+
         result = await balancer.execute(input_data)
-        
+
         assert result["success"] is True
-        assert result["balance_analysis"]["balanced_score"] == 0.0
+        # 空计划: base_score=0.0, force_type_balance.is_balanced=False -> force_balance_score=0.5
+        # balanced_score = 0.0 * 0.6 + 0.5 * 0.4 = 0.2
+        assert result["balance_analysis"]["balanced_score"] == 0.2
     
     @pytest.mark.asyncio
     async def test_execute_single_muscle_group(self, balancer, mock_neo4j_client):
         """测试单一肌群训练"""
         mock_neo4j_client.execute_query = AsyncMock(side_effect=[
+            # 第1次：_get_exercises_in_program
             [
                 {
                     "e": {"exercise_id": "1", "name_zh": "卧推"},
                     "target_muscles": ["胸大肌"]
                 }
             ],
+            # 第2次：_get_muscle_synergy_relations
             [
                 {
                     "muscle": "胸大肌",
                     "synergy_partners": ["三角肌前束"],
                     "antagonist_partners": []
                 }
+            ],
+            # 第3次：_analyze_force_type_balance
+            [
+                {"force_type": "push", "count": 1}
             ]
         ])
         

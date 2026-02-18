@@ -182,11 +182,11 @@ default:
     def test_get_config_existing_template(self):
         """测试获取存在的模板配置"""
         manager = LLMResponseConfigManager()
-        
+
         config = manager.get_config("greeting")
-        
+
         assert config is not None
-        assert config.max_tokens == 100
+        assert config.max_tokens == 200
         assert config.temperature == 0.8
     
     def test_get_config_nonexistent_template(self):

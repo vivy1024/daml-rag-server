@@ -75,10 +75,10 @@ class TestIntelligentExerciseSelector:
         user_profile = {}
         
         query_text = selector._build_query_text(input_data, user_profile)
-        
+
         assert "胸" in query_text
-        assert "intermediate" in query_text
-        assert "strength" in query_text
+        assert "中级" in query_text  # intermediate -> 中级
+        assert "力量" in query_text  # strength -> 力量
         assert "杠铃" in query_text or "哑铃" in query_text
     
     def test_build_query_text_with_injury(self, selector):
@@ -104,7 +104,7 @@ class TestIntelligentExerciseSelector:
         exercise = {
             "exercise_id": "ex1",
             "name_zh": "杠铃卧推",
-            "force_type_zh": "推",
+            "force_zh": "推",
             "equipment_zh": ["杠铃"]
         }
         input_data = {
@@ -113,10 +113,10 @@ class TestIntelligentExerciseSelector:
             "disliked_exercises": []
         }
         user_profile = {}
-        
+
         score = selector._calculate_suitability_score(exercise, input_data, user_profile)
-        
-        # 基础分50 + 力量目标20 + 器械匹配20 = 90
+
+        # 基础分50 + 力量目标(force_zh含"推")20 + 器械匹配20 = 90
         assert score >= 80
         assert score <= 100
     
@@ -199,7 +199,7 @@ class TestIntelligentExerciseSelector:
         exercise = {
             "exercise_id": "ex1",
             "safety_level": "MEDIUM_RISK",
-            "difficulty": "高级",
+            "difficulty_zh": "高级",
             "contraindications_zh": []
         }
         input_data = {
@@ -207,9 +207,9 @@ class TestIntelligentExerciseSelector:
             "injury_history": []
         }
         user_profile = {}
-        
+
         score = selector._calculate_safety_score(exercise, input_data, user_profile)
-        
+
         # 基础分100 - 中风险20 - 新手高级动作20 = 60
         assert score == 60.0
     
