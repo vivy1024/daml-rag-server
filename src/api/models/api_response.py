@@ -10,7 +10,7 @@ API Response - 统一API响应格式
 """
 
 from typing import Any, Optional, Generic, TypeVar, List, Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
 T = TypeVar('T')
@@ -167,12 +167,19 @@ class ThreeLayerRetrievalRequest(BaseModel):
     """三层检索请求"""
     query: str = Field(..., description="查询文本")
     domain: str = Field(default="fitness", description="领域：fitness, nutrition, general")
-    user_id: str = Field(..., description="用户ID")
+    user_id: int = Field(..., description="用户ID")
     user_context: Optional[Dict[str, Any]] = Field(default=None, description="用户上下文")
     retrieval_mode: str = Field(default="full_three_layer", description="检索模式")
     top_k: int = Field(default=10, description="返回结果数量")
     enable_anti_hallucination: bool = Field(default=True, description="启用反幻觉验证")
     enable_field_standardization: bool = Field(default=True, description="启用字段标准化")
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def coerce_user_id(cls, v):
+        if isinstance(v, str) and v.isdigit():
+            return int(v)
+        return int(v)
 
 
 class ThreeLayerRetrievalResponse(BaseModel):
@@ -191,8 +198,8 @@ class ThreeLayerRetrievalResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     """聊天请求"""
-    user_id: str = Field(..., description="用户ID")
-    query: str = Field(..., description="用户查询")
+    user_id: int = Field(..., description="用户ID")
+    query: str = Field(..., max_length=2000, description="用户查询")
     domain: str = Field(default="fitness", description="领域")
     session_id: Optional[str] = Field(default=None, description="会话ID")
     context: Optional[Dict[str, Any]] = Field(default=None, description="上下文信息")
@@ -200,6 +207,13 @@ class ChatRequest(BaseModel):
     retrieval_mode: Optional[str] = Field(default="full_three_layer", description="检索模式")
     mode: Optional[str] = Field(default="auto", description="执行模式: auto/dag/agent")
     topic_id: Optional[str] = Field(default=None, description="对话话题ID（用于上下文连续性）")
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def coerce_user_id(cls, v):
+        if isinstance(v, str) and v.isdigit():
+            return int(v)
+        return int(v)
 
 
 class ChatResponse(BaseModel):
@@ -221,12 +235,19 @@ class ChatResponse(BaseModel):
 
 class FeedbackRequest(BaseModel):
     """用户反馈请求"""
-    user_id: str = Field(..., description="用户ID")
+    user_id: int = Field(..., description="用户ID")
     interaction_id: str = Field(..., description="交互ID")
     rating: int = Field(..., ge=1, le=5, description="评分（1-5）")
     feedback_type: str = Field(..., description="反馈类型：accuracy, helpfulness, safety")
     comment: Optional[str] = Field(default=None, description="评论")
     issue_category: Optional[str] = Field(default=None, description="问题分类")
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def coerce_user_id(cls, v):
+        if isinstance(v, str) and v.isdigit():
+            return int(v)
+        return int(v)
 
 
 class HealthResponse(BaseModel):

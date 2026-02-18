@@ -255,7 +255,7 @@ def format_error_chain(error: Exception, max_depth: int = 5) -> str:
     lines = []
     current = error
     depth = 0
-    
+
     while current is not None and depth < max_depth:
         prefix = "  " * depth
         if isinstance(current, DAMLRAGError):
@@ -266,11 +266,60 @@ def format_error_chain(error: Exception, max_depth: int = 5) -> str:
                 lines.append(f"{prefix}  Suggestion: {current.suggestion}")
         else:
             lines.append(f"{prefix}{current.__class__.__name__}: {current}")
-        
+
         current = getattr(current, "__cause__", None)
         depth += 1
-    
+
     if current is not None:
         lines.append(f"{'  ' * depth}... (truncated)")
-    
+
     return "\n".join(lines)
+
+
+# =============================================================================
+# Legacy Exception Adapter
+# =============================================================================
+
+class LegacyExceptionAdapter:
+    """
+    旧异常 → DAMLRAGError 映射适配器
+
+    将 mcp_tools/exceptions.py 的 ToolError 系列和
+    mcp/error_handler.py 的 MCPToolError 映射到统一的 DAMLRAGError 子类。
+    """
+
+    _MAPPING = {
+        "ToolValidationError": ValidationError,
+        "ToolTimeoutError": TimeoutError,
+        "ToolConnectionError": ConnectionError,
+        "ToolExecutionError": ToolExecutionError,
+        "ToolError": ToolExecutionError,
+        "MCPToolError": ToolExecutionError,
+    }
+
+    @classmethod
+    def adapt(cls, error: Exception) -> DAMLRAGError:
+        """将旧异常转换为 DAMLRAGError 子类"""
+        error_class_name = type(error).__name__
+        target_class = cls._MAPPING.get(error_class_name, DAMLRAGError)
+
+        context = {}
+        if hasattr(error, "tool_name") and error.tool_name:
+            context["tool_name"] = error.tool_name
+        if hasattr(error, "context") and error.context:
+            context.update(error.context)
+        if hasattr(error, "error_code"):
+            context["legacy_error_code"] = str(error.error_code)
+
+        message = getattr(error, "message", str(error))
+
+        return target_class(
+            message=message,
+            context=context,
+            cause=error,
+        )
+
+    @classmethod
+    def is_legacy(cls, error: Exception) -> bool:
+        """判断是否为旧异常体系"""
+        return type(error).__name__ in cls._MAPPING
