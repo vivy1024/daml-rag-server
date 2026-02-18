@@ -1,8 +1,44 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.72.0
+**版本**: v9.73.0
 **更新日期**: 2026-02-19
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.73.0 (2026-02-19) - Phase 7 Batch 4: 架构重构 🏗️
+
+**变更类型**: 🏗️ 架构重构
+
+**变更内容**:
+
+**Task 44: BaseMCPTool Mixin拆分**:
+- 新建 `mcp_tools/mixins/` 子模块（4个Mixin + __init__.py）
+- `VersionedToolMixin`: 语义版本管理 + 变更日志
+- `CachedToolMixin`: 缓存读写委托 + 异常降级
+- `MonitoredToolMixin`: 执行监控 + 计时 + 错误标准化
+- `ThreeLayerQueryMixin`: 三层检索标准化调用 + 降级处理
+- `base_tool.py`: 696行→199行，通过MRO组合4个Mixin，18个工具文件零修改
+
+**Task 45: LLMFallbackManager Strategy拆分**:
+- 新建 `framework/clients/backends/` 子模块（5个文件）
+- `IBackendClient(ABC)`: 统一后端接口（call/call_stream/health_check）
+- `AnthropicClient` / `DeepSeekClient`: 策略模式实现
+- `BackendHealthChecker`: TTL健康缓存 + 标记不健康
+- `TemplateResponseGenerator`: 兜底模板响应
+- `llm_fallback_manager.py`: 784行→475行，保留内联降级路径（向后兼容）
+
+**Task 46: DI容器 + 死代码清理**:
+- 新建 `framework/core/container.py`: DependencyContainer（register/factory/lazy get）
+- 移除 `dag_template_permission.py` 中 COMPLEXITY_LIMITS（17行死代码）
+- 精简 `error_handler.py` 中 ERROR_STRATEGIES（移除未使用字段）
+
+**Task 47: 测试补充 + Fixture库**:
+- `tests/conftest.py`: 新增6个共享fixture（mock_neo4j/qdrant/redis/llm/three_layer_engine/framework_initializer）
+- `test_api_routes.py`: 提取纯函数测试（敏感信息过滤/状态计算/公开路径/反馈验证）
+- 绕过API路由三层相对导入问题的测试策略
+
+**测试**: 新增79个测试（27+16+12+24），全量100 passed（含Batch 3的21个），0失败
 
 ---
 

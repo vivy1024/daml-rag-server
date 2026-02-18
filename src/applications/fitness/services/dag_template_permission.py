@@ -36,25 +36,6 @@ DAG_TEMPLATE_TIERS = {
     "energy": ALL_TEMPLATES
 }
 
-# 按复杂度的每日使用限制
-COMPLEXITY_LIMITS = {
-    "free": {
-        "simple": 5,   # 简单场景 5次/天
-        "medium": 2,   # 中等场景 2次/天
-        "complex": 1   # 复杂场景 1次/天
-    },
-    "warmheart": {
-        "simple": 10,  # 简单场景 10次/天
-        "medium": 5,   # 中等场景 5次/天
-        "complex": 2   # 复杂场景 2次/天
-    },
-    "energy": {
-        "simple": -1,  # 无限制
-        "medium": -1,
-        "complex": -1
-    }
-}
-
 # 会员等级层级（用于权限继承）
 MEMBERSHIP_HIERARCHY = {
     "free": 0,
