@@ -64,9 +64,19 @@ def configure_logging():
     # 清除现有处理器
     root_logger.handlers.clear()
     
-    # 日志格式
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    # 日志格式（包含trace_id用于分布式追踪）
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - [%(trace_id)s] %(message)s'
     formatter = logging.Formatter(log_format)
+
+    # 注册TraceIdFilter到根logger（为所有日志注入trace_id）
+    try:
+        from ..middleware.tracing import TraceIdFilter
+        trace_filter = TraceIdFilter()
+        root_logger.addFilter(trace_filter)
+    except ImportError:
+        # 中间件未加载时使用不带trace_id的格式
+        log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        formatter = logging.Formatter(log_format)
     
     # 1. 控制台处理器（始终启用）
     console_handler = logging.StreamHandler()

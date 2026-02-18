@@ -139,6 +139,24 @@ class LLMAnalysisEngine:
                 model_used
             )
 
+            # 步骤4: LLM输出安全验证（禁忌症交叉检查 + 训练量范围检查）
+            try:
+                from ...framework.validators.output_validator import LLMOutputValidator
+                validator = LLMOutputValidator()
+                user_capacity = request.user_profile.get("training_capacity") if request.user_profile else None
+                validation = validator.validate(
+                    llm_response,
+                    contraindications=request.contraindications,
+                    user_capacity=user_capacity,
+                )
+                if validation.has_violations:
+                    analysis_result = validator.apply_to_analysis(analysis_result, validation)
+                    logger.warning(f"⚠️ LLM输出验证发现{len(validation.contraindication_violations) + len(validation.overload_violations)}个违规")
+            except ImportError:
+                pass
+            except Exception as e:
+                logger.warning(f"LLM输出验证异常(跳过): {e}")
+
             logger.info(f"✅ LLM综合分析完成 (model={model_used})")
             logger.info(f"📝 生成建议数量: {len(analysis_result.personalized_recommendations)}")
             logger.info(f"⚠️ 安全提醒数量: {len(analysis_result.safety_reminders)}")
