@@ -34,6 +34,8 @@ class ContentCategory(Enum):
     POLITICAL = "political"         # 政治敏感
     ILLEGAL = "illegal"             # 违法违规
     INAPPROPRIATE = "inappropriate" # 不当内容
+    SELF_HARM = "self_harm"         # 自我伤害
+    DANGEROUS_SUBSTANCE = "dangerous_substance"  # 危险物质
 
 
 @dataclass
@@ -69,48 +71,72 @@ class ContentSafetyFilter:
     
     def _init_sensitive_words(self):
         """初始化敏感词库"""
-        # 医疗越界词汇
+        # 医疗越界词汇（medical_advice）
         self.medical_keywords = {
             # 诊断相关
             "诊断", "确诊", "病症", "疾病", "病情",
+            "症状分析", "病理", "临床表现",
             # 治疗相关
             "治疗", "治愈", "康复治疗", "医治", "根治",
+            "理疗", "针灸治疗",
             # 药物相关
             "药物", "用药", "服药", "处方", "药方",
             "止痛药", "消炎药", "抗生素", "激素",
+            "布洛芬", "阿司匹林", "处方药",
             # 医疗建议
             "就医", "看医生", "挂号", "住院", "手术",
+            "化验", "CT检查", "核磁共振",
         }
-        
+
+        # 自我伤害相关词汇（self_harm）
+        self.self_harm_keywords = {
+            "自残", "自伤", "割腕", "自杀", "轻生",
+            "不想活", "活着没意思", "结束生命", "了断",
+            "跳楼", "服毒", "过量服药", "厌世",
+            "自我惩罚", "故意受伤", "伤害自己",
+        }
+
+        # 危险物质词汇（dangerous_substances）
+        self.dangerous_substances_keywords = {
+            "类固醇", "合成代谢类固醇", "睾酮注射",
+            "生长激素", "HGH", "EPO", "促红细胞生成素",
+            "兴奋剂", "安非他命", "麻黄碱",
+            "利尿剂减重", "DNP", "二硝基苯酚",
+            "西布曲明", "禁药", "违禁药物",
+            "氯巴占", "美沙酮",
+        }
+
         # 危险动作/方法词汇
         self.dangerous_keywords = {
             # 极端减肥
             "绝食", "断食超过", "催吐", "泻药减肥",
+            "灌肠减肥", "裹保鲜膜减肥",
             # 危险训练
             "极限负重", "超负荷", "忽视疼痛", "带伤训练",
-            # 违禁物质
+            "锁死关节", "颈后深蹲", "弹震式拉伸",
+            # 违禁物质（保留兼容）
             "类固醇", "兴奋剂", "禁药", "激素注射",
         }
-        
-        # 极端方法词汇
+
+        # 极端训练方法词汇（extreme_training）
         self.extreme_keywords = {
             "7天瘦", "快速减", "暴瘦", "极速",
             "不吃饭", "只喝水", "零碳水",
+            "一周减10斤", "三天速成", "暴力增肌",
+            "每天练6小时", "不休息连续训练", "疼痛就是成长",
         }
-        
-        # 政治敏感词汇（简化版，实际应更完整）
-        self.political_keywords = {
-            # 此处省略具体词汇，实际部署时需要完整词库
-        }
-        
+
+        # 政治敏感词汇
+        self.political_keywords = set()
+
         # 违法违规词汇
         self.illegal_keywords = {
-            # 此处省略具体词汇，实际部署时需要完整词库
+            "代购禁药", "地下药房", "黑市激素",
         }
-        
+
         # 不当内容词汇
         self.inappropriate_keywords = {
-            # 此处省略具体词汇，实际部署时需要完整词库
+            "色情", "裸体训练", "性暗示",
         }
     
     def _init_patterns(self):
@@ -161,6 +187,8 @@ class ContentSafetyFilter:
         result = FilterResult(risk_level=ContentRiskLevel.SAFE)
         
         # 检测各类敏感内容
+        self._check_self_harm_content(content, result)
+        self._check_dangerous_substances(content, result)
         self._check_medical_content(content, result)
         self._check_dangerous_content(content, result)
         self._check_extreme_content(content, result)
@@ -242,12 +270,35 @@ class ContentSafetyFilter:
     def _check_extreme_content(self, content: str, result: FilterResult):
         """检测极端方法"""
         content_lower = content.lower()
-        
+
         for keyword in self.extreme_keywords:
             if keyword in content_lower:
                 result.matched_keywords.append(keyword)
                 if ContentCategory.EXTREME not in result.categories:
                     result.categories.append(ContentCategory.EXTREME)
+
+    def _check_self_harm_content(self, content: str, result: FilterResult):
+        """检测自我伤害内容"""
+        content_lower = content.lower()
+
+        for keyword in self.self_harm_keywords:
+            if keyword in content_lower:
+                result.matched_keywords.append(keyword)
+                if ContentCategory.SELF_HARM not in result.categories:
+                    result.categories.append(ContentCategory.SELF_HARM)
+                result.should_block = True
+                result.warnings.append("检测到自我伤害相关内容")
+
+    def _check_dangerous_substances(self, content: str, result: FilterResult):
+        """检测危险物质内容"""
+        content_lower = content.lower()
+
+        for keyword in self.dangerous_substances_keywords:
+            if keyword.lower() in content_lower:
+                result.matched_keywords.append(keyword)
+                if ContentCategory.DANGEROUS_SUBSTANCE not in result.categories:
+                    result.categories.append(ContentCategory.DANGEROUS_SUBSTANCE)
+                result.warnings.append("检测到危险物质相关内容")
     
     def _check_political_content(self, content: str, result: FilterResult):
         """检测政治敏感内容"""
@@ -276,15 +327,21 @@ class ContentSafetyFilter:
         if result.should_block:
             result.risk_level = ContentRiskLevel.BLOCKED
             return
-        
-        # 根据类别确定风险等级
+
+        # 根据类别确定风险等级（从高到低）
         if ContentCategory.ILLEGAL in result.categories:
             result.risk_level = ContentRiskLevel.BLOCKED
             result.should_block = True
         elif ContentCategory.POLITICAL in result.categories:
             result.risk_level = ContentRiskLevel.BLOCKED
             result.should_block = True
+        elif ContentCategory.SELF_HARM in result.categories:
+            result.risk_level = ContentRiskLevel.BLOCKED
+            result.should_block = True
         elif ContentCategory.DANGEROUS in result.categories:
+            result.risk_level = ContentRiskLevel.HIGH
+            result.requires_review = True
+        elif ContentCategory.DANGEROUS_SUBSTANCE in result.categories:
             result.risk_level = ContentRiskLevel.HIGH
             result.requires_review = True
         elif ContentCategory.EXTREME in result.categories:

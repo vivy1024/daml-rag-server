@@ -256,13 +256,26 @@ app = FastAPI(
     default_encoder=CustomJSONEncoder
 )
 
-# 添加中间件
+# CORS白名单配置
+_DEFAULT_CORS_ORIGINS = [
+    "https://yuzhen.fit",
+    "https://www.yuzhen.fit",
+    "https://api.yuzhen.fit",
+    "http://localhost:5173",   # Vite dev server
+    "http://localhost:3000",   # 备用本地开发
+    "http://127.0.0.1:5173",
+]
+_extra_origins = os.getenv("CORS_EXTRA_ORIGINS", "")
+_cors_origins = _DEFAULT_CORS_ORIGINS + [
+    o.strip() for o in _extra_origins.split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境应该配置具体域名
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Internal-Token", "X-Request-ID"],
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -273,7 +286,7 @@ try:
     
     # 从环境变量读取安全配置
     enable_rate_limit = os.getenv("ENABLE_RATE_LIMIT", "true").lower() == "true"
-    enable_auth = os.getenv("ENABLE_AUTH", "false").lower() == "true"
+    enable_auth = os.getenv("ENABLE_AUTH", "true").lower() == "true"
     enable_input_validation = os.getenv("ENABLE_INPUT_VALIDATION", "true").lower() == "true"
     
     app.add_middleware(

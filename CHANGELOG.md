@@ -1,8 +1,41 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.69.0
-**更新日期**: 2026-02-17
+**版本**: v9.70.0
+**更新日期**: 2026-02-19
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.70.0 (2026-02-19) - Phase 7 Batch 1: 安全加固 🔒
+
+**变更类型**: 🔒 安全加固
+
+**变更内容**:
+
+**Task 33: CORS白名单 + 认证默认启用**:
+- `api/main.py`: CORS `allow_origins=["*"]` → 域名白名单（yuzhen.fit + localhost）
+- `api/main.py`: 新增 `CORS_EXTRA_ORIGINS` 环境变量支持额外域名
+- `api/main.py`: `allow_methods`/`allow_headers` 收窄为实际使用的方法和头
+- `.env.example` + `api/main.py`: `ENABLE_AUTH` 默认值改为 `true`
+
+**Task 34: 废弃旧版PermissionChecker**:
+- `framework/auth/permission_checker.py`: 添加 DeprecationWarning（将在v10.0删除）
+- `framework/auth/__init__.py`: 导出注释标记 DEPRECATED
+- 确认 `chat.py` 已使用 FailClosedPermissionChecker
+
+**Task 35: ContentSafetyFilter关键词填充**:
+- 新增 `self_harm_keywords`（16个）、`dangerous_substances_keywords`（17个）
+- 扩充 `medical_keywords`（28个）、`extreme_keywords`（13个）
+- 新增 ContentCategory: SELF_HARM, DANGEROUS_SUBSTANCE
+- 新增检测方法: `_check_self_harm_content`, `_check_dangerous_substances`
+
+**Task 36: Prompt Injection基础防御**:
+- 新建 `framework/safety/__init__.py`: PromptInjectionDetector
+- 10个检测模式（中英文双语）：指令覆盖、角色扮演、提示词泄露、越狱、分隔符注入
+- `api/routes/chat.py`: 集成注入检测，检测到注入返回安全提示
+- 审计日志记录所有注入尝试
+
+**测试**: 新增29个单元测试（14个内容安全 + 15个注入检测），全部通过
 
 ---
 
