@@ -105,10 +105,10 @@ class ConnectionPoolConfig:
 class LLMConfig:
     """LLM 配置"""
     # 主要后端
-    primary_backend: str = "deepseek"
-    
+    primary_backend: str = "anthropic"
+
     # 降级后端
-    fallback_backends: List[str] = field(default_factory=lambda: ["ollama", "template"])
+    fallback_backends: List[str] = field(default_factory=lambda: ["deepseek", "template"])
     
     # 重试配置
     max_retries: int = 3

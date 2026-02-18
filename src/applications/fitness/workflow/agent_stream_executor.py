@@ -483,8 +483,8 @@ class AgentStreamExecutor:
             from ....framework.clients.llm_fallback_manager import LLMFallbackManager, LLMRequest
             
             fallback_manager = LLMFallbackManager(
-                primary_backend="deepseek",
-                fallback_backends=["ollama", "template"],
+                primary_backend="anthropic",
+                fallback_backends=["deepseek", "template"],
                 max_retries=2,
                 timeout=30
             )
