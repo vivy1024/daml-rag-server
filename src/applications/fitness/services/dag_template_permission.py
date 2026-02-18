@@ -301,7 +301,6 @@ __all__ = [
     "SIMPLE_TEMPLATES",
     "MEDIUM_TEMPLATES", 
     "COMPLEX_TEMPLATES",
-    "COMPLEXITY_LIMITS",
     "PermissionCheckResult",
     "get_user_membership_tier",
     "check_template_permission",

@@ -126,8 +126,12 @@ class ContentSafetyFilter:
             "每天练6小时", "不休息连续训练", "疼痛就是成长",
         }
 
-        # 政治敏感词汇
-        self.political_keywords = set()
+        # 政治敏感词汇（健身场景下的政治擦边内容）
+        self.political_keywords = {
+            "政治立场", "政治观点", "政治倾向",
+            "国家领导人", "政府批评", "制度批判",
+            "意识形态", "政治运动", "敏感事件",
+        }
 
         # 违法违规词汇
         self.illegal_keywords = {
