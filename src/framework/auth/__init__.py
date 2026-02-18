@@ -7,7 +7,7 @@
 
 核心组件：
 - MembershipController: 会员权限控制器（本地权限检查）
-- PermissionChecker: 权限检查器（与PHP后端集成，旧模式）
+- PermissionChecker: 权限检查器（与PHP后端集成，⚠️ DEPRECATED - 将在v10.0删除）
 - PermissionClaims: Internal JWT权限声明数据类
 - InternalJwtVerifier: Internal JWT验证器
 - FailClosedPermissionChecker: 失败关闭权限检查器
@@ -65,7 +65,7 @@ __all__ = [
     "get_membership_level_from_string",
     "get_user_membership_from_backend",
     "MEMBERSHIP_CONFIGS",
-    # PermissionChecker (旧模式)
+    # PermissionChecker (DEPRECATED - 将在v10.0删除，使用FailClosedPermissionChecker)
     "PermissionChecker",
     "PermissionResult",
     "PermissionUsageInfo",

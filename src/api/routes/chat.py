@@ -135,6 +135,27 @@ async def chat(request: Request, chat_request: ChatRequest) -> ApiResponse[ChatR
             logger.error(f"输入验证失败: {e}")
             raise ApiError(400, f"输入验证失败: {str(e)}")
 
+        # Prompt Injection 检测
+        try:
+            from ...framework.safety import get_injection_detector
+            detector = get_injection_detector()
+            injection_result = detector.detect(query_text)
+            if injection_result.is_injection:
+                return ApiResponse.success(
+                    data=ChatResponse(
+                        response=detector.get_safe_response(),
+                        interaction_id="blocked",
+                        model_used="safety_filter",
+                        tools_used=[],
+                        execution_time=0.0,
+                        personalization_score=0.0,
+                    )
+                )
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.warning(f"注入检测异常(降级放行): {e}")
+
         # 2. session_id处理：支持前端传入或自动生成
         session_id = chat_request.session_id or str(uuid.uuid4())
 

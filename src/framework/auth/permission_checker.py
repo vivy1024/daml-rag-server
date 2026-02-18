@@ -2,6 +2,9 @@
 """
 权限检查器 - DAML-RAG权限检查集成
 
+⚠️ DEPRECATED - 将在v10.0删除
+请使用 FailClosedPermissionChecker 替代。
+
 在DAML-RAG执行查询前检查用户权限和用量配额。
 实现本地缓存（5分钟TTL）以减少API调用。
 
@@ -13,13 +16,14 @@
 
 Requirements: 7.1-7.6
 
-版本: v1.0.0
-日期: 2026-01-11
+版本: v1.1.0
+日期: 2026-02-19
 作者: 薛小川
 """
 
 import logging
 import time
+import warnings
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
 from enum import Enum
@@ -132,51 +136,38 @@ class CachedPermission:
 class PermissionChecker:
     """
     权限检查器
-    
+
+    ⚠️ DEPRECATED - 将在v10.0删除。
+    请使用 FailClosedPermissionChecker 替代。
+
     在DAML-RAG执行查询前检查用户权限和用量配额。
     实现本地缓存（5分钟TTL）以减少API调用。
-    
+
     Requirements: 7.1-7.6
-    
-    使用示例:
-    ```python
-    checker = PermissionChecker(backend_client)
-    
-    # 检查权限
-    result = await checker.check_permission(user_id=1, mode="dag")
-    if not result.allowed:
-        return {"error": result.message, "upgrade_hint": result.upgrade_hint}
-    
-    # 执行查询...
-    
-    # 增加用量
-    await checker.increment_usage(user_id=1, mode="dag")
-    ```
     """
-    
+
     # 缓存TTL（秒）
     DEFAULT_CACHE_TTL = 300  # 5分钟
-    
+
     def __init__(
         self,
         backend_client=None,
         cache_ttl: int = DEFAULT_CACHE_TTL
     ):
-        """
-        初始化权限检查器
-        
-        Args:
-            backend_client: BackendClient实例（用于调用PHP后端API）
-            cache_ttl: 缓存TTL（秒），默认5分钟
-        """
+        warnings.warn(
+            "PermissionChecker已废弃，将在v10.0删除。"
+            "请使用 FailClosedPermissionChecker 替代。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.backend_client = backend_client
         self.cache_ttl = cache_ttl
-        
+
         # 本地缓存：{user_id: CachedPermission}
         self._permission_cache: Dict[str, CachedPermission] = {}
-        
+
         logger.info(
-            f"✅ PermissionChecker初始化完成: "
+            f"⚠️ PermissionChecker初始化(DEPRECATED): "
             f"backend_client={'已连接' if backend_client else '未连接'}, "
             f"cache_ttl={cache_ttl}秒"
         )
