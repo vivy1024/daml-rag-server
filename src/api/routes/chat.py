@@ -494,6 +494,8 @@ async def chat_stream(request: Request, body: Dict[str, Any]):
         domain = body.get("domain", "fitness")
         strategy = body.get("strategy", "dag")  # 执行策略：dag或agent
         template_id = body.get("template_id")  # DAG模板ID（用户选择时强制使用）
+        persona_id = body.get("persona_id")  # SystemPersona风格ID
+        attachments = body.get("attachments")  # 图片附件列表（multimodal）
 
         logger.info(
             f"📨 Chat stream request: user={user_id}, "
@@ -574,7 +576,9 @@ async def chat_stream(request: Request, body: Dict[str, Any]):
                     session_id=session_id,
                     topic_id=topic_id,  # 传递话题ID用于多轮对话
                     strategy=strategy,  # 传递执行策略
-                    template_id=template_id  # 传递用户选择的DAG模板ID（强制使用）
+                    template_id=template_id,  # 传递用户选择的DAG模板ID（强制使用）
+                    persona_id=persona_id,  # SystemPersona风格
+                    attachments=attachments,  # 图片附件（multimodal）
                 ):
                     # 记录首字节时间（TTFB）
                     if not first_byte_sent:

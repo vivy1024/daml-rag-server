@@ -53,6 +53,9 @@ FlagEmbedding>=1.2.0
 rank_bm25>=0.2.2
 jieba>=0.42.1
 
+# WebSearch 兜底（完全免费，无需 API Key）
+duckduckgo-search>=6.0.0  # 或 ddgs>=7.0.0（新包名）
+
 # 开发依赖（可选）
 pytest>=7.4.0
 pytest-asyncio>=0.21.0

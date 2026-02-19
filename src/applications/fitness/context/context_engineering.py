@@ -66,14 +66,17 @@ class ContextResult:
     conversation_history: List[Dict[str, str]]  # LLM格式的对话历史
     user_profile_text: str                       # 格式化的用户档案
     current_message: str                         # 当前用户消息
-    
+
     # 元数据
     topic_id: str                                # 话题ID
     conversation_turn: int                       # 对话轮数
     total_tokens: int                            # 总Token数
     was_compressed: bool                         # 是否进行了压缩
     profile_utilization: float                   # 档案利用率
-    
+
+    # 跨对话记忆
+    user_memory_text: str = ""                   # 用户偏好记忆文本
+
     # 原始数据
     raw_messages: List[Message] = field(default_factory=list)
     user_profile: Optional[Dict[str, Any]] = None
@@ -202,6 +205,30 @@ class ContextEngineering:
             profile_text = self.profile_injector.format_profile_for_context(
                 user_profile
             )
+
+        # 4.5 检索跨对话记忆
+        user_memory_text = ""
+        try:
+            from ..services.user_memory import get_user_memory_service
+            mem_service = get_user_memory_service()
+            uid = int(user_id) if str(user_id).isdigit() else 0
+            if uid > 0:
+                memories = await mem_service.recall(uid, message, top_k=5)
+                if memories:
+                    user_memory_text = "## 用户偏好记忆\n"
+                    for m in memories:
+                        if m.get("score", 0) > 0.5:  # 只注入相关度较高的
+                            user_memory_text += f"- {m['content']}\n"
+                    if user_memory_text == "## 用户偏好记忆\n":
+                        user_memory_text = ""  # 没有高相关度记忆
+                    else:
+                        logger.info(
+                            f"🧠 记忆注入: user={user_id}, "
+                            f"memories={len(memories)}, "
+                            f"injected={user_memory_text.count(chr(10))-1}"
+                        )
+        except Exception as e:
+            logger.debug(f"记忆检索跳过: {e}")
         
         # 5. 计算统计信息
         conversation_turn = self.memory.get_conversation_turn(user_id, topic_id)
@@ -225,6 +252,7 @@ class ContextEngineering:
             total_tokens=total_tokens,
             was_compressed=was_compressed,
             profile_utilization=0.0,  # 稍后计算
+            user_memory_text=user_memory_text,
             raw_messages=history_messages,
             user_profile=user_profile,
         )

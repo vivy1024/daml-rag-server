@@ -1,8 +1,67 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.79.0
+**版本**: v9.83.0
 **更新日期**: 2026-02-20
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.83.0 (2026-02-20) - 代码库清理：死代码删除
+
+**变更类型**: 🧹 清理
+
+**变更内容**:
+
+- **删除** `src/framework/clients/mcp_tool_manager.py`（1,300 行，src/无import）
+- **删除** `src/applications/fitness/llm_analysis_engine.py`（576 行，src/无import）
+- **删除** `src/applications/fitness/workflow/agent_stream_executor.py`（539 行，无外部引用）
+- **删除** 6个关联测试/脚本文件（~1,330 行）
+- **修改** `output_validator.py` 清理 LLMAnalysisEngine 注释引用
+
+**修改文件**: 9个删除 + 1个修改
+
+---
+
+### v9.82.0 (2026-02-20) - 跨对话记忆 + WebSearch兜底 + Token预算管理
+
+**变更类型**: ✨ 新功能
+
+**变更内容**:
+
+- **新增** `web_search.py`: DuckDuckGo WebSearch 兜底检索（Layer4，完全免费无需 API Key）
+- **新增** `token_budget_manager.py`: 8000 token 总预算管理器，按优先级压缩低优先级组件
+- **新增** stream_executor 步骤10 集成 WebSearch 注入 + TokenBudgetManager 预算控制
+- **新增** SSE done 事件新增 `web_search_used` 标记
+- **修改** `requirements.txt` 新增 `duckduckgo-search>=6.0.0`
+
+**修改文件**: 4个新增 + 2个修改
+
+---
+
+### v9.81.0 (2026-02-20) - SystemPersona风格系统 + 蓝绿多模型池扩展
+
+**变更类型**: ✨ 新功能 + 🏗️ 架构
+
+**变更内容**:
+
+- **新增** `system_personas.yaml`: 3种教练风格（专业/友好/简洁）
+- **新增** `SystemPersonaManager`: YAML热加载 + 单例缓存
+- **新增** `multi_model_pool.yaml`: 9模型4层级YAML蓝绿池（加权随机选择）
+- **新增** `vision_model_pool.yaml`: 4个Vision模型蓝绿池
+- **新增** `PoolEntry` 数据类 + `select_from_yaml_pool()` 加权随机
+- **新增** `VisionMessageBuilder`: OpenAI兼容multimodal消息构建
+- **新增** `preference_extractor.py`: 关键词预筛 + LLM偏好提取
+- **新增** `user_memory.py`: Qdrant user_memory 跨对话记忆服务
+- **新增** `image_processor.py`: 图片格式验证/压缩/base64编解码
+- **重构** `model_routing.py`: PoolEntry + YAML加载 + isinstance分支
+- **重构** `llm_response_config_manager.py`: Persona三层组装（Persona + Task + Rendering）
+- **修改** `stream_executor.py`: Vision分支 + 记忆注入 + 异步偏好提取 + 蓝绿池路由
+- **修改** `context_engineering.py`: 步骤4.5记忆recall + user_memory_text注入
+- **修改** `llm_fallback_manager.py`: model_override + MOONSHOT后端
+- **修改** `generic_openai_client.py`: model_override支持
+- **修改** `chat.py`: persona_id + attachments 参数透传
+
+**修改文件**: 10个新增 + 8个修改
 
 ---
 

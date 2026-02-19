@@ -25,6 +25,8 @@ from .food import router as food_router
 from .user import router as user_router
 from .conversation import router as conversation_router
 from .model_evaluation import router as model_evaluation_router
+from .memories import router as memories_router
+from .personas import router as personas_router
 
 # 创建主路由器
 api_router = APIRouter()
@@ -68,6 +70,16 @@ api_router.include_router(
 api_router.include_router(
     model_evaluation_router,
     tags=["ModelEvaluation"]
+)
+
+api_router.include_router(
+    memories_router,
+    tags=["UserMemory"]
+)
+
+api_router.include_router(
+    personas_router,
+    tags=["Persona"]
 )
 
 # 导出路由
