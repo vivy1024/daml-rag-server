@@ -21,6 +21,25 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+# ═══════════════════════════════════════════════════════════
+# 前端渲染格式约束（追加到所有 DAG 模板的 system prompt 末尾）
+# ═══════════════════════════════════════════════════════════
+
+_RENDERING_FORMAT_CONSTRAINT = """
+
+## 📐 输出格式要求（前端渲染）
+
+你的回答将直接在移动端App中以Markdown渲染，必须严格遵守以下格式：
+
+1. **使用标准Markdown**：标题用 ##/###，列表用 -/1.，加粗用 **文字**
+2. **适当使用emoji**：每个主要段落标题前加一个相关emoji（如 💪🏋️🥗⚠️📊）
+3. **结构清晰**：用空行分隔段落，避免超长段落（每段不超过4-5行）
+4. **禁止HTML标签**：不要输出任何HTML（如<br>、<div>等）
+5. **禁止代码块**：不要使用```包裹普通文本内容
+6. **数据表格**：简单对比用Markdown表格（| 列1 | 列2 |），复杂数据用列表
+7. **安全提醒醒目**：安全/禁忌信息用 > ⚠️ 引用块格式"""
+
+
 @dataclass
 class LLMResponseConfig:
     """
@@ -297,11 +316,11 @@ class LLMResponseConfigManager:
             )
         """
         config = self.get_config(template_id)
-        
+
         try:
             # 使用安全的字符串替换方式，避免JSON中的花括号被误解析
             prompt = config.prompt_template
-            
+
             # 逐个替换占位符，而不是使用format()
             for key, value in kwargs.items():
                 placeholder = "{" + key + "}"
@@ -309,7 +328,10 @@ class LLMResponseConfigManager:
                     # 将值转换为字符串
                     str_value = str(value) if value is not None else ""
                     prompt = prompt.replace(placeholder, str_value)
-            
+
+            # 追加前端渲染格式约束（所有模板统一）
+            prompt += _RENDERING_FORMAT_CONSTRAINT
+
             return prompt
         except Exception as e:
             logger.error(f"构建提示词失败: {e}")
