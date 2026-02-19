@@ -118,6 +118,17 @@ async def lifespan(app: FastAPI):
             # v3.0: 允许部分初始化，不抛出异常
             logger.warning("⚠️ 框架部分初始化，服务将以降级模式运行")
 
+        # ✅ 初始化 Skills 架构（Agent 模式依赖）
+        if init_result.domain_adapter:
+            try:
+                from src.framework.skills import initialize_skills_from_adapter
+                skills_integration = initialize_skills_from_adapter(init_result.domain_adapter)
+                sm = skills_integration.get_skill_manager()
+                skill_count = sm.get_skill_count() if sm else 0
+                logger.info(f"✅ Skills架构初始化完成: {skill_count} 个技能")
+            except Exception as e:
+                logger.warning(f"⚠️ Skills架构初始化失败: {e}，Agent模式将以无Skills运行")
+
         # ✅ 启动预热系统（根据feature flag选择新旧系统）
         try:
             import os

@@ -1,8 +1,29 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.73.0
+**版本**: v9.74.0
 **更新日期**: 2026-02-19
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.74.0 (2026-02-19) - Agent Skills 架构 + 等级锁移除 🤖
+
+**变更类型**: 🤖 Agent 架构升级
+
+**变更内容**:
+
+**Agent 等级锁移除（三端统一）**:
+- `mode_router.py`: 移除 AGENT_MODE_ALLOWED_LEVELS，所有会员等级可用 Agent
+- `membership_controller.py`: FREE/WARMHEART 加入 AGENT 策略和 AGENT_MODE 特性
+- `strategy_selector.py`: `_can_use_agent()` 始终返回 True
+
+**Skills 架构接入 LangGraph Agent**:
+- `agent/state.py`: 新增 `skills_loaded` 字段
+- `agent/nodes.py`: `load_skill` 特殊处理（直接走 SkillManager，不计入成本/迭代）
+- `agent/executor.py`: 新增 `create_agent_executor_from_singletons()` 工厂函数 + tool schema 构建
+- `chat.py`: 修复 Agent 路径（替换不存在的 `get_framework_components`）
+- `stream_executor.py`: Agent 路径从文本 JSON 解析切换到 LangGraph function calling
+- `main.py`: lifespan 中新增 Skills 初始化（10 个技能从 DAG 模板自动转换）
 
 ---
 

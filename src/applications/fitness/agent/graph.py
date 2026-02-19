@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-LangGraph Agent 图构建
+LangGraph Agent 图构建（Skills 版）
 
 构建 StateGraph: agent → safety_check → tools → agent / END
 
-版本: v1.0.0
-日期: 2026-02-17
+v2.0: tool_node 接收 skill_manager，支持 load_skill 调用
+
+版本: v2.0.0
+日期: 2026-02-19
 """
 
 import logging
@@ -29,6 +31,7 @@ def build_agent_graph(
     llm_client,
     mcp_orchestrator,
     tool_schemas: list,
+    skill_manager=None,
 ) -> StateGraph:
     """
     构建 LangGraph Agent 执行图
@@ -42,6 +45,7 @@ def build_agent_graph(
         llm_client: LLM客户端（需支持 chat_with_tools）
         mcp_orchestrator: MCPOrchestrator 实例
         tool_schemas: 工具的 OpenAI function-calling schema 列表
+        skill_manager: SkillManager 实例（v2.0 新增）
 
     Returns:
         编译后的 LangGraph 可执行图
@@ -50,7 +54,11 @@ def build_agent_graph(
 
     # 绑定依赖到节点函数
     bound_agent = partial(agent_node, llm_client=llm_client, tool_schemas=tool_schemas)
-    bound_tools = partial(tool_node, mcp_orchestrator=mcp_orchestrator)
+    bound_tools = partial(
+        tool_node,
+        mcp_orchestrator=mcp_orchestrator,
+        skill_manager=skill_manager,
+    )
 
     # 添加节点
     graph.add_node("agent", bound_agent)
@@ -84,5 +92,8 @@ def build_agent_graph(
     graph.add_edge("tools", "agent")
 
     compiled = graph.compile()
-    logger.info("LangGraph Agent graph compiled successfully")
+    logger.info(
+        f"LangGraph Agent graph compiled: "
+        f"skills={'enabled' if skill_manager else 'disabled'}"
+    )
     return compiled

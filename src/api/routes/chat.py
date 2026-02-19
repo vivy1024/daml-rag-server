@@ -207,17 +207,11 @@ async def chat(request: Request, chat_request: ChatRequest) -> ApiResponse[ChatR
                     logger.warning(f"模式路由解析失败，降级到DAG: {e}")
 
             if execution_mode == "agent":
-                # Agent模式：LLM动态决策
+                # Agent模式：LLM动态决策（Skills架构 v2.0）
                 logger.info("🤖 Agent模式启动...")
-                from ...applications.fitness.agent import AgentExecutor
-                from ...framework.core.simple_framework_initializer import get_framework_components
+                from ...applications.fitness.agent import create_agent_executor_from_singletons
 
-                components = get_framework_components()
-                agent_executor = AgentExecutor(
-                    llm_client=components.get("llm_client"),
-                    mcp_orchestrator=components.get("mcp_orchestrator"),
-                    tool_schemas=components.get("tool_schemas", []),
-                )
+                agent_executor = create_agent_executor_from_singletons()
                 agent_result = await agent_executor.execute(
                     user_id=user_id,
                     query=query_text,

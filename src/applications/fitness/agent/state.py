@@ -4,8 +4,8 @@ LangGraph Agent 状态定义
 
 定义 Agent 执行引擎的状态数据结构，使用 LangGraph 的 Annotated 消息累加模式。
 
-版本: v1.0.0
-日期: 2026-02-17
+版本: v2.0.0 — 新增 skills_loaded
+日期: 2026-02-19
 """
 
 from typing import TypedDict, Optional, List, Dict, Any, Annotated
@@ -37,6 +37,9 @@ class AgentState(TypedDict, total=False):
     tool_calls_count: int
     total_cost: float
     tool_results: Annotated[List[Dict[str, Any]], operator.add]
+
+    # ========== Skills 追踪（v2.0） ==========
+    skills_loaded: List[str]
 
     # ========== 安全限制 ==========
     max_iterations: int
