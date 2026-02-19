@@ -10,7 +10,12 @@ LangGraph Agent 执行引擎
 """
 
 from .state import AgentState
-from .executor import AgentExecutor
+from .executor import AgentExecutor, create_agent_executor_from_singletons
 from .llm_adapter import ToolCallableLLM
 
-__all__ = ["AgentExecutor", "AgentState", "ToolCallableLLM"]
+__all__ = [
+    "AgentExecutor",
+    "AgentState",
+    "ToolCallableLLM",
+    "create_agent_executor_from_singletons",
+]

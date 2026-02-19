@@ -351,25 +351,20 @@ class StrategySelector:
     def _can_use_agent(self, membership_level: Optional[str]) -> bool:
         """
         检查是否可以使用Agent模式
-        
-        只有ENERGY会员可以使用Agent模式
-        
+
+        v2.0: 所有会员等级均可使用Agent模式，区别仅在积分消耗倍率
+
         Args:
             membership_level: 会员等级
-        
+
         Returns:
             bool: 是否可以使用Agent模式
         """
-        # 如果没有会员控制器，检查Feature Flag
+        # 如果没有会员控制器，仍然允许（积分由后端控制）
         if not self.membership_controller:
-            return False
-        
-        # 如果会员控制已禁用，所有用户都可以使用Agent
-        if not self.membership_controller.is_membership_control_enabled():
             return True
-        
-        # 只有ENERGY会员可以使用Agent
-        return membership_level and membership_level.lower() == "energy"
+
+        return True
     
     def _check_membership_permission(
         self,

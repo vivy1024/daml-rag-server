@@ -169,11 +169,12 @@ MEMBERSHIP_CONFIGS: Dict[MembershipLevel, MembershipConfig] = {
     MembershipLevel.FREE: MembershipConfig(
         level=MembershipLevel.FREE,
         display_name="免费用户",
-        allowed_strategies=[ExecutionStrategy.DAG],
+        allowed_strategies=[ExecutionStrategy.DAG, ExecutionStrategy.AGENT],
         daily_limit=5,
         features=[
             Feature.BASIC_TRAINING,
-            Feature.BASIC_NUTRITION
+            Feature.BASIC_NUTRITION,
+            Feature.AGENT_MODE
         ],
         max_context_length=1000,
         priority=0
@@ -181,13 +182,14 @@ MEMBERSHIP_CONFIGS: Dict[MembershipLevel, MembershipConfig] = {
     MembershipLevel.WARMHEART: MembershipConfig(
         level=MembershipLevel.WARMHEART,
         display_name="暖心会员",
-        allowed_strategies=[ExecutionStrategy.DAG],
+        allowed_strategies=[ExecutionStrategy.DAG, ExecutionStrategy.AGENT],
         daily_limit=30,
         features=[
             Feature.BASIC_TRAINING,
             Feature.BASIC_NUTRITION,
             Feature.HISTORY,
-            Feature.CUSTOM_PLANS
+            Feature.CUSTOM_PLANS,
+            Feature.AGENT_MODE
         ],
         max_context_length=2000,
         priority=1
@@ -254,31 +256,19 @@ class MembershipController:
         user_level: MembershipLevel,
         strategy: ExecutionStrategy
     ) -> PermissionCheckResult:
-        """检查用户是否可以使用指定策略"""
+        """检查用户是否可以使用指定策略（v2.0: 所有等级均可使用所有策略）"""
         if not self._membership_control_enabled:
             return PermissionCheckResult(
                 allowed=True,
                 reason="会员控制已禁用，所有策略可用"
             )
-        
+
         config = self.get_config(user_level)
-        
-        if strategy in config.allowed_strategies:
-            return PermissionCheckResult(
-                allowed=True,
-                reason=f"{config.display_name}可以使用{strategy.value}策略"
-            )
-        
-        if strategy == ExecutionStrategy.AGENT:
-            return PermissionCheckResult(
-                allowed=False,
-                reason=f"{config.display_name}不支持Agent模式",
-                upgrade_hint="升级到能量会员可解锁Agent模式"
-            )
-        
+
+        # v2.0: 所有等级均可使用 DAG 和 Agent
         return PermissionCheckResult(
-            allowed=False,
-            reason=f"{config.display_name}不支持{strategy.value}策略"
+            allowed=True,
+            reason=f"{config.display_name}可以使用{strategy.value}策略"
         )
     
     def can_use_feature(
@@ -302,7 +292,6 @@ class MembershipController:
             )
         
         upgrade_hints = {
-            Feature.AGENT_MODE: "升级到能量会员可解锁Agent模式",
             Feature.HISTORY: "升级到暖心会员可查看历史记录",
             Feature.ADVANCED_ANALYTICS: "升级到能量会员可使用高级分析",
             Feature.EXPORT_DATA: "升级到能量会员可导出数据",

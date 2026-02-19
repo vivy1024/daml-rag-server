@@ -187,22 +187,89 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             }
             return
         
-        # ========== 策略分流：Agent模式使用独立执行器 ==========
+        # ========== 策略分流：Agent模式使用 LangGraph 执行器 ==========
         if strategy == "agent":
-            logger.info(f"🤖 [{request_id}] 使用Agent模式执行")
-            from .agent_stream_executor import get_agent_stream_executor
-            
-            agent_executor = get_agent_stream_executor()
-            async for event in agent_executor.execute_stream(
-                query_text=query_text,
-                user_id=user_id,
-                user_profile=user_profile,
-                session_id=session_id,
-                topic_id=topic_id,
-                **kwargs
-            ):
-                yield event
-            
+            logger.info(f"🤖 [{request_id}] 使用Agent模式执行（LangGraph + Skills）")
+            from ..agent import create_agent_executor_from_singletons
+
+            try:
+                agent_executor = create_agent_executor_from_singletons()
+
+                # 构建对话历史（上下文工程）
+                conversation_history = []
+                if self.context_engine:
+                    try:
+                        context_result = await self.context_engine.build_context(
+                            user_id=str(user_id),
+                            message=query_text,
+                            topic_id=topic_id,
+                            user_profile=user_profile,
+                        )
+                        conversation_history = [
+                            {"role": h.get("role", "user"), "content": h.get("content", "")}
+                            for h in (context_result.conversation_history or [])
+                        ]
+                    except Exception as e:
+                        logger.warning(f"[{request_id}] Agent上下文构建失败: {e}")
+
+                yield {"type": "step", "step": 1, "message": "Agent模式初始化..."}
+                yield {"type": "step", "step": 2, "message": "AI正在分析您的需求..."}
+
+                agent_result = await agent_executor.execute(
+                    user_id=user_id,
+                    query=query_text,
+                    user_profile=user_profile,
+                    conversation_history=conversation_history,
+                    membership_level=kwargs.get("membership_level", "free"),
+                )
+
+                # 发送结构化数据
+                yield {
+                    "type": "structured_data",
+                    "data": {
+                        "mode": "agent",
+                        "skills_loaded": agent_result.get("skills_loaded", []),
+                        "tool_calls": [
+                            r.get("tool") for r in agent_result.get("tool_results", [])
+                        ],
+                    },
+                }
+
+                # 流式发送最终响应（分块模拟打字效果）
+                final_response = agent_result.get("final_response") or "抱歉，暂时无法生成回答。"
+                yield {"type": "step", "step": 10, "message": "生成专业建议..."}
+
+                chunk_size = 20
+                tokens_generated = 0
+                for i in range(0, len(final_response), chunk_size):
+                    chunk = final_response[i : i + chunk_size]
+                    tokens_generated += len(chunk)
+                    yield {"type": "chunk", "content": chunk, "tokens": tokens_generated}
+
+                processing_time = agent_result.get("total_time_s", 0.0)
+                yield {
+                    "type": "done",
+                    "data": {
+                        "request_id": request_id,
+                        "processing_time": processing_time,
+                        "mode": "agent",
+                        "skills_loaded": agent_result.get("skills_loaded", []),
+                        "tool_calls_count": agent_result.get("tool_calls_count", 0),
+                        "tokens_generated": tokens_generated,
+                    },
+                }
+
+                logger.info(
+                    f"✅ [{request_id}] Agent模式完成: "
+                    f"skills={agent_result.get('skills_loaded', [])}, "
+                    f"tools={agent_result.get('tool_calls_count', 0)}, "
+                    f"time={processing_time:.2f}s"
+                )
+
+            except Exception as e:
+                logger.error(f"❌ [{request_id}] Agent模式执行失败: {e}", exc_info=True)
+                yield {"type": "error", "error": str(e), "request_id": request_id}
+
             # Agent模式执行完毕，增加用量计数（Requirements 7.4）
             await self._increment_usage_after_execute(
                 user_id=user_id,
