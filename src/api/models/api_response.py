@@ -177,8 +177,12 @@ class ThreeLayerRetrievalRequest(BaseModel):
     @field_validator("user_id", mode="before")
     @classmethod
     def coerce_user_id(cls, v):
-        if isinstance(v, str) and v.isdigit():
-            return int(v)
+        if v is None or v == "":
+            raise ValueError("user_id 不能为空")
+        if isinstance(v, str):
+            if v.isdigit():
+                return int(v)
+            raise ValueError(f"user_id 必须为数字，收到: {v}")
         return int(v)
 
 
@@ -211,8 +215,12 @@ class ChatRequest(BaseModel):
     @field_validator("user_id", mode="before")
     @classmethod
     def coerce_user_id(cls, v):
-        if isinstance(v, str) and v.isdigit():
-            return int(v)
+        if v is None or v == "":
+            raise ValueError("user_id 不能为空")
+        if isinstance(v, str):
+            if v.isdigit():
+                return int(v)
+            raise ValueError(f"user_id 必须为数字，收到: {v}")
         return int(v)
 
 
@@ -245,8 +253,12 @@ class FeedbackRequest(BaseModel):
     @field_validator("user_id", mode="before")
     @classmethod
     def coerce_user_id(cls, v):
-        if isinstance(v, str) and v.isdigit():
-            return int(v)
+        if v is None or v == "":
+            raise ValueError("user_id 不能为空")
+        if isinstance(v, str):
+            if v.isdigit():
+                return int(v)
+            raise ValueError(f"user_id 必须为数字，收到: {v}")
         return int(v)
 
 

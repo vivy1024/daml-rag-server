@@ -1444,10 +1444,13 @@ class TrueThreeLayerEngine:
         neo4j_checked = False
         if self.neo4j_available and self.neo4j_manager and exercise_name and all_conditions:
             try:
-                neo4j_contras = await asyncio.to_thread(
-                    self._query_neo4j_contraindications_sync,
-                    exercise_name,
-                    list(all_conditions)
+                neo4j_contras = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self._query_neo4j_contraindications_sync,
+                        exercise_name,
+                        list(all_conditions)
+                    ),
+                    timeout=5.0
                 )
                 if neo4j_contras:
                     neo4j_checked = True
@@ -1475,6 +1478,8 @@ class TrueThreeLayerEngine:
                                 f"安全提示(Neo4j): {exercise_name} - 谨慎使用 "
                                 f"{contra.get('injury_name_zh')}"
                             )
+            except asyncio.TimeoutError:
+                logger.warning(f"Neo4j禁忌症查询超时(5s): {exercise_name}")
             except Exception as e:
                 logger.warning(f"Neo4j禁忌症异步查询失败: {e}")
 

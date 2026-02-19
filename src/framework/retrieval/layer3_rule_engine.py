@@ -717,11 +717,14 @@ class Layer3RuleEngine:
                         neutral.append(candidate)
                         continue
 
-                    # 通过asyncio.to_thread包装同步Neo4j查询
-                    relations = await asyncio.to_thread(
-                        self._query_neo4j_postural_relations_sync,
-                        exercise_name,
-                        postural_issues
+                    # 通过asyncio.to_thread包装同步Neo4j查询（5s超时）
+                    relations = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            self._query_neo4j_postural_relations_sync,
+                            exercise_name,
+                            postural_issues
+                        ),
+                        timeout=5.0
                     )
 
                     if relations["corrects"] and not relations["aggravates"]:
@@ -744,6 +747,12 @@ class Layer3RuleEngine:
                 # 只要有任何Neo4j查询成功执行（即使没有匹配结果），标记为已使用
                 neo4j_used = True
 
+            except asyncio.TimeoutError:
+                logger.warning("Neo4j体态关系查询超时(5s)，降级到关键词匹配")
+                corrective = []
+                neutral = []
+                aggravating = []
+                neo4j_used = False
             except Exception as e:
                 logger.warning(f"Neo4j体态关系批量查询失败，降级到关键词匹配: {e}")
                 # 重置分类列表，准备用关键词方式重新分类
