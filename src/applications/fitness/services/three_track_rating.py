@@ -455,7 +455,8 @@ class ThreeTrackRatingService:
                 llm_response=llm_response,
                 tools_used=tools_used,
                 personalization=personalization,
-                grade=grade
+                grade=grade,
+                backend_used=metadata.get('backend_used')
             )
         
         return result
@@ -480,11 +481,12 @@ class ThreeTrackRatingService:
         llm_response: str,
         tools_used: List[str],
         personalization: PersonalizationScores,
-        grade: PersonalizationGrade
+        grade: PersonalizationGrade,
+        backend_used: Optional[str] = None
     ) -> bool:
         """
         将高评分对话导入Few-Shot库
-        
+
         Args:
             session_id: 会话ID
             user_query: 用户查询
@@ -492,7 +494,8 @@ class ThreeTrackRatingService:
             tools_used: 使用的工具列表
             personalization: 个性化感知评分
             grade: 个性化等级
-            
+            backend_used: 生成该回复的LLM后端名称
+
         Returns:
             bool: 是否导入成功
         """
@@ -539,6 +542,7 @@ class ThreeTrackRatingService:
                     'uniqueness': personalization.uniqueness,
                     'dynamic_adjustment': personalization.dynamic_adjustment,
                     'effect_label': effect_label,
+                    'backend_used': backend_used,
                     'source': 'three_track_rating',
                     'fewshot_eligible': True
                 }

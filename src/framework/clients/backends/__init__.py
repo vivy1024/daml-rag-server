@@ -15,6 +15,7 @@ Task 45 - Phase 7 Batch 4 架构重构
 from .base import IBackendClient
 from .anthropic_client import AnthropicClient
 from .deepseek_client import DeepSeekClient
+from .generic_openai_client import GenericOpenAIClient
 from .health_checker import BackendHealthChecker
 from .template_generator import TemplateResponseGenerator
 
@@ -22,6 +23,7 @@ __all__ = [
     "IBackendClient",
     "AnthropicClient",
     "DeepSeekClient",
+    "GenericOpenAIClient",
     "BackendHealthChecker",
     "TemplateResponseGenerator",
 ]

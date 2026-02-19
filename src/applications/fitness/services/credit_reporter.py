@@ -292,11 +292,12 @@ async def report_credit_consumption(
     template_name: Optional[str] = None,
     conversation_id: Optional[str] = None,
     input_tokens: int = 0,
-    output_tokens: int = 0
+    output_tokens: int = 0,
+    backend_used: str = "unknown"
 ) -> Dict[str, Any]:
     """
     便捷函数：上报积分消耗
-    
+
     Args:
         user_id: 用户ID
         tokens: 总Token消耗数量
@@ -305,7 +306,8 @@ async def report_credit_consumption(
         conversation_id: 会话ID（可选）
         input_tokens: 输入Token数量（可选）
         output_tokens: 输出Token数量（可选）
-    
+        backend_used: 实际使用的LLM后端（可选）
+
     Returns:
         dict: 上报结果
     """
@@ -317,5 +319,6 @@ async def report_credit_consumption(
         template_name=template_name,
         conversation_id=conversation_id,
         input_tokens=input_tokens,
-        output_tokens=output_tokens
+        output_tokens=output_tokens,
+        backend_used=backend_used,
     )

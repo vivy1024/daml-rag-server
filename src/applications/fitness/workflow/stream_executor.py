@@ -468,6 +468,11 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             
             # 流式生成
             async for chunk in self._execute_step_10_stream(state):
+                # 捕获 backend_used 元数据（不发送给前端）
+                if "_backend_used" in chunk:
+                    state["backend_used"] = chunk["_backend_used"]
+                    continue
+
                 # 记录首字节时间
                 if first_chunk_time is None:
                     first_chunk_time = time.time()
@@ -837,15 +842,32 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 mcp_tools_result=mcp_tools_result_str
             )
             
-            # 初始化LLM降级管理器
+            # 初始化LLM降级管理器（根据模板路由选择后端）
             from ....framework.clients.llm_fallback_manager import LLMFallbackManager, LLMRequest
-            fallback_manager = LLMFallbackManager(
-                primary_backend="anthropic",
-                fallback_backends=["deepseek", "template"],
-                max_retries=3,
-                timeout=30,
-                enable_health_check=True
-            )
+            from ...fitness.config.model_routing import get_backend_for_template
+
+            routed_backend = get_backend_for_template(selected_template_id)
+            if routed_backend:
+                # 模板路由指定了后端，用它做primary，降级到默认链
+                fallback_manager = LLMFallbackManager(
+                    primary_backend=routed_backend,
+                    fallback_backends=["anthropic", "deepseek", "template"],
+                    max_retries=3,
+                    timeout=30,
+                    enable_health_check=True
+                )
+                logger.info(
+                    f"🔀 [{request_id}] 步骤10: 模板路由 {selected_template_id} → {routed_backend}"
+                )
+            else:
+                # 未配置路由，走默认降级链
+                fallback_manager = LLMFallbackManager(
+                    primary_backend="anthropic",
+                    fallback_backends=["deepseek", "template"],
+                    max_retries=3,
+                    timeout=30,
+                    enable_health_check=True
+                )
             
             # 准备LLM请求
             few_shot_dicts = [{"query": ex["query"], "response": ex["response"]} for ex in few_shot_examples]
@@ -872,7 +894,10 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             async for chunk, response in fallback_manager.call_with_fallback_stream(llm_request):
                 if chunk:  # 只处理非空的chunk
                     yield {"content": chunk}
-            
+                if response:
+                    # 捕获 backend_used 供后续评估使用
+                    yield {"_backend_used": response.backend_used.value}
+
             logger.info(f"✅ [{request_id}] 步骤10完成: 流式LLM生成完成")
             
         except Exception as e:
@@ -939,6 +964,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 'few_shot_count': len(state.get("few_shot_examples", [])),
                 'context_used': state.get("context_used", False),
                 'conversation_turn': state.get("conversation_turn", 1),
+                'backend_used': state.get("backend_used"),
             }
             
             # 处理三轨评分
