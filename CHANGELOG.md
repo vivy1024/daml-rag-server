@@ -1,8 +1,22 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.77.0
+**版本**: v9.78.0
 **更新日期**: 2026-02-20
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.78.0 (2026-02-20) - 多模型集成收尾：单元测试+文档+Docker验证
+
+**变更类型**: ✅ 测试 + 📝 文档
+
+**变更内容**:
+
+- **新增** `tests/unit/test_generic_openai_client.py`: GenericOpenAIClient 14项单元测试（init/call/health_check/_build_messages）
+- **更新** `docs/06-部署运维/环境变量配置指南.md`: 新增多模型集成配置章节（Qwen/SiliconFlow/GLM/TEMPLATE_MODEL_MAP/AGENT_LLM_BACKEND）
+- **验证** Docker容器内全链路：后端连通性 + 降级链 + 模板路由 + 评估服务 + API路由
+
+**新增文件**: 1个 | **修改文件**: 2个
 
 ---
 
