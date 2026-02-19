@@ -42,7 +42,20 @@ class LLMConfig:
     # 通义千问 (备用)
     QWEN_API_KEY = os.getenv("QWEN_API_KEY", "")
     QWEN_BASE_URL = os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-    QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-turbo")
+    QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-plus")
+    QWEN_ENABLED = os.getenv("QWEN_ENABLED", "false").lower() == "true"
+
+    # SiliconFlow (免费模型聚合平台)
+    SILICONFLOW_API_KEY = os.getenv("SILICONFLOW_API_KEY", "")
+    SILICONFLOW_BASE_URL = os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1")
+    SILICONFLOW_MODEL = os.getenv("SILICONFLOW_MODEL", "Qwen/Qwen3-8B")
+    SILICONFLOW_ENABLED = os.getenv("SILICONFLOW_ENABLED", "false").lower() == "true"
+
+    # 智谱GLM (免费模型可用)
+    GLM_API_KEY = os.getenv("GLM_API_KEY", "")
+    GLM_BASE_URL = os.getenv("GLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
+    GLM_MODEL = os.getenv("GLM_MODEL", "glm-4-flash")
+    GLM_ENABLED = os.getenv("GLM_ENABLED", "false").lower() == "true"
 
     # Anthropic Claude (通过Kiro RS反向代理)
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
@@ -78,6 +91,12 @@ class LLMConfig:
             logger.warning("ANTHROPIC_API_KEY未配置，Anthropic Claude功能将不可用")
         if cls.ANTHROPIC_ENABLED:
             logger.info(f"Anthropic Claude已启用: model={cls.ANTHROPIC_MODEL}")
+        if cls.QWEN_ENABLED:
+            logger.info(f"通义千问已启用: model={cls.QWEN_MODEL}")
+        if cls.SILICONFLOW_ENABLED:
+            logger.info(f"SiliconFlow已启用: model={cls.SILICONFLOW_MODEL}")
+        if cls.GLM_ENABLED:
+            logger.info(f"智谱GLM已启用: model={cls.GLM_MODEL}")
         if not cls.OLLAMA_ENABLED:
             logger.info("Ollama已禁用（服务器环境）")
         if cls.USE_API_POOL:

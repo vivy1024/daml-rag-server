@@ -1,8 +1,30 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.76.0
-**更新日期**: 2026-02-19
+**版本**: v9.77.0
+**更新日期**: 2026-02-20
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.77.0 (2026-02-20) - 多模型集成与DAML-Eval评估体系 🚀
+
+**变更类型**: ✨ 新功能 + 🏗️ 架构
+
+**变更内容**:
+
+- **新增** `GenericOpenAIClient`: 通用OpenAI兼容后端客户端，一个类覆盖Qwen/SiliconFlow/GLM等所有兼容API
+- **新增** `BackendType` 枚举扩展: QWEN/SILICONFLOW/GLM，`_init_backends()` 按 `*_ENABLED` 环境变量注册
+- **新增** `config/model_routing.py`: 模板级模型路由，通过 `TEMPLATE_MODEL_MAP` 环境变量按DAG模板分流不同后端
+- **修改** `stream_executor.py`: 步骤10根据模板路由选择后端，捕获 `backend_used` 到 state
+- **修改** `llm_adapter.py`: `ToolCallableLLM` 参数化，支持 `base_url/api_key/model` 可选参数 + `AGENT_LLM_BACKEND` 环境变量
+- **修改** `three_track_rating.py`: `_import_to_fewshot_pool` 接收 `backend_used`，Qdrant payload 携带模型标签
+- **新增** `services/model_evaluation.py`: 模型评估统计服务，从Qdrant聚合各模型的准入率和评分分布
+- **新增** `routes/model_evaluation.py`: `/api/internal/model-evaluation/stats` 内部API端点
+- **修改** `.env.example` / `.env.production`: 新增 SILICONFLOW_*/GLM_*/TEMPLATE_MODEL_MAP 配置
+- **修改** `LLMConfig`: 新增 SiliconFlow/GLM 配置项 + validate() 日志
+- **新增** `docs/04-开发指南/63-DAML-Eval垂直领域LLM评估体系设计.md`: 评估方法论文档
+
+**新增文件**: 4个 | **修改文件**: 8个
 
 ---
 

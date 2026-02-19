@@ -30,6 +30,9 @@ class BackendType(Enum):
     """LLM后端类型"""
     ANTHROPIC = "anthropic"
     DEEPSEEK = "deepseek"
+    QWEN = "qwen"
+    SILICONFLOW = "siliconflow"
+    GLM = "glm"
     OLLAMA = "ollama"  # 保留枚举值，实际已禁用
     TEMPLATE = "template"
 
@@ -117,11 +120,41 @@ class LLMFallbackManager:
         try:
             from .backends.anthropic_client import AnthropicClient
             from .backends.deepseek_client import DeepSeekClient
+            from .backends.generic_openai_client import GenericOpenAIClient
             from .backends.health_checker import BackendHealthChecker
             from .backends.template_generator import TemplateResponseGenerator
 
             self._clients[BackendType.ANTHROPIC] = AnthropicClient()
             self._clients[BackendType.DEEPSEEK] = DeepSeekClient()
+
+            # 通用OpenAI兼容后端（按环境变量ENABLED控制）
+            if os.getenv("QWEN_ENABLED", "false").lower() == "true":
+                self._clients[BackendType.QWEN] = GenericOpenAIClient(
+                    backend_name="qwen",
+                    base_url=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+                    api_key=os.getenv("QWEN_API_KEY", ""),
+                    model=os.getenv("QWEN_MODEL", "qwen-plus"),
+                )
+                logger.info(f"✅ Qwen后端已注册: model={os.getenv('QWEN_MODEL', 'qwen-plus')}")
+
+            if os.getenv("SILICONFLOW_ENABLED", "false").lower() == "true":
+                self._clients[BackendType.SILICONFLOW] = GenericOpenAIClient(
+                    backend_name="siliconflow",
+                    base_url=os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"),
+                    api_key=os.getenv("SILICONFLOW_API_KEY", ""),
+                    model=os.getenv("SILICONFLOW_MODEL", "Qwen/Qwen3-8B"),
+                )
+                logger.info(f"✅ SiliconFlow后端已注册: model={os.getenv('SILICONFLOW_MODEL', 'Qwen/Qwen3-8B')}")
+
+            if os.getenv("GLM_ENABLED", "false").lower() == "true":
+                self._clients[BackendType.GLM] = GenericOpenAIClient(
+                    backend_name="glm",
+                    base_url=os.getenv("GLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4"),
+                    api_key=os.getenv("GLM_API_KEY", ""),
+                    model=os.getenv("GLM_MODEL", "glm-4-flash"),
+                )
+                logger.info(f"✅ GLM后端已注册: model={os.getenv('GLM_MODEL', 'glm-4-flash')}")
+
             self._health_checker = BackendHealthChecker()
             self._template_generator = TemplateResponseGenerator()
         except ImportError as e:

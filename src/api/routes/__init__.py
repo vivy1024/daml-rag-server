@@ -24,6 +24,7 @@ from .health import router as health_router
 from .food import router as food_router
 from .user import router as user_router
 from .conversation import router as conversation_router
+from .model_evaluation import router as model_evaluation_router
 
 # 创建主路由器
 api_router = APIRouter()
@@ -62,6 +63,11 @@ api_router.include_router(
 api_router.include_router(
     conversation_router,
     tags=["Conversation"]
+)
+
+api_router.include_router(
+    model_evaluation_router,
+    tags=["ModelEvaluation"]
 )
 
 # 导出路由
