@@ -1,0 +1,83 @@
+# 蓝绿多模型测试池配置
+# 加权随机选择，weight 值越大被选中概率越高
+# 总 weight = 100（百分比语义）
+#
+# cost_tier:
+#   free       — 完全免费（SiliconFlow/智谱免费模型）
+#   free_quota — 有免费额度（通义千问100万token）
+#   low        — 低价（DeepSeek V3）
+#   baseline   — 基准/付费（Claude/Kimi K2）
+#
+# 版本: v1.0.0
+# 日期: 2026-02-20
+
+# 是否启用 YAML 池（false 时回退到 MULTI_MODEL_POOL 环境变量）
+enabled: true
+
+pool:
+  # === 免费模型 55% ===
+  - backend: glm
+    model: glm-4-flash
+    weight: 20
+    api_base: https://open.bigmodel.cn/api/paas/v4
+    cost_tier: free
+    note: "智谱免费，稳定快速"
+
+  - backend: siliconflow
+    model: Qwen/Qwen3-8B
+    weight: 15
+    api_base: https://api.siliconflow.cn/v1
+    cost_tier: free
+    note: "SiliconFlow免费，通义千问8B"
+
+  - backend: siliconflow
+    model: THUDM/GLM-Z1-9B-0414
+    weight: 10
+    api_base: https://api.siliconflow.cn/v1
+    cost_tier: free
+    note: "SiliconFlow免费，GLM推理模型"
+
+  - backend: siliconflow
+    model: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+    weight: 10
+    api_base: https://api.siliconflow.cn/v1
+    cost_tier: free
+    note: "SiliconFlow免费，DeepSeek蒸馏"
+
+  # === 低价模型 15% ===
+  - backend: deepseek
+    model: deepseek-chat
+    weight: 15
+    api_base: https://api.deepseek.com/v1
+    cost_tier: low
+    note: "DeepSeek V3，低价高质"
+
+  # === 免费额度模型 15% ===
+  - backend: qwen
+    model: qwen-turbo
+    weight: 5
+    api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+    cost_tier: free_quota
+    note: "通义千问turbo，100万token免费"
+
+  - backend: qwen
+    model: qwen-plus
+    weight: 10
+    api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+    cost_tier: free_quota
+    note: "通义千问plus，100万token免费"
+
+  # === 基准模型 15% ===
+  - backend: anthropic
+    model: claude-haiku-4-5-20250315
+    weight: 5
+    api_base: https://api.kirors.com/v1
+    cost_tier: baseline
+    note: "Claude Haiku 4.5，Kiro RS代理"
+
+  - backend: moonshot
+    model: kimi-k2-0905-preview
+    weight: 5
+    api_base: https://api.moonshot.cn/v1
+    cost_tier: baseline
+    note: "Kimi K2，月之暗面"

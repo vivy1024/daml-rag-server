@@ -140,13 +140,15 @@ async def execute_eleven_step_workflow_stream(
     session_id=None,
     topic_id=None,  # 话题ID，用于多轮对话
     strategy: str = "dag",  # 执行策略：dag或agent
-    template_id: str = None  # DAG模板ID（用户选择时强制使用）
+    template_id: str = None,  # DAG模板ID（用户选择时强制使用）
+    persona_id: str = None,  # SystemPersona风格ID
+    attachments: list = None,  # 图片附件列表（multimodal）
 ):
     """
     执行11步工作流程（流式版本，向后兼容）
-    
+
     这是对新 StreamWorkflowExecutor 的包装，保持与原有接口兼容。
-    
+
     Args:
         query_text: 用户查询文本
         user_id: 用户ID
@@ -156,10 +158,21 @@ async def execute_eleven_step_workflow_stream(
         topic_id: 话题ID（可选，用于多轮对话）
         strategy: 执行策略（dag或agent，默认dag）
         template_id: DAG模板ID（可选，用户选择时强制使用，跳过LLM选择）
-        
+        persona_id: SystemPersona风格ID（可选）
+        attachments: 图片附件列表（可选，multimodal）
+
     Yields:
         Dict[str, Any]: SSE事件
     """
+    # 构建额外参数（仅传递非None值，避免覆盖默认值）
+    extra_kwargs = {}
+    if template_id is not None:
+        extra_kwargs["template_id"] = template_id
+    if persona_id is not None:
+        extra_kwargs["persona_id"] = persona_id
+    if attachments is not None:
+        extra_kwargs["attachments"] = attachments
+
     async for event in execute_workflow_stream(
         query_text=query_text,
         user_id=user_id,
@@ -168,7 +181,7 @@ async def execute_eleven_step_workflow_stream(
         session_id=session_id,
         topic_id=topic_id,
         strategy=strategy,
-        template_id=template_id
+        **extra_kwargs
     ):
         yield event
 

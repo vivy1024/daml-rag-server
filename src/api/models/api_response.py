@@ -200,6 +200,31 @@ class ThreeLayerRetrievalResponse(BaseModel):
     standardization_result: Optional[Dict[str, Any]] = Field(default=None, description="字段标准化结果")
 
 
+class Attachment(BaseModel):
+    """附件模型（图片等）"""
+    type: str = Field(..., description="附件类型: image")
+    filename: str = Field(default="", description="文件名")
+    mime_type: str = Field(..., description="MIME类型: image/jpeg, image/png, image/webp")
+    data: str = Field(..., description="base64编码的文件数据")
+    size: int = Field(default=0, description="文件大小（字节）")
+
+    @field_validator("mime_type")
+    @classmethod
+    def validate_mime_type(cls, v):
+        allowed = {"image/jpeg", "image/png", "image/webp"}
+        if v not in allowed:
+            raise ValueError(f"不支持的MIME类型: {v}，允许: {allowed}")
+        return v
+
+    @field_validator("size")
+    @classmethod
+    def validate_size(cls, v):
+        max_size = 5 * 1024 * 1024  # 5MB
+        if v > max_size:
+            raise ValueError(f"文件大小超限: {v} > {max_size}")
+        return v
+
+
 class ChatRequest(BaseModel):
     """聊天请求"""
     user_id: int = Field(..., description="用户ID")
@@ -211,6 +236,8 @@ class ChatRequest(BaseModel):
     retrieval_mode: Optional[str] = Field(default="full_three_layer", description="检索模式")
     mode: Optional[str] = Field(default="auto", description="执行模式: auto/dag/agent")
     topic_id: Optional[str] = Field(default=None, description="对话话题ID（用于上下文连续性）")
+    persona_id: Optional[str] = Field(default=None, description="人设ID: coach_professional/coach_friendly/coach_concise")
+    attachments: Optional[List[Attachment]] = Field(default=None, description="附件列表（图片等）")
 
     @field_validator("user_id", mode="before")
     @classmethod
@@ -279,6 +306,7 @@ __all__ = [
     'ApiError',
     'ThreeLayerRetrievalRequest',
     'ThreeLayerRetrievalResponse',
+    'Attachment',
     'ChatRequest',
     'ChatResponse',
     'FeedbackRequest',

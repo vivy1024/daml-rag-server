@@ -31,9 +31,10 @@ class GenericOpenAIClient(IBackendClient):
         self.model = model
 
     async def call(self, request, timeout: int = 30) -> str:
+        model = getattr(request, "model_override", None) or self.model
         messages = request.messages or self._build_messages(request)
         payload = {
-            "model": self.model,
+            "model": model,
             "messages": messages,
             "max_tokens": request.max_tokens,
             "temperature": request.temperature,
@@ -54,9 +55,10 @@ class GenericOpenAIClient(IBackendClient):
             return data["choices"][0]["message"]["content"]
 
     async def call_stream(self, request, timeout: int = 30) -> AsyncIterator[str]:
+        model = getattr(request, "model_override", None) or self.model
         messages = request.messages or self._build_messages(request)
         payload = {
-            "model": self.model,
+            "model": model,
             "messages": messages,
             "max_tokens": request.max_tokens,
             "temperature": request.temperature,

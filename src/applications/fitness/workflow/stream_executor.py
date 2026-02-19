@@ -323,6 +323,9 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             state["conversation_turn"] = context_result.conversation_turn
             state["context_was_compressed"] = context_result.was_compressed
             state["context_total_tokens"] = context_result.total_tokens
+            # 跨对话记忆注入
+            if hasattr(context_result, "user_memory_text") and context_result.user_memory_text:
+                state["user_memory_text"] = context_result.user_memory_text
         
         # 流式监控变量
         ttfb_ms = None
@@ -542,6 +545,47 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     logger.info(f"📝 [{request_id}] 对话历史已记录")
                 except Exception as e:
                     logger.warning(f"[{request_id}] 记录对话历史失败: {e}")
+
+            # ========== 偏好提取（异步，不阻塞主流程） ==========
+            if state.get("final_response") and user_id:
+                try:
+                    import asyncio
+                    from ..services.preference_extractor import (
+                        should_extract_preferences,
+                        extract_preferences_from_conversation,
+                    )
+                    from ..services.user_memory import get_user_memory_service
+
+                    user_query_text = state.get("query_text", "")
+                    final_resp = state.get("final_response", "")
+
+                    if should_extract_preferences(user_query_text):
+                        async def _extract_and_store():
+                            try:
+                                prefs = await extract_preferences_from_conversation(
+                                    user_query=user_query_text,
+                                    ai_response=final_resp,
+                                )
+                                if prefs:
+                                    mem_service = get_user_memory_service()
+                                    uid = int(user_id) if str(user_id).isdigit() else 0
+                                    for p in prefs:
+                                        await mem_service.remember(
+                                            user_id=uid,
+                                            content=p["content"],
+                                            category=p["category"],
+                                        )
+                                    logger.info(
+                                        f"🧠 [{request_id}] 偏好提取: "
+                                        f"存储{len(prefs)}条记忆 (user={user_id})"
+                                    )
+                            except Exception as pe:
+                                logger.warning(f"[{request_id}] 偏好提取失败: {pe}")
+
+                        asyncio.create_task(_extract_and_store())
+                        logger.debug(f"[{request_id}] 偏好提取任务已启动（异步）")
+                except Exception as e:
+                    logger.warning(f"[{request_id}] 偏好提取初始化失败: {e}")
             
             # 计算总耗时
             processing_time = time.time() - start_time
@@ -596,6 +640,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     "topic_id": state.get("topic_id"),
                     "conversation_turn": state.get("conversation_turn", 1),
                     "context_was_compressed": state.get("context_was_compressed", False),
+                    "web_search_used": state.get("web_search_triggered", False),
                 }
             }
             
@@ -783,9 +828,16 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         user_profile = state.get("user_profile")
         aggregated_data = state.get("aggregated_data", {})
         few_shot_examples = state.get("few_shot_examples", [])
-        
+
         # 获取对话历史（上下文工程）
         conversation_history = state.get("conversation_history", [])
+
+        # 获取附件（multimodal）
+        attachments = state.get("attachments") or []
+        has_images = attachments and any(
+            a.get("mime_type", "").startswith("image/") or a.get("type") == "image"
+            for a in attachments
+        )
         
         try:
             # 初始化配置管理器
@@ -830,10 +882,12 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     logger.warning(f"序列化MCP工具结果失败: {e}")
                     mcp_tools_result_str = str(aggregated_data)
             
-            # 构建提示词
+            # 构建提示词（三层组装：Persona + Task + Rendering）
             retrieval_results = state.get("retrieval_results") or {}
+            persona_id = state.get("persona_id")  # 从请求传入
             system_prompt = config_manager.build_prompt(
                 template_id=selected_template_id,
+                persona_id=persona_id,
                 query=query_text,
                 user_profile=user_profile_for_prompt,
                 response_hint=response_hint,
@@ -841,23 +895,125 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 retrieval_count=len(retrieval_results.get('results', [])),
                 mcp_tools_result=mcp_tools_result_str
             )
-            
+
+            # 注入跨对话记忆到 system_prompt
+            user_memory_text = state.get("user_memory_text", "")
+            if user_memory_text:
+                system_prompt = f"{system_prompt}\n\n{user_memory_text}"
+
+            # ========== Layer4: WebSearch 兜底 ==========
+            retrieval_results = state.get("retrieval_results") or {}
+            try:
+                from ...fitness.services.web_search import (
+                    should_web_search, web_search_fallback, format_web_results_for_prompt
+                )
+                if should_web_search(query_text, retrieval_results):
+                    web_results = await web_search_fallback(query_text)
+                    if web_results:
+                        web_text = format_web_results_for_prompt(web_results)
+                        system_prompt = f"{system_prompt}\n{web_text}"
+                        state["web_search_triggered"] = True
+                        state["web_search_results"] = web_results
+                        logger.info(f"🔍 [{request_id}] WebSearch注入: {len(web_results)}条结果")
+            except Exception as ws_err:
+                logger.debug(f"[{request_id}] WebSearch跳过: {ws_err}")
+
+            # ========== TokenBudgetManager: 统一预算控制 ==========
+            try:
+                from ...fitness.context.token_budget_manager import TokenBudgetManager, estimate_tokens
+                import json as _json
+
+                budget_mgr = TokenBudgetManager()
+                # 将各组件文本传入预算管理器
+                budget_components = {
+                    "system_prompt": system_prompt,  # persona + task + rendering + memory + websearch
+                    "conversation_history": _json.dumps(
+                        conversation_history, ensure_ascii=False
+                    ) if conversation_history else "",
+                    "few_shot_examples": _json.dumps(
+                        [{"query": ex["query"], "response": ex["response"]} for ex in few_shot_examples],
+                        ensure_ascii=False,
+                    ) if few_shot_examples else "",
+                    "current_message": query_text,
+                }
+                # 重新映射：system_prompt 包含多个子组件，按 task_instruction 限额管理
+                budget_components_mapped = {
+                    "task_instruction": system_prompt,
+                    "conversation_history": budget_components["conversation_history"],
+                    "few_shot_examples": budget_components["few_shot_examples"],
+                    "current_message": query_text,
+                }
+                budget_result = budget_mgr.allocate(budget_components_mapped)
+
+                if budget_result.over_budget:
+                    logger.warning(
+                        f"⚠️ [{request_id}] Token预算仍超限: "
+                        f"{budget_result.total_tokens}/{budget_result.budget}"
+                    )
+
+                # 应用压缩结果
+                system_prompt = budget_result.get_text("task_instruction")
+
+                # 压缩对话历史：按比例截断条数
+                conv_alloc = budget_result.allocations.get("conversation_history")
+                if conv_alloc and conv_alloc.compressed and conversation_history:
+                    ratio = conv_alloc.allocated_tokens / max(conv_alloc.original_tokens, 1)
+                    keep_count = max(2, int(len(conversation_history) * ratio))
+                    conversation_history = conversation_history[-keep_count:]
+                    logger.info(
+                        f"📦 [{request_id}] 对话历史压缩: "
+                        f"{conv_alloc.original_tokens}→{conv_alloc.allocated_tokens} tokens, "
+                        f"保留最近 {keep_count} 条"
+                    )
+
+                # 压缩 few_shot：按比例截断条数
+                fs_alloc = budget_result.allocations.get("few_shot_examples")
+                if fs_alloc and fs_alloc.compressed and few_shot_examples:
+                    ratio = fs_alloc.allocated_tokens / max(fs_alloc.original_tokens, 1)
+                    keep_count = max(1, int(len(few_shot_examples) * ratio))
+                    few_shot_examples = few_shot_examples[-keep_count:]
+
+            except Exception as budget_err:
+                logger.debug(f"[{request_id}] TokenBudgetManager跳过: {budget_err}")
+
             # 初始化LLM降级管理器（根据模板路由选择后端）
             from ....framework.clients.llm_fallback_manager import LLMFallbackManager, LLMRequest
-            from ...fitness.config.model_routing import get_backend_for_template
+            from ...fitness.config.model_routing import get_backend_for_template, PoolEntry
 
-            routed_backend = get_backend_for_template(selected_template_id)
-            if routed_backend:
-                # 模板路由指定了后端，用它做primary，降级到默认链
+            routed = get_backend_for_template(selected_template_id)
+            model_override = None  # 蓝绿池模型覆盖
+            pool_meta = None  # 蓝绿池元数据（用于DAML-Eval）
+
+            if isinstance(routed, PoolEntry):
+                # YAML蓝绿池返回完整条目
+                pool_meta = {
+                    "model_id": routed.model,
+                    "cost_tier": routed.cost_tier,
+                    "backend": routed.backend,
+                }
+                model_override = routed.model
                 fallback_manager = LLMFallbackManager(
-                    primary_backend=routed_backend,
+                    primary_backend=routed.backend,
                     fallback_backends=["anthropic", "deepseek", "template"],
                     max_retries=3,
                     timeout=30,
                     enable_health_check=True
                 )
                 logger.info(
-                    f"🔀 [{request_id}] 步骤10: 模板路由 {selected_template_id} → {routed_backend}"
+                    f"🔀 [{request_id}] 步骤10: 蓝绿池 {selected_template_id} → "
+                    f"{routed.backend}/{routed.model} (tier={routed.cost_tier})"
+                )
+            elif routed:
+                # 固定覆盖或环境变量池（返回字符串）
+                fallback_manager = LLMFallbackManager(
+                    primary_backend=routed,
+                    fallback_backends=["anthropic", "deepseek", "template"],
+                    max_retries=3,
+                    timeout=30,
+                    enable_health_check=True
+                )
+                logger.info(
+                    f"🔀 [{request_id}] 步骤10: 模板路由 {selected_template_id} → {routed}"
                 )
             else:
                 # 未配置路由，走默认降级链
@@ -872,7 +1028,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             # 准备LLM请求
             few_shot_dicts = [{"query": ex["query"], "response": ex["response"]} for ex in few_shot_examples]
             
-            # 构建LLM请求（包含对话历史）
+            # 构建LLM请求（包含对话历史 + 蓝绿池模型覆盖）
             llm_request = LLMRequest(
                 query=query_text,
                 few_shot_examples=few_shot_dicts,
@@ -882,6 +1038,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 temperature=llm_response_config.temperature,
                 stream=True,  # 启用流式
                 conversation_history=conversation_history,  # 传递对话历史
+                model_override=model_override,  # 蓝绿池指定模型
             )
             
             # 记录对话历史信息
@@ -889,14 +1046,69 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 logger.info(
                     f"📚 [{request_id}] 步骤10: 携带{len(conversation_history)}条对话历史"
                 )
-            
+
+            # ========== Vision 分支：有图片时构建 multimodal messages ==========
+            if has_images:
+                try:
+                    from ...fitness.services.vision_message_builder import VisionMessageBuilder
+                    from ...fitness.config.model_routing import _load_yaml_pool, PoolEntry as VisionPoolEntry
+
+                    vision_builder = VisionMessageBuilder()
+                    vision_messages = vision_builder.build_messages(
+                        query=query_text,
+                        attachments=attachments,
+                        system_prompt=system_prompt,
+                        conversation_history=conversation_history,
+                    )
+                    # 用 multimodal messages 覆盖 LLMRequest
+                    llm_request.messages = vision_messages
+                    llm_request.conversation_history = None  # 已包含在 messages 中
+
+                    # 从 Vision 蓝绿池选模型（独立于文本池）
+                    import yaml
+                    from pathlib import Path
+                    vision_pool_path = Path(__file__).resolve().parents[4] / "config" / "vision_model_pool.yaml"
+                    if vision_pool_path.exists():
+                        import random
+                        with open(vision_pool_path, "r", encoding="utf-8") as f:
+                            vp_data = yaml.safe_load(f)
+                        if vp_data and vp_data.get("enabled") and vp_data.get("pool"):
+                            vp_entries = vp_data["pool"]
+                            weights = [e.get("weight", 10) for e in vp_entries]
+                            chosen_v = random.choices(vp_entries, weights=weights, k=1)[0]
+                            llm_request.model_override = chosen_v["model"]
+                            # 重建 fallback_manager 使用 vision 后端
+                            fallback_manager = LLMFallbackManager(
+                                primary_backend=chosen_v["backend"],
+                                fallback_backends=["anthropic", "deepseek", "template"],
+                                max_retries=3,
+                                timeout=60,  # Vision 调用给更长超时
+                                enable_health_check=True,
+                            )
+                            pool_meta = {
+                                "model_id": chosen_v["model"],
+                                "cost_tier": chosen_v.get("cost_tier", "free"),
+                                "backend": chosen_v["backend"],
+                                "vision": True,
+                            }
+                            logger.info(
+                                f"🖼️ [{request_id}] Vision模式: "
+                                f"{chosen_v['backend']}/{chosen_v['model']} "
+                                f"(images={len(attachments)})"
+                            )
+                except Exception as ve:
+                    logger.warning(f"[{request_id}] Vision分支初始化失败，回退文本模式: {ve}")
+
             # 流式调用LLM
             async for chunk, response in fallback_manager.call_with_fallback_stream(llm_request):
                 if chunk:  # 只处理非空的chunk
                     yield {"content": chunk}
                 if response:
-                    # 捕获 backend_used 供后续评估使用
-                    yield {"_backend_used": response.backend_used.value}
+                    # 捕获 backend_used + 蓝绿池元数据供 DAML-Eval 使用
+                    meta = {"_backend_used": response.backend_used.value}
+                    if pool_meta:
+                        meta["_pool_meta"] = pool_meta
+                    yield meta
 
             logger.info(f"✅ [{request_id}] 步骤10完成: 流式LLM生成完成")
             

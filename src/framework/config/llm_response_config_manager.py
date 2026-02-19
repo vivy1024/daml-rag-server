@@ -18,6 +18,20 @@ from dataclasses import dataclass, asdict
 from typing import Dict, Optional
 from pathlib import Path
 
+# 延迟导入避免循环依赖
+_persona_manager = None
+
+def _get_persona_manager():
+    """延迟获取 PersonaManager 单例"""
+    global _persona_manager
+    if _persona_manager is None:
+        try:
+            from ...applications.fitness.config.system_persona import get_persona_manager
+            _persona_manager = get_persona_manager()
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"PersonaManager 加载失败: {e}")
+    return _persona_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -259,13 +273,16 @@ class LLMResponseConfigManager:
             response_style="balanced",
             tone="professional",
             length_constraint="适中",
-            prompt_template="""你是玉珍健身专业教练，擅长基于真实数据进行深度分析和个性化指导。
+            prompt_template="""## 任务
+根据用户查询提供专业的分析和建议。
 
 用户查询: {query}
 
 用户档案: {user_profile}
 
-请提供专业的分析和建议。"""
+## 约束
+- 禁止编造用户档案信息
+- 提供通用的专业建议"""
         )
     
     def get_config(self, template_id: str) -> LLMResponseConfig:
@@ -291,12 +308,18 @@ class LLMResponseConfigManager:
         
         return config
     
-    def build_prompt(self, template_id: str, **kwargs) -> str:
+    def build_prompt(self, template_id: str, persona_id: str = None, **kwargs) -> str:
         """
-        使用模板生成提示词
-        
+        使用模板生成提示词（三层组装）
+
+        三层结构：
+        1. persona.system_prefix（怎么说）— 来自 SystemPersona
+        2. template.task_instruction（做什么）— 来自 DAG 模板
+        3. _RENDERING_FORMAT_CONSTRAINT（怎么排版）— 固定追加
+
         Args:
             template_id: DAG模板ID
+            persona_id: 人设ID（可选，默认使用 coach_professional）
             **kwargs: 提示词模板的占位符参数，常用参数包括：
                 - query: 用户查询文本
                 - user_profile: 用户档案（字典或JSON字符串）
@@ -304,13 +327,14 @@ class LLMResponseConfigManager:
                 - mcp_tools_count: MCP工具调用数量
                 - retrieval_count: 检索结果数量
                 - mcp_tools_result: MCP工具结果JSON字符串
-        
+
         Returns:
             str: 构建好的提示词
-        
+
         示例：
             prompt = manager.build_prompt(
                 "greeting",
+                persona_id="coach_friendly",
                 query="你好",
                 response_hint="简短友好，1-2句话"
             )
@@ -318,24 +342,32 @@ class LLMResponseConfigManager:
         config = self.get_config(template_id)
 
         try:
-            # 使用安全的字符串替换方式，避免JSON中的花括号被误解析
-            prompt = config.prompt_template
-
-            # 逐个替换占位符，而不是使用format()
+            # Layer 2: 任务指令（模板变量替换）
+            task_prompt = config.prompt_template
             for key, value in kwargs.items():
                 placeholder = "{" + key + "}"
-                if placeholder in prompt:
-                    # 将值转换为字符串
+                if placeholder in task_prompt:
                     str_value = str(value) if value is not None else ""
-                    prompt = prompt.replace(placeholder, str_value)
+                    task_prompt = task_prompt.replace(placeholder, str_value)
 
-            # 追加前端渲染格式约束（所有模板统一）
-            prompt += _RENDERING_FORMAT_CONSTRAINT
+            # Layer 1: Persona 风格前缀
+            persona_prefix = ""
+            pm = _get_persona_manager()
+            if pm:
+                persona = pm.get_persona(persona_id)
+                persona_prefix = persona.system_prefix
+            else:
+                logger.debug("PersonaManager 不可用，跳过 Persona 注入")
+
+            # 三层拼接
+            if persona_prefix:
+                prompt = f"{persona_prefix}\n\n{task_prompt}\n{_RENDERING_FORMAT_CONSTRAINT}"
+            else:
+                prompt = f"{task_prompt}\n{_RENDERING_FORMAT_CONSTRAINT}"
 
             return prompt
         except Exception as e:
             logger.error(f"构建提示词失败: {e}")
-            # 返回原始模板
             return config.prompt_template
     
     def build_messages(

@@ -24,13 +24,25 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from .state import AgentState
 from .graph import build_agent_graph
 from .llm_adapter import ToolCallableLLM
+from ..config.system_persona import get_persona_manager
 
 logger = logging.getLogger(__name__)
 
 
-def _build_skills_system_prompt(skills_prompt: str) -> str:
-    """构建包含 Skills 列表的 system prompt"""
-    return f"""你是玉珍健身的AI教练助手。你可以通过调用技能（Skills）来完成复杂任务。
+def _build_skills_system_prompt(skills_prompt: str, persona_id: str = None) -> str:
+    """构建包含 Skills 列表的 system prompt（支持 Persona 注入）"""
+    # 获取 Persona 前缀（替代硬编码角色描述）
+    persona_prefix = "你是玉珍健身的AI教练助手。"
+    try:
+        pm = get_persona_manager()
+        persona = pm.get_persona(persona_id)
+        persona_prefix = persona.system_prefix
+    except Exception:
+        pass
+
+    return f"""{persona_prefix}
+
+你可以通过调用技能（Skills）来完成复杂任务。
 
 {skills_prompt}
 
@@ -57,10 +69,22 @@ def _build_skills_system_prompt(skills_prompt: str) -> str:
 
 
 FALLBACK_SYSTEM_PROMPT = (
-    "你是玉珍健身的AI教练助手。根据用户的问题，决定是否需要调用工具获取数据，"
+    "根据用户的问题，决定是否需要调用工具获取数据，"
     "还是直接回答。每次只调用必要的工具，避免冗余调用。"
     "回答时使用中文，专业但友好。"
 )
+
+
+def _build_fallback_prompt(persona_id: str = None) -> str:
+    """构建带 Persona 的 fallback system prompt"""
+    persona_prefix = "你是玉珍健身的AI教练助手。"
+    try:
+        pm = get_persona_manager()
+        persona = pm.get_persona(persona_id)
+        persona_prefix = persona.system_prefix
+    except Exception:
+        pass
+    return f"{persona_prefix}\n{FALLBACK_SYSTEM_PROMPT}"
 
 
 def _build_load_skill_schema(skill_ids: List[str]) -> dict:
@@ -107,10 +131,12 @@ class AgentExecutor:
         tool_schemas: list,
         llm_client=None,
         skill_manager=None,
+        persona_id: str = None,
     ):
         self.llm_client = llm_client or ToolCallableLLM()
         self.mcp_orchestrator = mcp_orchestrator
         self.skill_manager = skill_manager
+        self.persona_id = persona_id
 
         # 构建 tool_schemas：load_skill 优先 + 原有工具
         if skill_manager and skill_manager.get_skill_count() > 0:
@@ -118,7 +144,8 @@ class AgentExecutor:
             load_skill_schema = _build_load_skill_schema(skill_ids)
             self.tool_schemas = [load_skill_schema] + list(tool_schemas)
             self.system_prompt = _build_skills_system_prompt(
-                skill_manager.get_system_prompt_skills()
+                skill_manager.get_system_prompt_skills(),
+                persona_id=persona_id,
             )
             logger.info(
                 f"AgentExecutor initialized with Skills: "
@@ -127,7 +154,7 @@ class AgentExecutor:
             )
         else:
             self.tool_schemas = tool_schemas
-            self.system_prompt = FALLBACK_SYSTEM_PROMPT
+            self.system_prompt = _build_fallback_prompt(persona_id)
             logger.info("AgentExecutor initialized without Skills (fallback mode)")
 
         self.graph = build_agent_graph(

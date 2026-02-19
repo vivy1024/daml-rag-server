@@ -33,6 +33,7 @@ class BackendType(Enum):
     QWEN = "qwen"
     SILICONFLOW = "siliconflow"
     GLM = "glm"
+    MOONSHOT = "moonshot"
     OLLAMA = "ollama"  # 保留枚举值，实际已禁用
     TEMPLATE = "template"
 
@@ -49,6 +50,7 @@ class LLMRequest:
     stream: bool = False
     messages: Optional[List[Dict[str, str]]] = None
     conversation_history: Optional[List[Dict[str, str]]] = None
+    model_override: Optional[str] = None  # 蓝绿池指定的模型ID（覆盖后端默认模型）
 
 
 @dataclass
@@ -154,6 +156,15 @@ class LLMFallbackManager:
                     model=os.getenv("GLM_MODEL", "glm-4-flash"),
                 )
                 logger.info(f"✅ GLM后端已注册: model={os.getenv('GLM_MODEL', 'glm-4-flash')}")
+
+            if os.getenv("MOONSHOT_ENABLED", "false").lower() == "true":
+                self._clients[BackendType.MOONSHOT] = GenericOpenAIClient(
+                    backend_name="moonshot",
+                    base_url=os.getenv("MOONSHOT_BASE_URL", "https://api.moonshot.cn/v1"),
+                    api_key=os.getenv("MOONSHOT_API_KEY", ""),
+                    model=os.getenv("MOONSHOT_MODEL", "kimi-k2-0905-preview"),
+                )
+                logger.info(f"✅ Moonshot后端已注册: model={os.getenv('MOONSHOT_MODEL', 'kimi-k2-0905-preview')}")
 
             self._health_checker = BackendHealthChecker()
             self._template_generator = TemplateResponseGenerator()

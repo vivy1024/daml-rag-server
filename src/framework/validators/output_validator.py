@@ -90,7 +90,7 @@ class LLMOutputValidator:
         将验证结果应用到AnalysisResult
 
         Args:
-            analysis_result: LLMAnalysisEngine的AnalysisResult
+            analysis_result: AnalysisResult对象
             validation: 验证结果
 
         Returns:

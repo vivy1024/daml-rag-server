@@ -1,0 +1,39 @@
+# Vision 多模态蓝绿池配置
+# 独立于文本蓝绿池，专门管理 Vision-capable 模型
+#
+# 版本: v1.0.0
+# 日期: 2026-02-20
+
+enabled: true
+
+pool:
+  # === 免费 Vision 模型 60% ===
+  - backend: siliconflow
+    model: THUDM/GLM-4.1V-9B-Thinking
+    weight: 40
+    api_base: https://api.siliconflow.cn/v1
+    cost_tier: free
+    note: "GLM-4.1V 视觉推理，SiliconFlow免费"
+
+  - backend: siliconflow
+    model: deepseek-ai/DeepSeek-OCR
+    weight: 20
+    api_base: https://api.siliconflow.cn/v1
+    cost_tier: free
+    note: "DeepSeek OCR，SiliconFlow免费"
+
+  # === 低价 Vision 模型 25% ===
+  - backend: qwen
+    model: qwen-vl-max
+    weight: 25
+    api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+    cost_tier: low
+    note: "通义千问VL-Max，视觉理解强"
+
+  # === 基准 Vision 模型 15% ===
+  - backend: anthropic
+    model: claude-haiku-4-5-20250315
+    weight: 15
+    api_base: https://api.kirors.com/v1
+    cost_tier: baseline
+    note: "Claude Haiku 4.5，原生Vision支持"
