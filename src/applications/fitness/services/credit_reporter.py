@@ -11,6 +11,7 @@ Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
 
 import os
 import math
+import asyncio
 import logging
 from typing import Optional, Dict, Any
 
@@ -73,6 +74,10 @@ class CreditReporter:
         # 统计信息
         self._report_count = 0
         self._error_count = 0
+
+        # 幂等性：conversation_id 去重缓存（最多保留1000条）
+        self._reported_conversations: set = set()
+        self._max_dedup_cache = 1000
         
         if self.enabled:
             logger.info(f"积分上报服务初始化完成: backend_url={self.backend_url}")
@@ -125,43 +130,38 @@ class CreditReporter:
         template_name: Optional[str] = None,
         conversation_id: Optional[str] = None,
         input_tokens: int = 0,
-        output_tokens: int = 0
+        output_tokens: int = 0,
+        backend_used: str = "unknown"
     ) -> Dict[str, Any]:
         """
         上报积分消耗到后端
-        
-        异步调用后端API记录积分消耗。如果上报失败，会记录错误日志但不会
-        抛出异常，确保不阻塞主响应流程。
-        
+
         Args:
             user_id: 用户ID
             tokens: 总Token消耗数量
             mode: 查询模式，'dag' 或 'agent'
             template_name: DAG模板名称（可选）
-            conversation_id: 会话ID（可选）
-            input_tokens: 输入Token数量（可选，默认0）
-            output_tokens: 输出Token数量（可选，默认0）
-        
+            conversation_id: 会话ID（可选，用于幂等性去重）
+            input_tokens: 输入Token数量
+            output_tokens: 输出Token数量
+            backend_used: 实际使用的LLM后端（anthropic/deepseek/template）
+
         Returns:
             dict: 上报结果
-                - success: bool, 是否成功
-                - credits: int, 消耗的积分数（成功时）
-                - error: str, 错误信息（失败时）
-                - data: dict, 后端返回的数据（成功时）
-        
-        Note:
-            - 如果积分上报被禁用，返回 {"success": True, "credits": 0, "skipped": True}
-            - 如果上报失败，返回 {"success": False, "error": "错误信息"}
-            - 上报失败不会抛出异常，确保不影响主流程
         """
         # 检查是否启用
         if not self.enabled:
             logger.debug("积分上报已禁用，跳过上报")
             return {"success": True, "credits": 0, "skipped": True}
-        
+
+        # 幂等性检查：同一 conversation_id 不重复上报
+        if conversation_id and conversation_id in self._reported_conversations:
+            logger.info(f"积分上报跳过(已上报): conversation_id={conversation_id}")
+            return {"success": True, "credits": 0, "deduplicated": True}
+
         # 计算积分
         credits = self.calculate_credits(tokens, mode)
-        
+
         # 构建请求数据
         payload = {
             "user_id": user_id,
@@ -172,58 +172,72 @@ class CreditReporter:
             "conversation_id": conversation_id,
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
+            "backend_used": backend_used,
         }
-        
+
         self._report_count += 1
-        
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.backend_url}/api/internal/credits/record",
-                    json=payload,
-                    headers={
-                        "X-Internal-Token": self.internal_token,
-                        "Content-Type": "application/json",
-                        "Accept": "application/json",
-                    },
-                    timeout=self.timeout
-                )
-                
-                # 检查响应状态
-                if response.status_code == 200:
-                    result = response.json()
-                    logger.info(
-                        f"积分上报成功: user_id={user_id}, credits={credits}, "
-                        f"tokens={tokens}, mode={mode}, template={template_name}"
+
+        # 重试逻辑（3次指数退避）
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        f"{self.backend_url}/api/internal/credits/record",
+                        json=payload,
+                        headers={
+                            "X-Internal-Token": self.internal_token,
+                            "Content-Type": "application/json",
+                            "Accept": "application/json",
+                        },
+                        timeout=self.timeout
                     )
-                    return {
-                        "success": True,
-                        "credits": credits,
-                        "data": result.get("data", {})
-                    }
-                else:
-                    error_msg = f"HTTP {response.status_code}: {response.text}"
-                    logger.error(f"积分上报失败: {error_msg}")
-                    self._error_count += 1
-                    return {"success": False, "error": error_msg, "credits": credits}
-        
-        except httpx.TimeoutException as e:
-            error_msg = f"请求超时: {e}"
-            logger.error(f"积分上报失败: {error_msg}")
-            self._error_count += 1
-            return {"success": False, "error": error_msg, "credits": credits}
-        
-        except httpx.RequestError as e:
-            error_msg = f"请求错误: {e}"
-            logger.error(f"积分上报失败: {error_msg}")
-            self._error_count += 1
-            return {"success": False, "error": error_msg, "credits": credits}
-        
-        except Exception as e:
-            error_msg = f"未知错误: {e}"
-            logger.error(f"积分上报失败: {error_msg}")
-            self._error_count += 1
-            return {"success": False, "error": error_msg, "credits": credits}
+
+                    if response.status_code == 200:
+                        result = response.json()
+                        # 记录已上报的 conversation_id
+                        if conversation_id:
+                            if len(self._reported_conversations) >= self._max_dedup_cache:
+                                self._reported_conversations.clear()
+                            self._reported_conversations.add(conversation_id)
+                        logger.info(
+                            f"积分上报成功: user_id={user_id}, credits={credits}, "
+                            f"tokens={tokens}, mode={mode}, backend={backend_used}"
+                        )
+                        return {
+                            "success": True,
+                            "credits": credits,
+                            "data": result.get("data", {})
+                        }
+                    else:
+                        error_msg = f"HTTP {response.status_code}: {response.text}"
+                        if attempt < max_retries - 1:
+                            delay = 1.0 * (2 ** attempt)
+                            logger.warning(f"积分上报失败(重试{attempt+1}/{max_retries}): {error_msg}")
+                            await asyncio.sleep(delay)
+                            continue
+                        logger.error(f"积分上报最终失败: {error_msg}")
+                        self._error_count += 1
+                        return {"success": False, "error": error_msg, "credits": credits}
+
+            except (httpx.TimeoutException, httpx.RequestError) as e:
+                error_msg = f"{type(e).__name__}: {e}"
+                if attempt < max_retries - 1:
+                    delay = 1.0 * (2 ** attempt)
+                    logger.warning(f"积分上报失败(重试{attempt+1}/{max_retries}): {error_msg}")
+                    await asyncio.sleep(delay)
+                    continue
+                logger.error(f"积分上报最终失败: {error_msg}")
+                self._error_count += 1
+                return {"success": False, "error": error_msg, "credits": credits}
+
+            except Exception as e:
+                error_msg = f"未知错误: {e}"
+                logger.error(f"积分上报失败: {error_msg}")
+                self._error_count += 1
+                return {"success": False, "error": error_msg, "credits": credits}
+
+        return {"success": False, "error": "重试耗尽", "credits": credits}
     
     def get_statistics(self) -> Dict[str, Any]:
         """

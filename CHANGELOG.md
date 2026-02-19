@@ -1,8 +1,24 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.75.0
+**版本**: v9.76.0
 **更新日期**: 2026-02-19
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.76.0 (2026-02-19) - 迁移后稳定性修复 🛡️
+
+**变更类型**: 🔧 稳定性 + 🔐 配置
+
+**变更内容**:
+
+- `credit_reporter.py`: 添加 conversation_id 幂等性去重、backend_used 参数、3次指数退避重试
+- `true_three_layer_engine.py`: Neo4j 禁忌症查询添加 5s 超时（asyncio.wait_for）
+- `layer3_rule_engine.py`: Neo4j 体态关系查询添加 5s 超时
+- `graphrag_retriever.py`: GraphRAG hybrid/vector 检索添加 5s 超时
+- `.env.example`: 补充 Anthropic 配置、限流配置等 7 个 P0 缺失变量
+- `.env.production`: 添加 Anthropic 配置、CORS、BYPASS_RATE_LIMIT_FOR_INTERNAL
+- `docs/06-部署运维/环境变量配置指南.md`: 添加 Zeabur 部署 Checklist
 
 ---
 

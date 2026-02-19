@@ -176,19 +176,27 @@ class FitnessGraphRAGRetriever:
         # 尝试使用新的 GraphRAG 检索
         try:
             if mode == "hybrid" and self._hybrid_retriever:
-                result = await asyncio.to_thread(
-                    self._hybrid_retriever.search,
-                    query_text=query, top_k=top_k
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self._hybrid_retriever.search,
+                        query_text=query, top_k=top_k
+                    ),
+                    timeout=5.0
                 )
                 return self._format_result(result, query, domain, "graphrag_hybrid", user_level)
 
             elif self._qdrant_retriever:
-                result = await asyncio.to_thread(
-                    self._qdrant_retriever.search,
-                    query_text=query, top_k=top_k
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self._qdrant_retriever.search,
+                        query_text=query, top_k=top_k
+                    ),
+                    timeout=5.0
                 )
                 return self._format_result(result, query, domain, "graphrag_vector", user_level)
 
+        except asyncio.TimeoutError:
+            logger.warning("⏱️ GraphRAG 检索超时(5s)，尝试降级")
         except Exception as e:
             logger.warning(f"⚠️ GraphRAG 检索失败，尝试降级: {e}")
 
