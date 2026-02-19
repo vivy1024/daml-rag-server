@@ -1,8 +1,20 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.74.0
+**版本**: v9.75.0
 **更新日期**: 2026-02-19
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.75.0 (2026-02-19) - trace_id 日志修复 🔧
+
+**变更类型**: 🐛 Bug 修复
+
+**变更内容**:
+
+- `logging_config.py`: `TraceIdFilter` 从 `root_logger.addFilter()` 改为每个 `handler.addFilter()`
+- 修复原因: Python logging 的 Filter 加在 Logger 上时，子 logger propagate 的 record 不经过父 logger 的 filters
+- 修复效果: 所有日志正确显示 `[-]`（非请求上下文）或 `[uuid]`（请求上下文），不再报 `KeyError: 'trace_id'`
 
 ---
 

@@ -64,24 +64,24 @@ def configure_logging():
     # 清除现有处理器
     root_logger.handlers.clear()
     
-    # 日志格式（包含trace_id用于分布式追踪）
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - [%(trace_id)s] %(message)s'
-    formatter = logging.Formatter(log_format)
-
-    # 注册TraceIdFilter到根logger（为所有日志注入trace_id）
+    # 尝试加载TraceIdFilter（为日志注入trace_id）
+    # 注意：Filter必须加在Handler上，而非Logger上。
+    # 因为子logger propagate到root时，record直接传给root的handlers，不经过root的filters。
+    trace_filter = None
     try:
         from ..middleware.tracing import TraceIdFilter
         trace_filter = TraceIdFilter()
-        root_logger.addFilter(trace_filter)
+        log_format = '%(asctime)s - %(name)s - %(levelname)s - [%(trace_id)s] %(message)s'
     except ImportError:
-        # 中间件未加载时使用不带trace_id的格式
         log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        formatter = logging.Formatter(log_format)
+    formatter = logging.Formatter(log_format)
     
     # 1. 控制台处理器（始终启用）
     console_handler = logging.StreamHandler()
     console_handler.setLevel(ACTUAL_LOG_LEVEL)
     console_handler.setFormatter(formatter)
+    if trace_filter:
+        console_handler.addFilter(trace_filter)
     root_logger.addHandler(console_handler)
     
     # 2. 文件处理器（可选）- 使用TimedRotatingFileHandler按天轮转
@@ -99,6 +99,8 @@ def configure_logging():
         file_handler.namer = lambda name: name.replace('.log-', '-').replace('.log', '')
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(formatter)
+        if trace_filter:
+            file_handler.addFilter(trace_filter)
         root_logger.addHandler(file_handler)
         
         # 错误日志文件（ERROR及以上）- 按天轮转，保留30天
@@ -113,6 +115,8 @@ def configure_logging():
         error_handler.namer = lambda name: name.replace('.log-', '-').replace('.log', '')
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(formatter)
+        if trace_filter:
+            error_handler.addFilter(trace_filter)
         root_logger.addHandler(error_handler)
         
         # 获取当前实际写入的文件名
