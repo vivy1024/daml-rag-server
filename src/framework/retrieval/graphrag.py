@@ -325,8 +325,9 @@ class GraphRAGQueryTool:
             # 构建过滤条件（✅ 传递query_text用于智能过滤）
             qdrant_filters = self._build_qdrant_filters(domain, filters, query_text)
 
-            # 主集合检索（fitness-exercises）
-            results = self.vector_search.search(
+            # 主集合检索（fitness-exercises）— 同步方法，用to_thread避免阻塞
+            results = await asyncio.to_thread(
+                self.vector_search.search,
                 query_vector=query_vector,
                 top_k=top_k,
                 min_similarity=min_similarity,
@@ -334,7 +335,9 @@ class GraphRAGQueryTool:
             )
 
             # ✅ v2.5.0: 并行查询 training_knowledge 知识库
-            knowledge_results = self._search_knowledge_context(query_vector, top_k=5)
+            knowledge_results = await asyncio.to_thread(
+                self._search_knowledge_context, query_vector, 5
+            )
             if knowledge_results:
                 # 将知识上下文附加到结果中（标记source便于区分）
                 for kr in knowledge_results:
@@ -433,14 +436,15 @@ class GraphRAGQueryTool:
             )
         
         try:
-            # Step 1: 向量召回（扩大候选集）
+            # Step 1: 向量召回（扩大候选集）— 同步方法，用to_thread避免阻塞
             query_vector = self.vector_search.encode(query_text)
             qdrant_filters = self._build_qdrant_filters(domain, filters)
-            
-            candidates = self.vector_search.search(
+
+            candidates = await asyncio.to_thread(
+                self.vector_search.search,
                 query_vector=query_vector,
-                top_k=top_k * 2,  # 召回2倍候选
-                min_similarity=min_similarity * 0.8,  # 降低阈值
+                top_k=top_k * 2,
+                min_similarity=min_similarity * 0.8,
                 filters=qdrant_filters
             )
             

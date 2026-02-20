@@ -345,21 +345,25 @@ class DynamicContextBuilder:
             LIMIT 20
             """
             
-            # 执行查询
-            with self.neo4j_manager.get_session() as session:
-                result = session.run(cypher_query, start_id=str(start_id))
-                
-                for record in result:
-                    results.append({
-                        "id": record.get("id"),
-                        "name": record.get("name"),
-                        "name_zh": record.get("name_zh"),
-                        "difficulty": record.get("difficulty_zh") or record.get("difficulty_en"),
-                        "equipment": record.get("equipment_zh"),
-                        "hop_distance": record.get("hop_distance"),
-                        "relationship_type": record.get("relationship_type"),
-                        "source": "multi_hop_reasoning"
-                    })
+            # 执行查询（同步Neo4j调用，用to_thread避免阻塞事件循环）
+            def _sync_query():
+                with self.neo4j_manager.get_session() as session:
+                    result = session.run(cypher_query, start_id=str(start_id))
+                    return [dict(record) for record in result]
+
+            records = await asyncio.to_thread(_sync_query)
+
+            for record in records:
+                results.append({
+                    "id": record.get("id"),
+                    "name": record.get("name"),
+                    "name_zh": record.get("name_zh"),
+                    "difficulty": record.get("difficulty_zh") or record.get("difficulty_en"),
+                    "equipment": record.get("equipment_zh"),
+                    "hop_distance": record.get("hop_distance"),
+                    "relationship_type": record.get("relationship_type"),
+                    "source": "multi_hop_reasoning"
+                })
             
             logger.info(f"多跳推理完成: {len(results)}个结果")
             
@@ -472,22 +476,27 @@ class DynamicContextBuilder:
             LIMIT 50
             """
             
-            with self.neo4j_manager.get_session() as session:
-                result = session.run(cypher_query, entity_id=str(entity_id))
-                
-                for record in result:
-                    neighbors.append({
-                        "id": record.get("neighbor_id"),
-                        "name": record.get("neighbor_name"),
-                        "name_zh": record.get("neighbor_name_zh"),
-                        "type": record.get("neighbor_type")
-                    })
-                    
-                    relationships.append({
-                        "type": record.get("relationship_type"),
-                        "target_id": record.get("neighbor_id"),
-                        "properties": record.get("relationship_props", {})
-                    })
+            # 同步Neo4j调用，用to_thread避免阻塞事件循环
+            def _sync_query():
+                with self.neo4j_manager.get_session() as session:
+                    result = session.run(cypher_query, entity_id=str(entity_id))
+                    return [dict(record) for record in result]
+
+            records = await asyncio.to_thread(_sync_query)
+
+            for record in records:
+                neighbors.append({
+                    "id": record.get("neighbor_id"),
+                    "name": record.get("neighbor_name"),
+                    "name_zh": record.get("neighbor_name_zh"),
+                    "type": record.get("neighbor_type")
+                })
+
+                relationships.append({
+                    "type": record.get("relationship_type"),
+                    "target_id": record.get("neighbor_id"),
+                    "properties": record.get("relationship_props", {})
+                })
         
         except Exception as e:
             logger.error(f"扩展上下文失败: {e}")
@@ -542,17 +551,22 @@ class DynamicContextBuilder:
             LIMIT 100
             """
             
-            with self.neo4j_manager.get_session() as session:
-                result = session.run(cypher_query, entity_ids=entity_ids)
-                
-                for record in result:
-                    relationships.append(RelationshipInfo(
-                        source_id=str(record.get("source_id", "")),
-                        target_id=str(record.get("target_id", "")),
-                        relationship_type=record.get("relationship_type", ""),
-                        properties=record.get("properties", {}),
-                        hop_distance=hop
-                    ))
+            # 同步Neo4j调用，用to_thread避免阻塞事件循环
+            def _sync_query():
+                with self.neo4j_manager.get_session() as session:
+                    result = session.run(cypher_query, entity_ids=entity_ids)
+                    return [dict(record) for record in result]
+
+            records = await asyncio.to_thread(_sync_query)
+
+            for record in records:
+                relationships.append(RelationshipInfo(
+                    source_id=str(record.get("source_id", "")),
+                    target_id=str(record.get("target_id", "")),
+                    relationship_type=record.get("relationship_type", ""),
+                    properties=record.get("properties", {}),
+                    hop_distance=hop
+                ))
         
         except Exception as e:
             logger.error(f"获取关系失败: {e}")

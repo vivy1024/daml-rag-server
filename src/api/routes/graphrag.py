@@ -456,29 +456,34 @@ async def _get_knowledge_graph_stats() -> Dict[str, Any]:
 
         logger.info(f"Connecting to Neo4j at {neo4j_uri}")
 
-        driver = GraphDatabase.driver(
-            neo4j_uri,
-            auth=(neo4j_user, neo4j_password),
-            max_connection_lifetime=30
-        )
-
-        with driver.session() as session:
-            node_result = session.run("MATCH (n) RETURN count(n) as count")
-            node_count = node_result.single()["count"]
-
-            rel_result = session.run("MATCH ()-[r]->() RETURN count(r) as count")
-            rel_count = rel_result.single()["count"]
-
-            type_result = session.run(
-                "MATCH (n) RETURN labels(n)[0] as label, count(*) as count ORDER BY count DESC"
+        # 同步Neo4j操作，用to_thread避免阻塞事件循环
+        def _sync_query():
+            driver = GraphDatabase.driver(
+                neo4j_uri,
+                auth=(neo4j_user, neo4j_password),
+                max_connection_lifetime=30
             )
-            node_types = {
-                record["label"]: record["count"]
-                for record in type_result
-                if record["label"]
-            }
+            try:
+                with driver.session() as session:
+                    node_result = session.run("MATCH (n) RETURN count(n) as count")
+                    node_count = node_result.single()["count"]
 
-        driver.close()
+                    rel_result = session.run("MATCH ()-[r]->() RETURN count(r) as count")
+                    rel_count = rel_result.single()["count"]
+
+                    type_result = session.run(
+                        "MATCH (n) RETURN labels(n)[0] as label, count(*) as count ORDER BY count DESC"
+                    )
+                    node_types = {
+                        record["label"]: record["count"]
+                        for record in type_result
+                        if record["label"]
+                    }
+                return node_count, rel_count, node_types
+            finally:
+                driver.close()
+
+        node_count, rel_count, node_types = await asyncio.to_thread(_sync_query)
 
         return {
             "nodes": node_count,
