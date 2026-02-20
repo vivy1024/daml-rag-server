@@ -29,7 +29,7 @@ DAML-RAG Server 是玉珍健身的核心AI服务，实现了**面向垂直领域
 - **数据层**: Neo4j知识图谱 + Qdrant向量数据库 + MySQL对话历史
 - **检索层**: 向量检索 + 图谱检索 + 业务约束检索
 - **编排层**: DAG固定编排器（默认模式）+ Agent动态决策（energy+会员）
-- **工具层**: 16个MCP工具（1个stdio + 15个Python内置）
+- **工具层**: 18个MCP工具（1个stdio + 17个Python内置）
 - **服务层**: FastAPI RESTful API + SSE流式输出
 
 **三层检索架构**:
