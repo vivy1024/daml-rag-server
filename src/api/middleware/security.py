@@ -625,7 +625,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             
             # 4. 处理请求
             response = await call_next(request)
-            
+
+            # 5. 添加安全响应头
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["X-XSS-Protection"] = "1; mode=block"
+            response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+            response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
             return response
             
         except HTTPException as e:

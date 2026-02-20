@@ -1,8 +1,49 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.84.0
-**更新日期**: 2026-02-20
+**版本**: v9.87.0
+**更新日期**: 2026-02-21
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.87.0 (2026-02-21) - SecurityMiddleware安全响应头加固
+
+**变更类型**: 🔒 安全
+
+**变更内容**:
+
+- **新增** `SecurityMiddleware.dispatch()` 添加5个安全响应头：X-Content-Type-Options/X-Frame-Options/X-XSS-Protection/Referrer-Policy/Permissions-Policy
+
+**修改文件**: 1个
+
+---
+
+### v9.86.0 (2026-02-21) - async/sync混用修复
+
+**变更类型**: 🐛 修复
+
+**变更内容**:
+
+- **修复** `dynamic_context_builder.py` 3处async函数中同步Neo4j调用，提取`_sync_query()`+`asyncio.to_thread()`包装
+- **修复** `graphrag.py` `_semantic_search()`/`_hybrid_query()` 同步VectorSearch调用，`asyncio.to_thread()`包装
+- **修复** `routes/graphrag.py` `_get_knowledge_graph_stats()` 同步Neo4j调用，提取`_sync_query()`+`asyncio.to_thread()`
+- **修复** `routes/health.py` `_check_databases()` 4个同步数据库检查，提取`_sync_check_all()`+`asyncio.to_thread()`
+
+**修改文件**: 4个
+
+---
+
+### v9.85.0 (2026-02-21) - 检索层P0修复
+
+**变更类型**: 🐛 修复
+
+**变更内容**:
+
+- **修复** `graphrag.py:472` 混合检索100%失败：`await`同步方法导致TypeError，改用`asyncio.to_thread`
+- **修复** `auth_middleware.py` 内部IP(127.0.0.1)请求401：DualAuthMiddleware新增INTERNAL_IPS白名单
+- **修复** `docker-compose.yml` Embedding模型CUDA OOM：添加`PYTORCH_CUDA_ALLOC_CONF`环境变量
+
+**修改文件**: 3个
 
 ---
 
