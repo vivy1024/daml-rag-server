@@ -23,6 +23,7 @@ MCO统一GraphRAG入口 - 为所有MCP提供Neo4j+Qdrant访问
 v2.5.0: 新增 training_knowledge 集合并行查询，知识上下文增强
 """
 
+import asyncio
 import logging
 from typing import Dict, List, Optional, Literal, TypedDict, Union
 from enum import Enum
@@ -469,7 +470,8 @@ class GraphRAGQueryTool:
                 candidate_ids, domain, filters
             )
 
-            graph_results = await self.neo4j.execute_query(cypher_filter)
+            # execute_query 是同步方法，用 to_thread 避免阻塞事件循环
+            graph_results = await asyncio.to_thread(self.neo4j.execute_query, cypher_filter)
             graph_id_set = {r.get("id") or r.get("node_id") for r in graph_results}
 
             # Step 4: 保留通过图过滤的候选

@@ -8,7 +8,7 @@ faiss-cpu>=1.7.4
 # 存储
 redis>=5.0.0
 aiosqlite>=0.19.0
-qdrant-client>=1.16.0  # 向量数据库（与服务器v1.15.1兼容，SimpleKGPipeline需要）
+qdrant-client>=1.16.0,<1.17.0  # 向量数据库（锁定兼容服务端v1.15.1，minor差≤1）
 aiomysql>=0.2.0  # MySQL异步连接池
 neo4j>=5.14.0  # Neo4j异步驱动
 

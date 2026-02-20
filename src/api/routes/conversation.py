@@ -53,7 +53,12 @@ def _get_conversation_memory():
         import os
         redis_host = os.getenv("REDIS_HOST", "redis")
         redis_port = int(os.getenv("REDIS_PORT", "6379"))
-        redis_client = aioredis.Redis(host=redis_host, port=redis_port, decode_responses=True)
+        redis_password = os.getenv("REDIS_PASSWORD", "")
+        redis_client = aioredis.Redis(
+            host=redis_host, port=redis_port,
+            password=redis_password if redis_password else None,
+            decode_responses=True
+        )
         logger.info(f"ConversationMemory Redis: {redis_host}:{redis_port}")
     except Exception as e:
         logger.warning(f"Redis 连接创建失败，降级到纯内存: {e}")
