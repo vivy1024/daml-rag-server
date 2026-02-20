@@ -833,126 +833,104 @@ async def _check_anti_hallucination() -> Dict[str, Any]:
 
 
 async def _check_databases() -> Dict[str, Any]:
-    """检查数据库连接状态"""
-    databases = {
-        "neo4j": "unknown",
-        "qdrant": "unknown",
-        "mysql": "unknown",
-        "redis": "unknown"
-    }
+    """检查数据库连接状态（同步操作用to_thread避免阻塞事件循环）"""
 
-    try:
-        # Neo4j检查
+    def _sync_check_all():
+        databases = {
+            "neo4j": "unknown",
+            "qdrant": "unknown",
+            "mysql": "unknown",
+            "redis": "unknown"
+        }
+
         try:
-            from neo4j import GraphDatabase
-            neo4j_uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
-            neo4j_user = os.getenv('NEO4J_USER', 'neo4j')
-            neo4j_password = os.getenv('NEO4J_PASSWORD', 'build_body_2024')
+            # Neo4j检查
+            try:
+                from neo4j import GraphDatabase
+                neo4j_uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
+                neo4j_user = os.getenv('NEO4J_USER', 'neo4j')
+                neo4j_password = os.getenv('NEO4J_PASSWORD', 'build_body_2024')
 
-            driver = GraphDatabase.driver(
-                neo4j_uri,
-                auth=(neo4j_user, neo4j_password),
-                max_connection_lifetime=5
-            )
-            with driver.session() as session:
-                session.run("RETURN 1").single()
-            driver.close()
-            databases["neo4j"] = "connected"
-        except Exception as e:
-            databases["neo4j"] = f"error: {str(e)[:50]}"
+                driver = GraphDatabase.driver(
+                    neo4j_uri,
+                    auth=(neo4j_user, neo4j_password),
+                    max_connection_lifetime=5
+                )
+                with driver.session() as session:
+                    session.run("RETURN 1").single()
+                driver.close()
+                databases["neo4j"] = "connected"
+            except Exception as e:
+                databases["neo4j"] = f"error: {str(e)[:50]}"
 
-        # Qdrant检查
-        try:
-            from qdrant_client import QdrantClient
-            qdrant_host = os.getenv('QDRANT_HOST', 'qdrant')
-            qdrant_port = int(os.getenv('QDRANT_PORT', '6333'))
-            qdrant_api_key = os.getenv('QDRANT_API_KEY', '')
-            qdrant_https = os.getenv('QDRANT_HTTPS', 'false').lower() == 'true'
-            
-            # 使用Qdrant客户端检查连接（支持API Key认证，显式禁用HTTPS）
-            client = QdrantClient(
-                host=qdrant_host,
-                port=qdrant_port,
-                api_key=qdrant_api_key if qdrant_api_key else None,
-                https=qdrant_https,  # 显式设置HTTPS，默认禁用
-                timeout=5
-            )
-            # 获取集合列表来验证连接
-            collections = client.get_collections()
-            databases["qdrant"] = "connected"
-        except Exception as e:
-            databases["qdrant"] = f"error: {str(e)[:50]}"
+            # Qdrant检查
+            try:
+                from qdrant_client import QdrantClient
+                qdrant_host = os.getenv('QDRANT_HOST', 'qdrant')
+                qdrant_port = int(os.getenv('QDRANT_PORT', '6333'))
+                qdrant_api_key = os.getenv('QDRANT_API_KEY', '')
+                qdrant_https = os.getenv('QDRANT_HTTPS', 'false').lower() == 'true'
 
-        # MySQL检查
-        try:
-            import pymysql
-            mysql_host = os.getenv('MYSQL_HOST', 'mysql')
-            mysql_port = int(os.getenv('MYSQL_PORT', '3306'))
-            mysql_user = os.getenv('MYSQL_USER', 'root')
-            mysql_password = os.getenv('MYSQL_PASSWORD', 'build_body_2024')
-            mysql_db = os.getenv('MYSQL_DATABASE', 'fitness_app')
-            
-            conn = pymysql.connect(
-                host=mysql_host,
-                port=mysql_port,
-                user=mysql_user,
-                password=mysql_password,
-                database=mysql_db,
-                connect_timeout=5
-            )
-            conn.ping()
-            conn.close()
-            databases["mysql"] = "connected"
-        except Exception as e:
-            databases["mysql"] = f"error: {str(e)[:50]}"
+                client = QdrantClient(
+                    host=qdrant_host,
+                    port=qdrant_port,
+                    api_key=qdrant_api_key if qdrant_api_key else None,
+                    https=qdrant_https,
+                    timeout=5
+                )
+                collections = client.get_collections()
+                databases["qdrant"] = "connected"
+            except Exception as e:
+                databases["qdrant"] = f"error: {str(e)[:50]}"
 
-        # Redis检查（安全加固：Requirements 8.3, 8.4）
-        try:
-            import redis
-            redis_host = os.getenv('REDIS_HOST', 'redis')
-            redis_port = int(os.getenv('REDIS_PORT', '6379'))
-            redis_password = os.getenv('REDIS_PASSWORD', '')
-            
-            # 安全加固：记录Redis密码配置状态
-            if not redis_password:
-                structured_logger.warning(
-                    "Redis连接未配置密码",
-                    component="redis",
+            # MySQL检查
+            try:
+                import pymysql
+                mysql_host = os.getenv('MYSQL_HOST', 'mysql')
+                mysql_port = int(os.getenv('MYSQL_PORT', '3306'))
+                mysql_user = os.getenv('MYSQL_USER', 'root')
+                mysql_password = os.getenv('MYSQL_PASSWORD', 'build_body_2024')
+                mysql_db = os.getenv('MYSQL_DATABASE', 'fitness_app')
+
+                conn = pymysql.connect(
+                    host=mysql_host,
+                    port=mysql_port,
+                    user=mysql_user,
+                    password=mysql_password,
+                    database=mysql_db,
+                    connect_timeout=5
+                )
+                conn.ping()
+                conn.close()
+                databases["mysql"] = "connected"
+            except Exception as e:
+                databases["mysql"] = f"error: {str(e)[:50]}"
+
+            # Redis检查
+            try:
+                import redis
+                redis_host = os.getenv('REDIS_HOST', 'redis')
+                redis_port = int(os.getenv('REDIS_PORT', '6379'))
+                redis_password = os.getenv('REDIS_PASSWORD', '')
+
+                r = redis.Redis(
                     host=redis_host,
                     port=redis_port,
-                    security_warning="Redis connection without password authentication"
+                    password=redis_password if redis_password else None,
+                    socket_timeout=5
                 )
-            
-            r = redis.Redis(
-                host=redis_host,
-                port=redis_port,
-                password=redis_password if redis_password else None,
-                socket_timeout=5
-            )
-            r.ping()
-            databases["redis"] = "connected"
-        except redis.AuthenticationError as auth_error:
-            # 安全加固：认证失败时记录警告日志（Requirements 8.4）
-            structured_logger.warning(
-                "Redis认证失败",
-                component="redis",
-                host=redis_host,
-                port=redis_port,
-                error=str(auth_error)[:100],
-                security_warning="Redis authentication failed - check REDIS_PASSWORD configuration"
-            )
-            databases["redis"] = "auth_error"
-        except redis.ConnectionError as conn_error:
-            structured_logger.warning(
-                "Redis连接失败",
-                component="redis",
-                host=redis_host,
-                port=redis_port,
-                error=str(conn_error)[:100]
-            )
-            databases["redis"] = f"connection_error: {str(conn_error)[:30]}"
-        except Exception as e:
-            databases["redis"] = f"error: {str(e)[:50]}"
+                r.ping()
+                databases["redis"] = "connected"
+            except Exception as e:
+                databases["redis"] = f"error: {str(e)[:50]}"
+
+        except Exception:
+            pass
+
+        return databases
+
+    try:
+        databases = await asyncio.to_thread(_sync_check_all)
 
         # 计算数据库整体状态
         connected_count = sum(1 for status in databases.values() if status == "connected")
