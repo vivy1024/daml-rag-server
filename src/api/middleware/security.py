@@ -611,10 +611,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             # 1. 限流检查
             if self.enable_rate_limit and self.rate_limiter:
                 self.rate_limiter.check_rate_limit(request)
-            
-            # 2. 认证检查
+
+            # 2. 认证检查（如果DualAuthMiddleware已认证，跳过）
             user_info = None
-            if self.enable_auth:
+            already_authed = getattr(request.state, 'auth_mode', None) is not None
+            if self.enable_auth and not already_authed:
                 user_info = self.auth_manager.check_authentication(request)
                 if user_info:
                     request.state.user_info = user_info
