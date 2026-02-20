@@ -1,8 +1,22 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.83.0
+**版本**: v9.84.0
 **更新日期**: 2026-02-20
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.84.0 (2026-02-20) - 检索层P0修复：混合检索+认证白名单+CUDA OOM
+
+**变更类型**: 🐛 修复
+
+**变更内容**:
+
+- **修复** `graphrag.py:472` 混合检索100%失败：`await`同步方法`neo4j.execute_query()`导致TypeError，改用`asyncio.to_thread`包装
+- **修复** `auth_middleware.py` 内部IP(127.0.0.1)请求401：DualAuthMiddleware新增INTERNAL_IPS白名单，容器内部调用免认证
+- **修复** `docker-compose.yml` Embedding模型CUDA OOM：添加`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`环境变量
+
+**修改文件**: 3个
 
 ---
 

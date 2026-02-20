@@ -38,10 +38,15 @@ PUBLIC_PATHS = [
     "/api/health",
     "/health/components",
     "/health/metrics",
+    "/favicon.ico",
+    "/robots.txt",
     "/",
 ]
 if not _is_production:
     PUBLIC_PATHS.extend(["/docs", "/redoc", "/openapi.json"])
+
+# 内部IP白名单（容器内部调用免认证）
+INTERNAL_IPS = {'127.0.0.1', '::1', 'localhost'}
 
 
 class DualAuthMiddleware(BaseHTTPMiddleware):
@@ -81,6 +86,13 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         client_ip = request.client.host if request.client else "unknown"
+
+        # 内部IP白名单：容器内部调用（如三层检索引擎回调）免认证
+        if client_ip in INTERNAL_IPS:
+            request.state.auth_mode = "internal_ip"
+            request.state.permission_claims = None
+            logger.debug(f"内部IP免认证: {client_ip} → {request.url.path}")
+            return await call_next(request)
 
         # 1. 尝试Internal JWT认证
         auth_header = request.headers.get("Authorization", "")
