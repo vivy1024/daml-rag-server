@@ -16,7 +16,7 @@
 - **Agent动态决策**：energy+会员专享，DeepSeek function calling
 - **11步工作流程**：从用户档案预加载到交互记录的完整流程
 - **三层检索**：Vector → Graph → Constraint，确保无幻觉
-- **16个MCP工具**：1个stdio用户档案服务 + 15个Python内置工具
+- **18个MCP工具**：1个stdio用户档案服务 + 17个Python内置工具
 - **流式输出**：SSE实时推送工作流程状态和LLM生成内容
 - **多模型支持**：Anthropic Claude haiku-4.5（主）→ DeepSeek（备）→ Template（兜底）
 
@@ -300,7 +300,7 @@ docs/
 **技术更新**：
 - DAG固定编排为默认模式（所有用户）
 - Agent动态决策为energy+会员专享
-- 16个MCP工具：1个stdio + 15个Python内置
+- 18个MCP工具：1个stdio + 17个Python内置
 - Anthropic Claude haiku-4.5为主LLM（Kiro RS代理）
 
 ### v8.1.0 (2025-12-31) - v6.0架构同步完成
