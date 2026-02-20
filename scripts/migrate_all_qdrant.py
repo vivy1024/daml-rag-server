@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """迁移所有Qdrant集合到远程"""
+import os
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 
@@ -7,6 +8,7 @@ LOCAL_HOST = "fitness_qdrant"
 LOCAL_PORT = 6333
 REMOTE_HOST = "182.92.78.183"
 REMOTE_GRPC_PORT = 32091
+REMOTE_API_KEY = os.environ.get("QDRANT_API_KEY", "yuzhen_qdrant_2025_secure_abc123xyz789")
 BATCH_SIZE = 100
 
 def migrate_collection(local_client, remote_client, name):
@@ -63,7 +65,7 @@ def main():
     print("=" * 50)
     
     local = QdrantClient(host=LOCAL_HOST, port=LOCAL_PORT)
-    remote = QdrantClient(host=REMOTE_HOST, grpc_port=REMOTE_GRPC_PORT, prefer_grpc=True, timeout=120)
+    remote = QdrantClient(host=REMOTE_HOST, grpc_port=REMOTE_GRPC_PORT, prefer_grpc=True, timeout=120, api_key=REMOTE_API_KEY, https=False)
     
     collections = local.get_collections()
     for c in collections.collections:
