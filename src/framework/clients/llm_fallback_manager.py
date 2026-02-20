@@ -153,9 +153,9 @@ class LLMFallbackManager:
                     backend_name="glm",
                     base_url=os.getenv("GLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4"),
                     api_key=os.getenv("GLM_API_KEY", ""),
-                    model=os.getenv("GLM_MODEL", "glm-4-flash"),
+                    model=os.getenv("GLM_MODEL", "glm-4.7-flash"),
                 )
-                logger.info(f"✅ GLM后端已注册: model={os.getenv('GLM_MODEL', 'glm-4-flash')}")
+                logger.info(f"✅ GLM后端已注册: model={os.getenv('GLM_MODEL', 'glm-4.7-flash')}")
 
             if os.getenv("MOONSHOT_ENABLED", "false").lower() == "true":
                 self._clients[BackendType.MOONSHOT] = GenericOpenAIClient(
@@ -168,8 +168,61 @@ class LLMFallbackManager:
 
             self._health_checker = BackendHealthChecker()
             self._template_generator = TemplateResponseGenerator()
+
+            # YAML 池自动注册：补充 XXX_ENABLED 未覆盖的后端
+            self._auto_register_from_yaml_pool()
+
         except ImportError as e:
             logger.warning(f"后端客户端初始化失败(降级到内联模式): {e}")
+
+    def _auto_register_from_yaml_pool(self):
+        """从 YAML 蓝绿池自动注册未注册的后端客户端"""
+        try:
+            from ...applications.fitness.config.model_routing import _get_yaml_pool
+            from .backends.generic_openai_client import GenericOpenAIClient
+        except ImportError:
+            return
+
+        enabled, pool = _get_yaml_pool()
+        if not enabled or not pool:
+            return
+
+        seen_backends = set()
+        for entry in pool:
+            backend_name = entry.backend.lower()
+            if backend_name in seen_backends:
+                continue
+            seen_backends.add(backend_name)
+
+            # 跳过已注册的后端（显式配置优先）
+            try:
+                backend_type = BackendType(backend_name)
+            except ValueError:
+                logger.warning(f"⚠️ YAML池中未知后端类型: {backend_name}")
+                continue
+
+            if backend_type in self._clients:
+                continue
+
+            # 从环境变量获取 API_KEY
+            api_key = os.getenv(f"{backend_name.upper()}_API_KEY", "")
+            if not api_key:
+                logger.warning(
+                    f"⚠️ YAML池后端 {backend_name} 无 {backend_name.upper()}_API_KEY，跳过自动注册"
+                )
+                continue
+
+            client = GenericOpenAIClient(
+                backend_name=backend_name,
+                base_url=entry.api_base,
+                api_key=api_key,
+                model=entry.model,
+            )
+            self._clients[backend_type] = client
+            logger.info(
+                f"🔄 YAML池自动注册: {backend_name}/{entry.model} "
+                f"(api_base={entry.api_base})"
+            )
 
     # ─── 非流式调用 ──────────────────────────────────────
 
@@ -215,6 +268,17 @@ class LLMFallbackManager:
                         )
 
                     content = await self._call_backend(backend, request)
+
+                    # 空响应检测：正常LLM调用不可能返回空内容
+                    if not content or not content.strip():
+                        logger.warning(
+                            f"⚠️ LLM调用返回空内容: backend={backend.value}, "
+                            f"attempt={attempt_count} — 视为失败，继续降级"
+                        )
+                        self._mark_backend_unhealthy(backend)
+                        if retry < self.max_retries - 1:
+                            await asyncio.sleep(1.0 * (retry + 1))
+                        continue
 
                     duration_ms = (time.time() - start_time) * 1000
                     fallback_used = backend != self.primary_backend
@@ -303,6 +367,17 @@ class LLMFallbackManager:
                     async for chunk in self._call_backend_stream(backend, request):
                         accumulated_content += chunk
                         yield (chunk, None)
+
+                    # 空响应检测：正常LLM调用不可能返回0个chunk
+                    if not accumulated_content.strip():
+                        logger.warning(
+                            f"⚠️ LLM流式调用返回空内容: backend={backend.value}, "
+                            f"attempt={attempt_count} — 视为失败，继续降级"
+                        )
+                        self._mark_backend_unhealthy(backend)
+                        if retry < self.max_retries - 1:
+                            await asyncio.sleep(1.0 * (retry + 1))
+                        continue
 
                     duration_ms = (time.time() - start_time) * 1000
                     fallback_used = backend != self.primary_backend
@@ -436,6 +511,11 @@ class LLMFallbackManager:
             from .llm_client import call_ollama
             content = await self._call_backend_inline(backend, request)
             yield content
+        else:
+            raise ValueError(
+                f"后端 {backend.value} 未注册且无内联实现，"
+                f"请检查 YAML 池配置和 {backend.value.upper()}_API_KEY 环境变量"
+            )
 
     # ─── 公共辅助方法（保持向后兼容） ────────────────────
 

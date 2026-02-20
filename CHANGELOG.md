@@ -1,8 +1,27 @@
 # DAML-RAG框架更新日志
 
-**版本**: v9.87.0
+**版本**: v9.88.0
 **更新日期**: 2026-02-21
 **状态**: ✅ 生产环境运行中
+
+---
+
+### v9.88.0 (2026-02-21) - 多模型蓝绿池修复
+
+**变更类型**: 🐛 修复
+
+**变更内容**:
+
+- **修复** YAML蓝绿池与LLM后端注册脱节：55%请求路由到未注册后端导致静默空响应
+- **新增** `_auto_register_from_yaml_pool()` 自动从YAML池注册后端客户端（补充XXX_ENABLED未覆盖的后端）
+- **新增** `_call_backend_stream_inline()` 未知后端raise ValueError兜底（替代静默空返回）
+- **新增** `call_with_fallback_stream()`/`call_with_fallback()` 空响应检测，空内容视为失败触发降级
+- **改进** `select_from_yaml_pool()` 内部自检API_KEY，自动过滤无密钥后端
+- **改进** `_load_yaml_pool()` 启动时校验各后端API_KEY，缺失时log warning
+- **同步** `.env`/`.env.production` 添加GLM/SILICONFLOW/QWEN/MOONSHOT的ENABLED标志和API_KEY
+- **新增** 单元测试 `test_multi_model_pool_fix.py` 覆盖自动注册、API_KEY过滤、空响应降级、未知后端报错
+
+**修改文件**: 5个 + 1个测试文件
 
 ---
 

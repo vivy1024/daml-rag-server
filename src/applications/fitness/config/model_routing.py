@@ -127,6 +127,14 @@ def _load_yaml_pool() -> tuple:
                 f"总权重={total_weight}, "
                 f"层级分布: {_summarize_tiers(entries)}"
             )
+            # 启动时校验 API_KEY
+            for entry in entries:
+                key_name = f"{entry.backend.upper()}_API_KEY"
+                if not os.getenv(key_name, ""):
+                    logger.warning(
+                        f"⚠️ YAML池后端 {entry.backend}/{entry.model} "
+                        f"缺少环境变量 {key_name}，运行时将被过滤"
+                    )
         return True, entries
 
     except Exception as e:
@@ -151,13 +159,33 @@ def _get_yaml_pool() -> tuple:
 
 
 def select_from_yaml_pool() -> Optional[PoolEntry]:
-    """从 YAML 池中加权随机选择一个模型"""
+    """从 YAML 池中加权随机选择一个模型（自动过滤无 API_KEY 的后端）"""
     enabled, pool = _get_yaml_pool()
     if not enabled or not pool:
         return None
 
-    weights = [e.weight for e in pool]
-    chosen = random.choices(pool, weights=weights, k=1)[0]
+    # 内部自检：过滤无 API_KEY 的后端
+    available = []
+    skipped = []
+    for entry in pool:
+        api_key = os.getenv(f"{entry.backend.upper()}_API_KEY", "")
+        if api_key:
+            available.append(entry)
+        else:
+            skipped.append(entry)
+
+    if skipped:
+        logger.warning(
+            f"⚠️ YAML池过滤无API_KEY后端: "
+            f"{[f'{e.backend}/{e.model}' for e in skipped]}"
+        )
+
+    if not available:
+        logger.warning("YAML池所有后端均无API_KEY，回退到默认降级链")
+        return None
+
+    weights = [e.weight for e in available]
+    chosen = random.choices(available, weights=weights, k=1)[0]
     logger.info(
         f"🎲 YAML池选择: {chosen.backend}/{chosen.model} "
         f"(tier={chosen.cost_tier}, weight={chosen.weight})"
