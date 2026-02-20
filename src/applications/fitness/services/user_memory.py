@@ -74,16 +74,17 @@ class UserMemoryService:
             vector = await asyncio.to_thread(self._embed, query)
             from qdrant_client.models import Filter, FieldCondition, MatchValue
 
-            results = await asyncio.to_thread(
-                self._get_qdrant().search,
+            response = await asyncio.to_thread(
+                self._get_qdrant().query_points,
                 collection_name=COLLECTION_NAME,
-                query_vector=vector,
+                query=vector,
                 query_filter=Filter(
                     must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]
                 ),
                 limit=top_k,
             )
 
+            points = response.points if hasattr(response, 'points') else response
             return [
                 {
                     "id": str(r.id),
@@ -92,7 +93,7 @@ class UserMemoryService:
                     "score": round(r.score, 4),
                     "created_at": r.payload.get("created_at", ""),
                 }
-                for r in results
+                for r in points
             ]
         except Exception as e:
             logger.warning(f"记忆检索失败 (user_id={user_id}): {e}")
@@ -108,16 +109,17 @@ class UserMemoryService:
             from qdrant_client.models import Filter, FieldCondition, MatchValue, PointStruct
 
             # 检查是否有高度相似的已有记忆
-            existing = await asyncio.to_thread(
-                self._get_qdrant().search,
+            response = await asyncio.to_thread(
+                self._get_qdrant().query_points,
                 collection_name=COLLECTION_NAME,
-                query_vector=vector,
+                query=vector,
                 query_filter=Filter(
                     must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]
                 ),
                 limit=1,
             )
 
+            existing = response.points if hasattr(response, 'points') else response
             now = datetime.now(timezone.utc).isoformat()
 
             if existing and existing[0].score >= self.SIMILARITY_THRESHOLD:
