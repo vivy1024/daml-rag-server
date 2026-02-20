@@ -647,7 +647,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             logger.info(
                 f"🎉 [{request_id}] 流式工作流执行成功! "
                 f"耗时: {processing_time:.2f}秒, "
-                f"TTFB: {ttfb_ms:.0f}ms, "
+                f"TTFB: {f'{ttfb_ms:.0f}ms' if ttfb_ms is not None else 'N/A'}, "
                 f"tokens: {tokens_generated}, "
                 f"grade: {state.get('personalization_grade', 'N/A')}"
             )
