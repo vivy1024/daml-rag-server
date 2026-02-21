@@ -221,7 +221,10 @@ class CreditReporter:
                         return {"success": False, "error": error_msg, "credits": credits}
 
             except (httpx.TimeoutException, httpx.RequestError) as e:
-                error_msg = f"{type(e).__name__}: {e}"
+                if isinstance(e, httpx.TimeoutException):
+                    error_msg = f"超时: {type(e).__name__}: {e}"
+                else:
+                    error_msg = f"{type(e).__name__}: {e}"
                 if attempt < max_retries - 1:
                     delay = 1.0 * (2 ** attempt)
                     logger.warning(f"积分上报失败(重试{attempt+1}/{max_retries}): {error_msg}")

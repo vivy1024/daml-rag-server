@@ -914,6 +914,7 @@ async def node_retrieve_context(
        - semantic   → HybridSearch（BM25 + 向量 + RRF，~200ms）
        - hybrid     → Neo4j + HybridSearch 融合
     2. 降级链：GraphRAG → 三层检索 → 空结果
+    3. 所有路径均追加 knowledge_articles 知识库检索结果（knowledge_refs）
 
     Args:
         state: 当前工作流状态
@@ -923,22 +924,44 @@ async def node_retrieve_context(
         cypher_executor: Neo4j Cypher 直查执行器
 
     Returns:
-        StateUpdate: 状态更新，包含 retrieval_results
+        StateUpdate: 状态更新，包含 retrieval_results（含 knowledge_refs）
     """
     request_id = state.get("request_id", "unknown")
     query_text = state.get("query_text", "")
     domain = state.get("domain", "fitness")
     dag_results = state.get("dag_results")
 
+    # 并行启动 knowledge_articles 检索（不阻塞主检索路径）
+    knowledge_task: Optional[asyncio.Task] = None
+    if hybrid_search_engine is not None:
+        try:
+            knowledge_task = asyncio.ensure_future(
+                hybrid_search_engine.search_knowledge_articles(query_text, top_k=5)
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ [{request_id}] 步骤8: 启动知识库检索任务失败: {e}")
+
+    async def _get_knowledge_refs() -> List[Dict]:
+        """等待知识库检索任务，失败时返回空列表"""
+        if knowledge_task is None:
+            return []
+        try:
+            return await knowledge_task
+        except Exception as e:
+            logger.warning(f"⚠️ [{request_id}] 步骤8: 知识库检索任务失败: {e}")
+            return []
+
     # 如果DAG已经返回结果，可能不需要额外检索
     if dag_results:
+        knowledge_refs = await _get_knowledge_refs()
         logger.info(f"✅ [{request_id}] 步骤8完成: 使用DAG结果，跳过检索")
         return StateUpdate(updates={
             "retrieval_results": {
                 "results": _convert_dag_results_to_list(dag_results),
                 "query_type": "dag_orchestration",
                 "domain": domain,
-                "count": len(dag_results)
+                "count": len(dag_results),
+                "knowledge_refs": knowledge_refs,
             }
         })
 
@@ -967,6 +990,7 @@ async def node_retrieve_context(
             )
 
             if neo4j_results:
+                knowledge_refs = await _get_knowledge_refs()
                 logger.info(
                     f"✅ [{request_id}] 步骤8完成: "
                     f"Neo4j直查({intent_result.structured_type.value}) "
@@ -981,6 +1005,7 @@ async def node_retrieve_context(
                         "count": len(neo4j_results),
                         "intent": intent_result.intent.value,
                         "entity": intent_result.extracted_entity,
+                        "knowledge_refs": knowledge_refs,
                     }
                 })
             else:
@@ -1021,6 +1046,7 @@ async def node_retrieve_context(
         merged = _merge_results(neo4j_results, hybrid_results, max_total=10)
 
         if merged:
+            knowledge_refs = await _get_knowledge_refs()
             logger.info(
                 f"✅ [{request_id}] 步骤8完成: "
                 f"Hybrid路由(Neo4j={len(neo4j_results)}+Search={len(hybrid_results)}) "
@@ -1034,6 +1060,7 @@ async def node_retrieve_context(
                     "count": len(merged),
                     "intent": "hybrid",
                     "entity": intent_result.extracted_entity,
+                    "knowledge_refs": knowledge_refs,
                 }
             })
 
@@ -1053,6 +1080,7 @@ async def node_retrieve_context(
                 f"✅ [{request_id}] 步骤8完成: "
                 f"HybridSearch(BM25+向量+RRF) 返回 {len(hybrid_results)} 个结果"
             )
+            knowledge_refs = await _get_knowledge_refs()
             return StateUpdate(updates={
                 "retrieval_results": {
                     "results": hybrid_results,
@@ -1060,6 +1088,7 @@ async def node_retrieve_context(
                     "domain": domain,
                     "count": len(hybrid_results),
                     "intent": intent_result.intent.value if intent_result else "unknown",
+                    "knowledge_refs": knowledge_refs,
                 }
             })
         except Exception as e:
@@ -1084,18 +1113,21 @@ async def node_retrieve_context(
                 f"{retriever_name} 返回 {len(retrieval_results.get('results', []))} 个结果"
             )
 
+            knowledge_refs = await _get_knowledge_refs()
+            retrieval_results["knowledge_refs"] = knowledge_refs
             return StateUpdate(updates={"retrieval_results": retrieval_results})
         else:
+            knowledge_refs = await _get_knowledge_refs()
             logger.warning(f"⚠️ [{request_id}] 步骤8: 无检索引擎")
             return StateUpdate(
-                updates={"retrieval_results": {"results": [], "count": 0}},
+                updates={"retrieval_results": {"results": [], "count": 0, "knowledge_refs": knowledge_refs}},
                 warning="无检索引擎"
             )
 
     except Exception as e:
         logger.error(f"❌ [{request_id}] 步骤8: 检索异常: {e}")
         return StateUpdate(
-            updates={"retrieval_results": {"results": [], "count": 0}},
+            updates={"retrieval_results": {"results": [], "count": 0, "knowledge_refs": []}},
             error=f"检索异常: {str(e)}"
         )
 
@@ -1376,6 +1408,19 @@ async def node_llm_analysis(
             retrieval_count=len(retrieval_results.get('results', [])),
             mcp_tools_result=mcp_tools_result_json
         )
+
+        # 6.1 追加知识库引用到 system_prompt
+        knowledge_refs = retrieval_results.get("knowledge_refs", [])
+        if knowledge_refs:
+            refs_lines = ["", "---", "【知识库参考文献】"]
+            for ref in knowledge_refs:
+                title = ref.get("title", "")
+                source_book = ref.get("source_book", "")
+                chapter = ref.get("chapter", "")
+                chapter_part = f" Ch.{chapter}" if chapter else ""
+                refs_lines.append(f"[知识引用] {title} — {source_book}{chapter_part}")
+            system_prompt = system_prompt + "\n".join(refs_lines)
+            logger.info(f"   - 注入知识库引用: {len(knowledge_refs)} 条")
         
         logger.info(f"   - 提示词长度: {len(system_prompt)}字")
         

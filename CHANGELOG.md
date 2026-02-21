@@ -5,6 +5,21 @@
 
 ---
 
+## #6 (feat) 检索层扩展：knowledge_articles collection 接入 — 2026-02-21
+
+- `src/framework/retrieval/hybrid_search.py`：新增 `search_knowledge_articles` 方法
+  - 懒加载 GTE-Large-zh（1024维）向量模型，复用现有 `get_qdrant_client()`
+  - collection 不存在时优雅降级（log warning + 返回空列表）
+  - 结果携带 `source_type="knowledge_article"`、`article_id`、`title`、`source_book`、`chapter`
+- `src/applications/fitness/workflow/nodes.py`：`node_retrieve_context` 扩展
+  - 函数启动时并行发起 knowledge_articles 检索任务（`asyncio.ensure_future`）
+  - 所有返回路径（DAG/Neo4j/Hybrid/HybridSearch/降级）均追加 `knowledge_refs` 字段
+  - 内部辅助函数 `_get_knowledge_refs()` 统一等待任务结果，失败时返回空列表
+- `src/applications/fitness/workflow/nodes.py`：`node_llm_analysis` 扩展
+  - 从 `retrieval_results.knowledge_refs` 读取知识库引用
+  - 注入格式：`[知识引用] {title} — {source_book} Ch.{chapter}`，用分隔线追加到 system_prompt
+- 对应产品版本：v1.1.0
+
 ## #5 (refactor) 环境变量集中配置 — 2026-02-21
 
 - 创建 `framework/config/app_config.py`：Pydantic BaseSettings 集中管理所有环境变量
