@@ -15,7 +15,7 @@
 | [环境配置](./环境配置.md) | 各服务详细配置 - MySQL、Neo4j、Qdrant等 | v3.11.0 |
 
 **v3.11.0 重要更新** (2025-11-08):
-- ⚠️ 更新真实资源需求：86.3GB磁盘、CPU 1300%峰值、Anthropic Claude 8GB内存
+- ⚠️ 更新真实资源需求：86.3GB磁盘、CPU 1300%峰值
 - ✅ 明确各服务的资源占用和配置要求
 - ✅ 新增Docker镜像清理和优化建议
 - ✅ 完善服务健康检查和故障排查流程
@@ -28,18 +28,18 @@
 
 ```
 💾 磁盘空间: 86.3 GB
-   ├─ Docker镜像: ~25GB (Neo4j 5.15、Anthropic Claude、GTE-Large-zh等)
+   ├─ Docker镜像: ~25GB (Neo4j 5.15、GTE-Large-zh等)
    ├─ 容器数据卷: ~45GB (MySQL、Neo4j图谱、Qdrant向量)
    └─ Hugging Face缓存: ~16GB (GTE-Large-zh、tokenizer等)
 
-🧠 内存占用: 14-20 GB
-   ├─ Anthropic Claude (haiku-4.5): 8GB
+🧠 内存占用: 6-12 GB
    ├─ Neo4j 图谱: 1.5GB (512MB pagecache + 1GB heap)
    ├─ MySQL 8.4: 1-2GB
    ├─ Qdrant: 1-2GB
    ├─ DAML-RAG Server AI服务 (GTE-Large-zh): 2-3GB
    ├─ PHP后端: 512MB
    └─ 其他服务: 1-2GB
+   注: LLM 推理已迁移至 Anthropic Claude API（云端），无需本地 LLM 内存
 
 ⚡ CPU使用: 峰值 1300% (13核满负载)
    ├─ 正常运行: 200-400% (2-4核)
@@ -52,12 +52,12 @@
 | 组件 | 最低配置 | 推荐配置 | 生产环境 |
 |-----|---------|---------|---------|
 | **CPU** | 4核心 (i5/Ryzen 5) | 8核心 (i7/Ryzen 7) | 16核心+ (服务器) |
-| **内存** | 16GB | 32GB | 64GB+ |
+| **内存** | 8GB | 16GB | 32GB+ |
 | **磁盘** | 100GB SSD | 256GB NVMe SSD | 512GB+ NVMe SSD |
 | **网络** | 10Mbps | 100Mbps | 1Gbps |
 
 **⚠️ 警告**：
-- 低于16GB内存会导致Anthropic Claude OOM（内存溢出）
+- 低于8GB内存会导致服务 OOM（内存溢出）
 - 低于4核CPU会导致AI推理超时
 - 磁盘不足会导致Docker无法启动容器
 
@@ -137,9 +137,9 @@ docker-compose down  # 停止服务
 | **phpMyAdmin** | 80 | 8080 | 数据库管理 | 100MB |
 | **Redis Commander** | 8081 | 8081 | Redis管理 | 50MB |
 | **Mailpit Web** | 8025 | 8026 | 邮件测试 | 50MB |
-| **Anthropic Claude** | 443 (HTTPS) | 443 (HTTPS) | 本地LLM | **8GB 内存** |
+| **Anthropic Claude** | - | - | 云端LLM API | 无需本地资源 |
 
-**总计**：约14-20GB内存（包括Anthropic Claude）
+**总计**：约6-12GB内存（LLM 已迁移至云端 API）
 
 ---
 
@@ -159,14 +159,14 @@ docker-compose down  # 停止服务
 ## 🔗 相关文档
 
 ### 核心文档
-- <!-- [系统架构](../02-核心架构/系统架构.md) (文档不存在) --> - 了解整体设计
-- [Docker部署](../06-部署运维/Docker部署.md) - 生产部署指南
-- <!-- [知识图谱快速导入](../06-部署运维/知识图谱快速导入指南.md) (文档不存在) --> - Neo4j数据导入
+- [系统架构总览](../02-核心架构/01-系统架构/01-系统架构总览.md) - 了解整体设计
+- [Docker部署](../06-部署运维/01-Docker部署.md) - 生产部署指南
+- [知识图谱快速导入](../06-部署运维/08-知识图谱快速导入指南.md) - Neo4j数据导入
 
 ### 进阶文档
 - [代码参考](../03-代码参考/README.md) - 详细代码说明
 - [API文档](../05-API文档/README.md) - MCP工具API
-- [双模型使用指南](../04-开发指南/双模型框架使用指南.md) - DeepSeek + Anthropic Claude
+- [开发指南](../04-开发指南/README.md) - 开发使用指南
 
 ---
 
@@ -228,5 +228,5 @@ docker-compose logs -f --tail=100 fitness_daml_rag
 ---
 
 <div align="center">
-<strong>⚠️ 请确保硬件资源充足 · 💾 86GB磁盘 · 🧠 16GB+内存 · ⚡ 4核+CPU</strong>
+<strong>⚠️ 请确保硬件资源充足 · 💾 86GB磁盘 · 🧠 8GB+内存 · ⚡ 4核+CPU</strong>
 </div>
