@@ -5,6 +5,23 @@
 
 ---
 
+## #5 (refactor) 环境变量集中配置 — 2026-02-21
+
+- 创建 `framework/config/app_config.py`：Pydantic BaseSettings 集中管理所有环境变量
+- 9 个配置类：MySQLConfig/Neo4jConfig/QdrantConfig/RedisConfig/BackendAPIConfig/InternalTokenConfig/LLMBaseConfig/DeepSeekConfig/AnthropicConfig/ServiceConfig
+- fail-fast 校验：Neo4j 密码 + 内部 API Token 缺失时启动即报错
+- 迁移 singletons.py 数据库配置到 get_config() 集中入口
+- 15 个单元测试全部通过
+- 对应产品版本：v1.0.0
+
+## #4 (fix) 全量裸 except 收窄 — 2026-02-21
+
+- 7 个文件 30+ 处裸 except 收窄为具体异常类型
+- main.py(2处)/exercise_stability_manager.py(4处)/fewshot_types.py(3处)/mcp_client_v2.py(1处)
+- stream_executor.py(10处)/llm_client.py(7处)/backend_client.py(10处)
+- daml-rag-server/src/ 零裸 except 残留
+- 对应产品版本：v1.0.0
+
 ## #3 (feat) 知识库入库脚本 — 2026-02-21
 
 - 创建 `scripts/import_knowledge.py` 批量入库工具
