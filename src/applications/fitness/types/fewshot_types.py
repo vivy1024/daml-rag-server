@@ -228,23 +228,23 @@ class UnifiedFewShotExample:
         if isinstance(timestamp, str):
             try:
                 timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-            except:
+            except (ValueError, TypeError):
                 timestamp = datetime.now()
         elif not isinstance(timestamp, datetime):
             timestamp = datetime.now()
-        
+
         created_at = data.get("created_at")
         if isinstance(created_at, str):
             try:
                 created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-            except:
+            except (ValueError, TypeError):
                 created_at = None
-        
+
         updated_at = data.get("updated_at")
         if isinstance(updated_at, str):
             try:
                 updated_at = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
-            except:
+            except (ValueError, TypeError):
                 updated_at = None
         
         # 处理三轨评分

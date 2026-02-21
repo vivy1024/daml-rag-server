@@ -227,7 +227,7 @@ class ConfigurableMCPClient(BaseClient):
                     async with httpx.AsyncClient(timeout=5.0) as client:
                         response = await client.get(f"{server_config.endpoint}/health")
                         return response.status_code == 200
-                except:
+                except (httpx.HTTPError, ConnectionError, OSError, TimeoutError):
                     return False
             return False
         except Exception as e:

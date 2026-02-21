@@ -21,6 +21,7 @@ import logging
 import time
 import uuid
 import asyncio
+import httpx
 from typing import Dict, Any, Optional, AsyncGenerator
 
 from .state import (
@@ -114,7 +115,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     llm_client=llm_client,
                 )
                 logger.info("上下文工程模块初始化成功")
-            except Exception as e:
+            except (ImportError, AttributeError, TypeError, ConnectionError) as e:
                 logger.warning(f"上下文工程模块初始化失败: {e}")
                 self._context_engine = None
         return self._context_engine
@@ -124,7 +125,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         try:
             from ....framework.clients.llm_client import get_llm_client
             return get_llm_client()
-        except Exception as e:
+        except (ImportError, AttributeError) as e:
             logger.warning(f"获取LLM客户端失败: {e}")
             return None
     
@@ -209,7 +210,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                             {"role": h.get("role", "user"), "content": h.get("content", "")}
                             for h in (context_result.conversation_history or [])
                         ]
-                    except Exception as e:
+                    except (RuntimeError, ValueError, ConnectionError, TimeoutError) as e:
                         logger.warning(f"[{request_id}] Agent上下文构建失败: {e}")
 
                 yield {"type": "step", "step": 1, "message": "Agent模式初始化..."}
@@ -266,7 +267,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     f"time={processing_time:.2f}s"
                 )
 
-            except Exception as e:
+            except Exception as e:  # 需要宽泛捕获：Agent模式顶层错误边界，确保所有异常都返回错误响应
                 logger.error(f"❌ [{request_id}] Agent模式执行失败: {e}", exc_info=True)
                 yield {"type": "error", "error": str(e), "request_id": request_id}
 
@@ -301,7 +302,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     f"tokens={context_result.total_tokens}, "
                     f"compressed={context_result.was_compressed}"
                 )
-            except Exception as e:
+            except (RuntimeError, ValueError, ConnectionError, TimeoutError) as e:
                 logger.warning(f"[{request_id}] 上下文构建失败: {e}")
         
         # 初始化状态
@@ -543,7 +544,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                         }
                     )
                     logger.info(f"📝 [{request_id}] 对话历史已记录")
-                except Exception as e:
+                except (RuntimeError, ValueError, ConnectionError, TimeoutError) as e:
                     logger.warning(f"[{request_id}] 记录对话历史失败: {e}")
 
             # ========== 偏好提取（异步，不阻塞主流程） ==========
@@ -579,12 +580,12 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                                         f"🧠 [{request_id}] 偏好提取: "
                                         f"存储{len(prefs)}条记忆 (user={user_id})"
                                     )
-                            except Exception as pe:
+                            except (RuntimeError, ValueError, ConnectionError, TimeoutError) as pe:
                                 logger.warning(f"[{request_id}] 偏好提取失败: {pe}")
 
                         asyncio.create_task(_extract_and_store())
                         logger.debug(f"[{request_id}] 偏好提取任务已启动（异步）")
-                except Exception as e:
+                except (ImportError, AttributeError) as e:
                     logger.warning(f"[{request_id}] 偏好提取初始化失败: {e}")
             
             # 计算总耗时
@@ -652,7 +653,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 f"grade: {state.get('personalization_grade', 'N/A')}"
             )
             
-        except Exception as e:
+        except Exception as e:  # 需要宽泛捕获：主工作流顶层错误边界，确保所有异常都返回错误响应
             processing_time = time.time() - start_time
             logger.error(f"❌ [{request_id}] 流式工作流执行失败: {e}", exc_info=True)
             
@@ -863,7 +864,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                         if isinstance(v, (str, int, float, bool, list, dict, type(None)))
                     }
                     user_profile_for_prompt = json.dumps(serializable_profile, ensure_ascii=False)
-                except Exception:
+                except (TypeError, ValueError):
                     user_profile_for_prompt = str(user_profile)
             
             # 准备MCP工具结果字符串
@@ -878,7 +879,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                             mcp_results[key] = self._make_json_serializable(value)
                     if mcp_results:
                         mcp_tools_result_str = json.dumps(mcp_results, ensure_ascii=False, indent=2)
-                except Exception as e:
+                except (TypeError, ValueError) as e:
                     logger.warning(f"序列化MCP工具结果失败: {e}")
                     mcp_tools_result_str = str(aggregated_data)
             
@@ -915,7 +916,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                         state["web_search_triggered"] = True
                         state["web_search_results"] = web_results
                         logger.info(f"🔍 [{request_id}] WebSearch注入: {len(web_results)}条结果")
-            except Exception as ws_err:
+            except (ImportError, ConnectionError, TimeoutError, httpx.HTTPError) as ws_err:
                 logger.debug(f"[{request_id}] WebSearch跳过: {ws_err}")
 
             # ========== TokenBudgetManager: 统一预算控制 ==========
@@ -973,7 +974,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     keep_count = max(1, int(len(few_shot_examples) * ratio))
                     few_shot_examples = few_shot_examples[-keep_count:]
 
-            except Exception as budget_err:
+            except (ImportError, ValueError, KeyError) as budget_err:
                 logger.debug(f"[{request_id}] TokenBudgetManager跳过: {budget_err}")
 
             # 初始化LLM降级管理器（根据模板路由选择后端）
@@ -1096,7 +1097,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                                 f"{chosen_v['backend']}/{chosen_v['model']} "
                                 f"(images={len(attachments)})"
                             )
-                except Exception as ve:
+                except (ImportError, KeyError, ValueError, ConnectionError) as ve:
                     logger.warning(f"[{request_id}] Vision分支初始化失败，回退文本模式: {ve}")
 
             # 流式调用LLM
@@ -1112,9 +1113,9 @@ class StreamWorkflowExecutor(WorkflowExecutor):
 
             logger.info(f"✅ [{request_id}] 步骤10完成: 流式LLM生成完成")
             
-        except Exception as e:
+        except Exception as e:  # 需要宽泛捕获：步骤10顶层错误边界，确保LLM生成失败时返回降级响应
             logger.error(f"❌ [{request_id}] 步骤10: 流式LLM生成异常: {e}")
-            
+
             # 生成降级响应
             fallback_response = f"抱歉，AI分析功能暂时不可用。\n\n您的查询：{query_text}\n\n请稍后重试。"
             yield {"content": fallback_response}
@@ -1206,7 +1207,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                         eligibility_reason=rating_result.eligibility_reason,
                         overall_score=rating_result.overall_score
                     )
-                except Exception as e:
+                except (httpx.HTTPError, ConnectionError, TimeoutError) as e:
                     logger.warning(f"[{request_id}] 提交三轨评分到后端失败: {e}")
             
             logger.info(
@@ -1215,7 +1216,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 f"eligible={rating_result.fewshot_eligible}"
             )
             
-        except Exception as e:
+        except (ImportError, ValueError, RuntimeError, ConnectionError, TimeoutError) as e:
             logger.error(f"❌ [{request_id}] 步骤12: 三轨评分异常: {e}")
             # 不影响主流程，记录错误但继续
             state["three_track_rating"] = {
@@ -1230,7 +1231,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         try:
             from ....framework.clients.qdrant_client import get_qdrant_client
             return get_qdrant_client()
-        except Exception as e:
+        except (ImportError, ConnectionError) as e:
             logger.warning(f"获取Qdrant客户端失败: {e}")
             return None
     
@@ -1297,7 +1298,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     "upgrade_hint": result.upgrade_hint
                 }
                 
-        except Exception as e:
+        except (ImportError, httpx.HTTPError, ConnectionError, TimeoutError, ValueError) as e:
             logger.error(f"❌ [{request_id}] 权限检查异常: {e}")
             # 权限检查异常时，允许执行（避免阻塞用户）
             return {
@@ -1391,7 +1392,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             
             return success
             
-        except Exception as e:
+        except (ImportError, httpx.HTTPError, ConnectionError, TimeoutError, ValueError) as e:
             logger.error(f"❌ [{request_id}] 用量增加异常: {e}")
             return False
     
@@ -1463,7 +1464,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 )
                 return False
                 
-        except Exception as e:
+        except (ImportError, httpx.HTTPError, ConnectionError, TimeoutError, ValueError) as e:
             # 积分上报失败不应阻塞主流程
             logger.error(
                 f"❌ [{request_id}] 积分上报异常: {e}",
