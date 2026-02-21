@@ -5,6 +5,18 @@
 
 ---
 
+## #8 (feat) Alertmanager 飞书告警转发 — 2026-02-21
+
+- 新增 `src/api/routes/alertmanager_webhook.py`：Alertmanager → 飞书卡片消息转发
+  - 接收标准 Alertmanager webhook payload，格式化为飞书交互卡片
+  - 按 severity 显示不同颜色（critical=红/warning=橙/info=蓝）
+  - 环境变量 `FEISHU_WEBHOOK_URL` 配置飞书机器人地址
+  - 未配置时优雅降级为日志记录
+- 更新 `prometheus/alertmanager.yml`：Slack → 飞书 webhook 转发
+- 更新 `config/prometheus/alertmanager.yml`：同步飞书配置
+- 路由注册到 api_router（`/webhooks/alertmanager`）
+- 对应产品版本：v1.1.0
+
 ## #7 (refactor) metrics_collector → prometheus_client 迁移 — 2026-02-21
 
 - `src/api/routes/health.py`：移除自定义 `metrics_collector` 依赖

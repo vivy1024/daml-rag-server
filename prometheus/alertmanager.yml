@@ -1,87 +1,59 @@
-# Alertmanager 配置文件
+# Alertmanager 配置文件 — 飞书告警版
 #
-# ⚠️  重要：使用前必须替换以下占位符：
-#   - PLACEHOLDER → 真实的 Slack Incoming Webhook URL
-#     获取方式：https://api.slack.com/messaging/webhooks
-#     格式示例：https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
+# 告警链路：Prometheus → Alertmanager → daml-rag-server /webhooks/alertmanager → 飞书
+#
+# 配置步骤：
+#   1. 在飞书群设置 → 群机器人 → 添加自定义机器人，获取 Webhook URL
+#   2. 设置环境变量 FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
+#   3. 重启 daml-rag-server 容器
 #
 # 路由策略：
 #   - severity=critical → 立即通知（group_wait: 0s）
-#   - severity=warning  → 5 分钟聚合后通知（group_wait: 5m）
+#   - severity=warning  → 5 分钟聚合后通知
 
 global:
-  # 告警解除后等待多久才发送 resolved 通知
   resolve_timeout: 5m
 
-# ─── 通知模板 ────────────────────────────────────────────────────────────────
 templates:
   - '/etc/alertmanager/templates/*.tmpl'
 
 # ─── 路由配置 ────────────────────────────────────────────────────────────────
 route:
-  # 默认接收器
-  receiver: 'slack-warning'
-
-  # 按 alertname + job 分组，减少告警风暴
+  receiver: 'feishu-default'
   group_by: ['alertname', 'job']
-
-  # 默认：5 分钟聚合（warning 级别）
   group_wait: 5m
   group_interval: 5m
   repeat_interval: 4h
 
   routes:
-    # critical 告警：立即通知，1 小时后重复
+    # critical 告警：立即通知
     - match:
         severity: critical
-      receiver: 'slack-critical'
+      receiver: 'feishu-critical'
       group_wait: 0s
       group_interval: 1m
       repeat_interval: 1h
       continue: false
 
-    # warning 告警：5 分钟聚合，4 小时后重复（使用默认配置）
+    # warning 告警：5 分钟聚合
     - match:
         severity: warning
-      receiver: 'slack-warning'
+      receiver: 'feishu-default'
       continue: false
 
-# ─── 接收器配置 ──────────────────────────────────────────────────────────────
+# ─── 接收器配置（统一走 daml-rag-server 飞书转发）─────────────────────────────
 receivers:
-  # Critical 告警接收器 — 立即通知
-  - name: 'slack-critical'
-    slack_configs:
-      - api_url: 'https://hooks.slack.com/services/PLACEHOLDER'
-        # ⚠️ 将上方 PLACEHOLDER 替换为真实的 Slack Webhook URL
-        channel: '#alerts-critical'
+  - name: 'feishu-critical'
+    webhook_configs:
+      - url: 'http://fitness_daml_rag:8001/webhooks/alertmanager'
         send_resolved: true
-        title: '🚨 [CRITICAL] {{ .GroupLabels.alertname }}'
-        text: |
-          {{ range .Alerts }}
-          *告警*: {{ .Annotations.summary }}
-          *详情*: {{ .Annotations.description }}
-          *开始时间*: {{ .StartsAt | since }}
-          {{ end }}
-        color: 'danger'
 
-  # Warning 告警接收器 — 聚合通知
-  - name: 'slack-warning'
-    slack_configs:
-      - api_url: 'https://hooks.slack.com/services/PLACEHOLDER'
-        # ⚠️ 将上方 PLACEHOLDER 替换为真实的 Slack Webhook URL
-        channel: '#alerts-warning'
+  - name: 'feishu-default'
+    webhook_configs:
+      - url: 'http://fitness_daml_rag:8001/webhooks/alertmanager'
         send_resolved: true
-        title: '⚠️ [WARNING] {{ .GroupLabels.alertname }}'
-        text: |
-          {{ range .Alerts }}
-          *告警*: {{ .Annotations.summary }}
-          *详情*: {{ .Annotations.description }}
-          *开始时间*: {{ .StartsAt | since }}
-          {{ end }}
-        color: 'warning'
 
 # ─── 抑制规则 ────────────────────────────────────────────────────────────────
-# 当 ServiceDown 触发时，抑制同实例的其他告警（避免级联告警噪音）
 inhibit_rules:
   - source_match:
       alertname: 'ServiceDown'
