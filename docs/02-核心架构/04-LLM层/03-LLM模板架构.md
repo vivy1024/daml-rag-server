@@ -488,7 +488,7 @@ def _create_fallback_response(
 - 用于高相似度查询（相似度≥0.7）
 - 提供更准确的分析和建议
 
-**学生模型（Ollama）**：
+**学生模型（Anthropic Claude）**：
 - 用于简单查询
 - 用于低相似度查询
 - 提供快速响应
@@ -498,10 +498,10 @@ def _create_fallback_response(
 使用`LLMFallbackManager`进行自动降级：
 
 ```python
-# 降级策略：DeepSeek → Ollama → Template
+# 降级策略：DeepSeek → Anthropic Claude → Template
 fallback_manager = LLMFallbackManager(
     primary_backend="deepseek",
-    fallback_backends=["ollama", "template"],
+    fallback_backends=["anthropic-claude", "template"],
     max_retries=3,
     timeout=30,
     enable_health_check=True
@@ -588,7 +588,7 @@ analysis_stats = {
     "average_safety_reminders": 2.8,
     "model_usage": {
         "deepseek-chat": 600,
-        "ollama-qwen2.5": 350,
+        "anthropic-claude-qwen2.5": 350,
         "fallback": 50
     }
 }

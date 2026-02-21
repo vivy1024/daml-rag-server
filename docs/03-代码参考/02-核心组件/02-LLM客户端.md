@@ -21,7 +21,7 @@ LLM客户端提供统一的大语言模型调用接口，支持多个LLM提供�
 | 提供商 | 角色 | 模型 | 特点 |
 |--------|------|------|------|
 | **DeepSeek** | Teacher模型 | deepseek-chat | 经济实惠，推理能力强 |
-| **Ollama** | Student模型 | qwen3:8b | 本地部署，隐私保护 |
+| **Anthropic Claude** | Student模型 | qwen3:8b | 本地部署，隐私保护 |
 | **Moonshot** | 备用 | moonshot-v1-32k | 长文本处理 |
 | **通义千问** | 备用 | qwen-turbo | 国内稳定 |
 
@@ -37,8 +37,8 @@ DEEPSEEK_API_KEY=sk-xxx
 DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
 DEEPSEEK_MODEL=deepseek-chat
 
-# Ollama配置（本地）
-OLLAMA_BASE_URL=http://localhost:11434
+# Anthropic Claude配置（本地）
+OLLAMA_BASE_URL=http://localhost:443 (HTTPS)
 OLLAMA_MODEL=qwen3:8b
 
 # 通用配置
@@ -127,12 +127,12 @@ answer = await call_deepseek(
 )
 ```
 
-### 2. `call_ollama()` - Ollama调用
+### 2. `call_anthropic-claude()` - Anthropic Claude调用
 
-**功能**: 调用本地Ollama模型
+**功能**: 调用本地Anthropic Claude模型
 
 ```python
-async def call_ollama(
+async def call_anthropic-claude(
     query: str,
     few_shot_examples: List[Dict[str, Any]],
     tool_results: Dict[str, Any],
@@ -371,8 +371,8 @@ tool_results = {...}  # 精简数据
 curl -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
      https://api.deepseek.com/v1/models
 
-# 切换到Ollama
-export OLLAMA_BASE_URL=http://localhost:11434
+# 切换到Anthropic Claude
+export OLLAMA_BASE_URL=http://localhost:443 (HTTPS)
 ```
 
 ### 问题3：重试次数不够

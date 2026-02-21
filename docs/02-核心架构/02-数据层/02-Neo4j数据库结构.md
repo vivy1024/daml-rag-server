@@ -306,7 +306,7 @@ graph LR
     * 格式: ["起始：...", "动作：...", "结束：..."]
     * 包含3-5个关键技术检查点
     * 覆盖率: 100% (1,603/1,603)
-    * 数据来源: Ollama Qwen3 8B生成 + 手动审核
+    * 数据来源: Anthropic Claude Qwen3 8B生成 + 手动审核
   
   - rom_requirements: 关节活动度要求 (JSON格式)
     * 格式: {"hip_flexion": 90, "knee_flexion": 90, "ankle_dorsiflexion": 15}
@@ -945,7 +945,7 @@ NSCA标准示例:
 ```yaml
 实现方式:
   - 通过GraphRAG API调用Qdrant
-  - 基于BGE-M3模型 (1024维)
+  - 基于GTE-Large-zh模型 (1024维)
   - 支持中英文语义匹配
   - 返回相似度分数
 
