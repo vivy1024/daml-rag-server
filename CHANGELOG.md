@@ -5,6 +5,27 @@
 
 ---
 
+## #13 (refactor) Agent模式移至experimental/ + 检索层精简 — 2026-02-22
+
+对应产品版本：v9.88.0（纯内部重构，产品版本不动）
+
+**Block A: Agent代码清理 (-5,157行)**
+- `src/applications/fitness/agent/` 6个核心文件(36,303行)移至 `experimental/agent/`
+- `src/framework/orchestration/agent_executor.py`(2,000行) 移至 `experimental/`
+- `src/framework/skills/skills_agent_executor.py`(786行) 移至 `experimental/`
+- 清理 `chat.py` + `stream_executor.py` Agent路由分支
+- 简化 `mode_router.py` 统一返回DAG
+- `strategy_selector.py` 移除AGENT枚举和相关逻辑
+- `skills/__init__.py` 移除Agent执行器导出
+- `is_agent_mode_enabled()` 统一返回False
+- 2个Agent测试文件移至 `experimental/`
+
+**Block B: 检索层精简**
+- 删除 `HybridSearchEngine.compare_search_methods()` 未使用方法
+- 三套引擎保留(各有分工): HybridSearch(DAG管线60%) + GraphRAG(API+降级) + TrueThreeLayer(MCP工具)
+
+**验证**: 654 unit tests passed, 所有import正常
+
 ## #12 (fix) 向量检索修复 — hybrid_search 直查 Qdrant 同源数据 — 2026-02-21
 
 - `src/framework/retrieval/hybrid_search.py`：`vector_search()` 重写
