@@ -168,6 +168,10 @@ def initialize_performance_components():
             PoolConfig
         )
         
+        # 从集中配置获取数据库连接参数
+        from ....framework.config import get_config
+        app_config = get_config()
+
         # MySQL连接池配置
         mysql_config = PoolConfig(
             min_size=10,
@@ -177,15 +181,8 @@ def initialize_performance_components():
             acquire_timeout=2,
             health_check_interval=30
         )
-        
-        mysql_db_config = {
-            'host': os.getenv('MYSQL_HOST', 'fitness_mysql'),
-            'port': int(os.getenv('MYSQL_PORT', '3306')),
-            'user': os.getenv('MYSQL_USER', 'root'),
-            'password': os.getenv('MYSQL_PASSWORD', ''),
-            'database': os.getenv('MYSQL_DATABASE', 'fitness_app')
-        }
-        
+        mysql_db_config = app_config.database.mysql.to_dict()
+
         # Neo4j连接池配置
         neo4j_config = PoolConfig(
             min_size=5,
@@ -195,12 +192,7 @@ def initialize_performance_components():
             acquire_timeout=2,
             health_check_interval=30
         )
-        
-        neo4j_db_config = {
-            'uri': os.getenv('NEO4J_URI', 'bolt://fitness_neo4j:7687'),
-            'user': os.getenv('NEO4J_USER', 'neo4j'),
-            'password': os.getenv('NEO4J_PASSWORD', '')
-        }
+        neo4j_db_config = app_config.database.neo4j.to_dict()
         
         _connection_pool_manager_instance = ConnectionPoolManager(
             mysql_config=mysql_config,
