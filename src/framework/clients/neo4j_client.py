@@ -36,7 +36,7 @@ class Neo4jClientConfig(ClientConfig):
         return cls(
             uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
             user=os.getenv("NEO4J_USER", "neo4j"),
-            password=os.getenv("NEO4J_PASSWORD", "password"),
+            password=os.getenv("NEO4J_PASSWORD", ""),
             database=os.getenv("NEO4J_DATABASE", "neo4j")
         )
 
