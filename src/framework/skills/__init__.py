@@ -10,15 +10,16 @@ Skills架构模块
 - SkillExecution: Level 3 执行资源（执行时加载）
 - SkillManager: 技能管理器
 - LoadSkillTool: load_skill MCP工具
-- SkillsAgentExecutor: 基于Skills的Agent执行器
 
 集成模块：
 - skills_integration: Feature Flag控制和单例管理
 
+v3.0: Agent执行器已移至experimental/，Skills仅用于DAG模板管理。
+
 Requirements: 8.1-8.7
 
-版本: v1.1.0
-日期: 2026-01-11
+版本: v3.0.0
+日期: 2026-02-22
 作者: 薛小川
 """
 
@@ -34,17 +35,9 @@ from .skill_manager import SkillManager, create_skill_manager, create_skill_mana
 
 from .load_skill_tool import LoadSkillTool, LoadSkillInput
 
-from .skills_agent_executor import (
-    AgentAction,
-    AgentDecision,
-    AgentExecutionResult,
-    SkillsAgentExecutor,
-)
-
 from .skills_integration import (
     # Feature Flags
     is_skills_mode_enabled,
-    is_agent_mode_enabled,
     get_skills_config,
     # 集成器
     SkillsIntegration,
@@ -66,14 +59,8 @@ __all__ = [
     # MCP工具
     "LoadSkillTool",
     "LoadSkillInput",
-    # Agent执行器
-    "AgentAction",
-    "AgentDecision",
-    "AgentExecutionResult",
-    "SkillsAgentExecutor",
     # Feature Flags
     "is_skills_mode_enabled",
-    "is_agent_mode_enabled",
     "get_skills_config",
     # 集成器
     "SkillsIntegration",

@@ -50,18 +50,10 @@ def is_skills_mode_enabled() -> bool:
 
 def is_agent_mode_enabled() -> bool:
     """
-    检查是否启用Agent模式
-    
-    通过环境变量 USE_AGENT_MODE 控制：
-    - true/1/yes: 启用Agent模式（LLM自主决策）
-    - false/0/no（默认）: 禁用Agent模式
-    
-    注意：Agent模式需要ENERGY会员权限
-    
-    Returns:
-        bool: 是否启用Agent模式
+    Agent模式已移至experimental/，统一返回False。
+    保留函数签名以兼容现有调用。
     """
-    return os.getenv('USE_AGENT_MODE', 'false').lower() in ('true', '1', 'yes')
+    return False
 
 
 def get_skills_config() -> Dict[str, Any]:

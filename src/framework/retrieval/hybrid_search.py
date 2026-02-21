@@ -250,45 +250,6 @@ class HybridSearchEngine:
 
         return final_results
 
-    async def compare_search_methods(
-        self,
-        query: str,
-        domain: str = "fitness",
-        top_k: int = 10
-    ) -> Dict[str, List[Dict]]:
-        """
-        对比三种检索方法
-
-        Args:
-            query: 查询文本
-            domain: 领域
-            top_k: 返回结果数
-
-        Returns:
-            包含三种方法结果的字典
-        """
-        logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        logger.info(f"📊 对比检索方法: {query}")
-        logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-
-        # 向量检索
-        vector_results = await self.vector_search(query, domain, top_k=top_k)
-
-        # BM25检索
-        bm25_results = self.bm25_search(query, top_k=top_k)
-
-        # 混合检索
-        hybrid_results = await self.hybrid_search(
-            query, domain, top_k=top_k,
-            vector_top_k=20, bm25_top_k=20
-        )
-
-        return {
-            'vector': vector_results,
-            'bm25': bm25_results,
-            'hybrid': hybrid_results
-        }
-
 
 # 便捷函数
 def get_hybrid_search_engine() -> HybridSearchEngine:
