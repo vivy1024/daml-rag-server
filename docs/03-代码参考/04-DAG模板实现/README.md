@@ -35,6 +35,7 @@
 ### DAG模板代码实现
 
 3. [03-DAG模板代码实现.md](./03-DAG模板代码实现.md) - 所有DAG模板的详细代码实现
+4. [04-CacheManager使用指南.md](./04-CacheManager使用指南.md) - CacheManager 使用指南
    - 9个预定义模板的完整实现
    - 任务节点定义和依赖关系配置
    - 并行执行组优化
