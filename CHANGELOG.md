@@ -12,7 +12,7 @@
 - fail-fast 校验：Neo4j 密码 + 内部 API Token 缺失时启动即报错
 - 迁移 singletons.py 数据库配置到 get_config() 集中入口
 - 15 个单元测试全部通过
-- 对应产品版本：v1.0.0
+- 对应产品版本：v1.1.0
 
 ## #4 (fix) 全量裸 except 收窄 — 2026-02-21
 
@@ -20,7 +20,7 @@
 - main.py(2处)/exercise_stability_manager.py(4处)/fewshot_types.py(3处)/mcp_client_v2.py(1处)
 - stream_executor.py(10处)/llm_client.py(7处)/backend_client.py(10处)
 - daml-rag-server/src/ 零裸 except 残留
-- 对应产品版本：v1.0.0
+- 对应产品版本：v1.1.0
 
 ## #3 (feat) 知识库入库脚本 — 2026-02-21
 
@@ -29,7 +29,7 @@
 - 三端写入：MySQL（文章+引用）→ Qdrant（GTE-Large-zh 1024维向量）→ Neo4j（KnowledgeArticle 节点）
 - 首批 5 篇知识文章入库验证通过（CUDA GPU 加速）
 - 支持 --dry-run / --skip-qdrant / --skip-neo4j 参数
-- 对应产品版本：v1.0.0
+- 对应产品版本：v1.1.0
 
 ## #2 (fix) 安全加固 + Vision 降级逻辑 — 2026-02-21
 
@@ -37,7 +37,7 @@
 - LLMRequest 新增 `has_vision_content()` / `strip_vision_content()` 方法
 - LLMFallbackManager 新增 Vision 降级：模型不支持图片时自动剥离 image_url，切换纯文本模式
 - 流式模式下 yield 用户可见降级提示
-- 对应产品版本：v1.0.0
+- 对应产品版本：v1.1.0
 
 ## #1 (chore) MVP 基线 — 2026-02-21
 
