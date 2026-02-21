@@ -5,7 +5,16 @@
 
 ---
 
-## #6 (feat) 检索层扩展：knowledge_articles collection 接入 — 2026-02-21
+## #7 (refactor) metrics_collector → prometheus_client 迁移 — 2026-02-21
+
+- `src/api/routes/health.py`：移除自定义 `metrics_collector` 依赖
+  - 请求耗时改用 `prometheus_integration.request_duration` 官方 Histogram
+  - 错误计数改用 `prometheus_integration.record_error()` 官方 Counter
+  - `/metrics` 端点改用 `prometheus_client.REGISTRY.collect()` 获取指标摘要
+  - `/metrics/prometheus` 端点移除自定义 `export_prometheus()` 追加，只输出标准格式
+- `src/applications/fitness/workflow/singletons.py`：`get_performance_monitor` 兼容层改用 `initialize_prometheus_metrics()`
+- `src/framework/monitoring/__init__.py`：`metrics_collector` 导出添加 DEPRECATED 注释
+- 对应产品版本：v1.1.0
 
 - `src/framework/retrieval/hybrid_search.py`：新增 `search_knowledge_articles` 方法
   - 懒加载 GTE-Large-zh（1024维）向量模型，复用现有 `get_qdrant_client()`

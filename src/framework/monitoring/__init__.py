@@ -38,7 +38,9 @@ from .structured_logger import (
     get_logger
 )
 
-# 2. 指标收集
+# 2. 指标收集（已废弃：请使用 prometheus_integration 中的官方 prometheus_client 指标）
+# DEPRECATED: metrics_collector 自定义实现将在未来版本移除。
+# 请改用 prometheus_integration.py 中的 request_duration、errors_total 等官方指标。
 from .metrics_collector import (
     MetricType,
     MetricValue,
