@@ -2,11 +2,11 @@
 """
 框架层编排模块
 
-提供通用的DAG编排、Agent执行和工具管理功能。
+提供通用的DAG编排和工具管理功能。
+v3.0: Agent执行器已移至experimental/，仅保留DAG编排。
 
-版本: v1.2.0
-日期: 2026-01-12
-变更: 工具注册表已迁移到tools模块，此处重新导出以保持向后兼容
+版本: v3.0.0
+日期: 2026-02-22
 """
 
 # 工具注册表已迁移到tools模块，为了向后兼容，从tools模块重新导出
@@ -35,17 +35,10 @@ from ..mcp.cache_manager import (
     CacheStatistics
 )
 
-from .agent_executor import (
-    AgentExecutor,
-    AgentDecision,
-    AgentAction,
-    AgentExecutionResult,
+# 策略选择器（仅DAG策略）
+from .strategy_selector import (
     ExecutionStrategy,
-    ToolCallRecord,
-    SafetyCheckResult,
-    LLMClientInterface,
-    ToolInterface,
-    create_agent_executor
+    StrategyDecision,
 )
 
 __all__ = [
@@ -63,17 +56,9 @@ __all__ = [
     "DAGExecutionResult",
     "ExecutionLevel",
     "TaskStatus",
-    # Agent执行器
-    "AgentExecutor",
-    "AgentDecision",
-    "AgentAction",
-    "AgentExecutionResult",
+    # 策略选择器
     "ExecutionStrategy",
-    "ToolCallRecord",
-    "SafetyCheckResult",
-    "LLMClientInterface",
-    "ToolInterface",
-    "create_agent_executor",
+    "StrategyDecision",
     # 缓存管理器
     "CacheManager",
     "CacheStatistics"

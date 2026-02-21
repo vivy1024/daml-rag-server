@@ -43,7 +43,6 @@ logger = logging.getLogger(__name__)
 class ExecutionStrategy(Enum):
     """执行策略枚举"""
     DAG = "dag"      # DAG模式：预定义模板，程序控制
-    AGENT = "agent"  # Agent模式：LLM自主决策（基于Skills）
 
 
 # =============================================================================
@@ -261,10 +260,7 @@ class StrategySelector:
                 return decision
             
             logger.info(f"   📌 强制策略: {force_strategy.value}")
-            if force_strategy == ExecutionStrategy.DAG:
-                self._dag_count += 1
-            else:
-                self._agent_count += 1
+            self._dag_count += 1
             
             return StrategyDecision(
                 strategy=force_strategy,
@@ -324,19 +320,7 @@ class StrategySelector:
                     metadata={"matched_template": matched_template}
                 )
         
-        # 5. 检查是否可以使用Agent模式（仅ENERGY会员）
-        if self._can_use_agent(membership_level):
-            # ENERGY会员可以选择Agent模式处理未匹配的复杂查询
-            logger.info(f"   🤖 未匹配技能，ENERGY会员可使用Agent模式")
-            self._agent_count += 1
-            return StrategyDecision(
-                strategy=ExecutionStrategy.AGENT,
-                reasoning="未匹配到技能，使用Agent模式（ENERGY会员）",
-                confidence=0.7,
-                metadata={"fallback_to_agent": True}
-            )
-        
-        # 6. 默认使用DAG模式（通用对话技能）
+        # 5. 默认使用DAG模式（通用对话技能）
         logger.info(f"   📋 使用DAG模式（默认）")
         self._dag_count += 1
         return StrategyDecision(
@@ -349,23 +333,9 @@ class StrategySelector:
         )
 
     def _can_use_agent(self, membership_level: Optional[str]) -> bool:
-        """
-        检查是否可以使用Agent模式
+        """Agent模式已移至experimental/，统一返回False"""
+        return False
 
-        v2.0: 所有会员等级均可使用Agent模式，区别仅在积分消耗倍率
-
-        Args:
-            membership_level: 会员等级
-
-        Returns:
-            bool: 是否可以使用Agent模式
-        """
-        # 如果没有会员控制器，仍然允许（积分由后端控制）
-        if not self.membership_controller:
-            return True
-
-        return True
-    
     def _check_membership_permission(
         self,
         requested_strategy: ExecutionStrategy,
@@ -373,68 +343,11 @@ class StrategySelector:
     ) -> Optional[StrategyDecision]:
         """
         检查会员权限是否允许使用指定策略
-        
-        Args:
-            requested_strategy: 请求的策略
-            membership_level: 会员等级（free/warmheart/energy）
-        
-        Returns:
-            如果权限不足，返回降级决策；否则返回None
-        
-        Requirements: 8.6
+
+        v3.0: Agent模式已移除，统一DAG，此方法简化为直接返回None
         """
-        # 如果没有会员控制器，不做限制
-        if not self.membership_controller:
-            return None
-        
-        # 如果会员控制已禁用，不做限制
-        if not self.membership_controller.is_membership_control_enabled():
-            return None
-        
-        # DAG模式所有用户都可以使用
-        if requested_strategy == ExecutionStrategy.DAG:
-            return None
-        
-        # Agent模式需要检查权限
-        if requested_strategy == ExecutionStrategy.AGENT:
-            # 获取会员等级
-            from ..auth.membership_controller import (
-                get_membership_level_from_string,
-                ExecutionStrategy as MembershipStrategy
-            )
-            
-            level = get_membership_level_from_string(membership_level or "free")
-            
-            # 检查是否可以使用Agent策略
-            result = self.membership_controller.can_use_strategy(
-                level, 
-                MembershipStrategy.AGENT
-            )
-            
-            if not result.allowed:
-                # 权限不足，降级到DAG模式
-                self._membership_restricted_count += 1
-                self._dag_count += 1
-                
-                logger.info(
-                    f"   ⚠️ 会员权限限制: {result.reason}, "
-                    f"降级到DAG模式"
-                )
-                
-                return StrategyDecision(
-                    strategy=ExecutionStrategy.DAG,
-                    reasoning=f"会员权限限制: {result.reason}",
-                    confidence=0.8,
-                    membership_restricted=True,
-                    original_strategy=ExecutionStrategy.AGENT,
-                    metadata={
-                        "membership_level": membership_level or "free",
-                        "upgrade_hint": result.upgrade_hint
-                    }
-                )
-        
         return None
-    
+
     def _match_template(
         self,
         query: str,

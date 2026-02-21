@@ -73,7 +73,7 @@ class MembershipLevel(Enum):
 class ExecutionStrategy(Enum):
     """执行策略枚举"""
     DAG = "dag"
-    AGENT = "agent"
+    AGENT = "agent"  # 已废弃：Agent模式已移至experimental/，保留枚举值兼容历史数据
 
 
 class Feature(Enum):
@@ -81,7 +81,7 @@ class Feature(Enum):
     BASIC_TRAINING = "basic_training"       # 基础训练建议
     BASIC_NUTRITION = "basic_nutrition"     # 基础营养建议
     HISTORY = "history"                     # 历史记录
-    AGENT_MODE = "agent_mode"               # Agent模式
+    AGENT_MODE = "agent_mode"               # 已废弃：Agent模式已移至experimental/
     PRIORITY_SUPPORT = "priority_support"   # 优先支持
     ADVANCED_ANALYTICS = "advanced_analytics"  # 高级分析
     CUSTOM_PLANS = "custom_plans"           # 自定义计划

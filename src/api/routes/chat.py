@@ -189,56 +189,18 @@ async def chat(request: Request, chat_request: ChatRequest) -> ApiResponse[ChatR
                 data={"retry_after": 10}
             )
 
-        # 3. 执行完整的11步工作流程（或Agent模式）
-        requested_mode = getattr(chat_request, "mode", "auto") or "auto"
+        # 3. 执行完整的11步工作流程
         topic_id = getattr(chat_request, "topic_id", None)
 
         try:
-            # 尝试解析执行模式（需要先获取会员等级）
-            execution_mode = "dag"  # 默认DAG
-            if requested_mode == "agent":
-                try:
-                    from ...applications.fitness.mode_router import resolve_execution_mode
-                    # 简化：从权限claims获取会员等级
-                    claims = getattr(request.state, "permission_claims", None)
-                    membership_level = getattr(claims, "membership_level", "free") if claims else "free"
-                    execution_mode = resolve_execution_mode(requested_mode, membership_level)
-                except Exception as e:
-                    logger.warning(f"模式路由解析失败，降级到DAG: {e}")
-
-            if execution_mode == "agent":
-                # Agent模式：LLM动态决策（Skills架构 v2.0）
-                logger.info("🤖 Agent模式启动...")
-                from ...applications.fitness.agent import create_agent_executor_from_singletons
-
-                agent_executor = create_agent_executor_from_singletons()
-                agent_result = await agent_executor.execute(
-                    user_id=user_id,
-                    query=query_text,
-                    membership_level=membership_level,
-                )
-                # 转换为统一响应格式
-                workflow_result = {
-                    "response": agent_result.get("final_response", "抱歉，暂时无法生成回答。"),
-                    "processing_time": agent_result.get("total_time_s", 0.0),
-                    "metadata": {
-                        "selected_model": "agent_mode",
-                        "execution_mode": "agent",
-                        "tool_calls_count": agent_result.get("tool_calls_count", 0),
-                        "total_cost": agent_result.get("total_cost", 0.0),
-                    },
-                    "eleven_step_workflow": {},
-                }
-            else:
-                # DAG模式：固定模板编排（默认）
-                logger.info("🚀 开始执行11步工作流程...")
-                workflow_result = await execute_eleven_step_workflow(
-                    query_text=query_text,
-                    user_id=user_id,
-                    domain=chat_request.domain,
-                    user_profile=None,
-                    session_id=session_id
-                )
+            logger.info("🚀 开始执行11步工作流程...")
+            workflow_result = await execute_eleven_step_workflow(
+                query_text=query_text,
+                user_id=user_id,
+                domain=chat_request.domain,
+                user_profile=None,
+                session_id=session_id
+            )
         finally:
             # 无论成功还是失败，都要释放并发许可
             await concurrency_limiter.release(session_id)
@@ -492,7 +454,7 @@ async def chat_stream(request: Request, body: Dict[str, Any]):
         session_id = body.get("session_id") or str(uuid.uuid4())
         topic_id = body.get("topic_id")  # 话题ID，用于多轮对话
         domain = body.get("domain", "fitness")
-        strategy = body.get("strategy", "dag")  # 执行策略：dag或agent
+        strategy = "dag"  # 统一使用DAG模式
         template_id = body.get("template_id")  # DAG模板ID（用户选择时强制使用）
         persona_id = body.get("persona_id")  # SystemPersona风格ID
         attachments = body.get("attachments")  # 图片附件列表（multimodal）
