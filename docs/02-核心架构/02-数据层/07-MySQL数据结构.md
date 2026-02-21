@@ -215,7 +215,7 @@ CREATE TABLE chat_sessions (
     user_id BIGINT UNSIGNED NULL COMMENT '用户ID（匿名用户为NULL）',
     user_query TEXT NOT NULL COMMENT '用户问题',
     llm_response TEXT NOT NULL COMMENT 'AI回答',
-    model_used VARCHAR(50) NOT NULL COMMENT '使用的模型（deepseek-chat/ollama-qwen3:8b）',
+    model_used VARCHAR(50) NOT NULL COMMENT '使用的模型（deepseek-chat/anthropic-claude-qwen3:8b）',
     tools_used JSON NULL COMMENT '调用的工具列表（JSON数组）',
     metadata JSON NULL COMMENT '元数据：few_shot_count, orchestrator_used等',
     user_rating TINYINT NULL COMMENT '用户评分（1-5星）',

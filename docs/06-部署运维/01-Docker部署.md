@@ -44,7 +44,7 @@
 ```bash
 # 克隆项目
 git clone <repo-url>
-cd mcp-servers/meta-learning-mcp
+cd mcp-servers/fitness_daml_rag
 
 # 复制配置
 cp config/meta_learning.json.example config/meta_learning.json
@@ -154,7 +154,7 @@ python tests/test_kg_queries.py
 | **Neo4j** | ✅ 运行中 | 2,447 节点 |
 | **关系** | ✅ 已建立 | 5,569 关系 |
 | **Qdrant** | ✅ 运行中 | 2,177 向量 |
-| **BGE模型** | ✅ GPU加速 | 768维向量 |
+| **BGE模型** | ✅ GPU加速 | 1024维向量 |
 | **语义搜索** | ✅ 85%准确率 | 生产就绪 |
 
 **关系类型**:
@@ -383,7 +383,7 @@ volumes:
 ```bash
 # 检查网络
 docker network ls
-docker network inspect meta-learning-mcp_default
+docker network inspect fitness_daml_rag_default
 
 # 重建网络
 docker-compose down

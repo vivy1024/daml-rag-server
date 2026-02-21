@@ -50,7 +50,7 @@ llm_decision:
   # 模型选择
   model:
     primary: "deepseek-chat"
-    fallback: "ollama-qwen2.5"
+    fallback: "anthropic-claude-qwen2.5"
   
   # Token配置
   tokens:
@@ -212,7 +212,7 @@ tokens:
 ```yaml
 # 使用更快的模型
 model:
-  primary: "ollama-qwen2.5"  # 本地模型更快
+  primary: "anthropic-claude-qwen2.5"  # 本地模型更快
 
 # 减少超时时间
 timeout:
@@ -237,7 +237,7 @@ llm_analysis:
   # 模型选择
   model:
     primary: "deepseek-chat"
-    fallback: "ollama-qwen2.5"
+    fallback: "anthropic-claude-qwen2.5"
   
   # Token配置
   tokens:
@@ -419,9 +419,9 @@ model_selection:
       - "更专业的建议"
       - "更好的推理能力"
   
-  # 学生模型（Ollama）
+  # 学生模型（Anthropic Claude）
   student:
-    model: "ollama-qwen2.5"
+    model: "anthropic-claude-qwen2.5"
     use_for:
       - complexity: "simple"
       - similarity: "< 0.7"
@@ -433,7 +433,7 @@ model_selection:
 
 ### 降级策略
 
-**策略**：DeepSeek → Ollama → Template
+**策略**：DeepSeek → Anthropic Claude → Template
 
 ```yaml
 # 降级管理
@@ -441,7 +441,7 @@ fallback:
   enabled: true
   strategy:
     - primary: "deepseek-chat"
-    - fallback_1: "ollama-qwen2.5"
+    - fallback_1: "anthropic-claude-qwen2.5"
     - fallback_2: "template"
   
   # 降级条件
@@ -534,13 +534,13 @@ curl http://localhost:8001/api/health/metrics/llm
 **A**:
 1. 减少max_tokens设置
 2. 简化提示词，移除不必要的内容
-3. 使用更小的模型（Ollama）
+3. 使用更小的模型（Anthropic Claude）
 4. 启用缓存机制
 
 ### Q3: 如何提升响应速度？
 
 **A**:
-1. 使用本地模型（Ollama）
+1. 使用本地模型（Anthropic Claude）
 2. 减少超时时间
 3. 启用并行执行
 4. 优化提示词长度
