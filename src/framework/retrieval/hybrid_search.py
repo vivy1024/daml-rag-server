@@ -2,13 +2,17 @@
 """
 混合检索引擎：向量检索 + BM25全文检索 + RRF融合
 """
+import asyncio
 import logging
+import os
 from typing import List, Dict, Optional
 import aiohttp
 from .bm25_engine import get_bm25_engine
 from .reranker import FitnessReranker
 
 logger = logging.getLogger(__name__)
+
+KNOWLEDGE_ARTICLES_COLLECTION = "knowledge_articles"
 
 
 class HybridSearchEngine:
@@ -29,6 +33,7 @@ class HybridSearchEngine:
         self.graphrag_api_base = graphrag_api_base
         self.rrf_k = rrf_k
         self.bm25_engine = get_bm25_engine()
+        self._encoder = None  # 懒加载 GTE-Large-zh，用于 knowledge_articles 检索
 
         logger.info(f"初始化混合检索引擎: RRF_k={rrf_k}")
 
@@ -104,6 +109,78 @@ class HybridSearchEngine:
             检索结果列表
         """
         return self.bm25_engine.search(query, top_k)
+
+    def _embed(self, text: str) -> List[float]:
+        """向量化文本（懒加载 GTE-Large-zh）"""
+        if self._encoder is None:
+            from sentence_transformers import SentenceTransformer
+            model_name = os.getenv("EMBEDDING_MODEL", "thenlper/gte-large-zh")
+            self._encoder = SentenceTransformer(model_name)
+            logger.info(f"HybridSearchEngine 加载向量模型: {model_name}")
+        return self._encoder.encode(text).tolist()
+
+    async def search_knowledge_articles(
+        self,
+        query: str,
+        top_k: int = 5
+    ) -> List[Dict]:
+        """
+        检索 knowledge_articles Qdrant collection
+
+        Args:
+            query: 查询文本
+            top_k: 返回结果数
+
+        Returns:
+            知识库文章检索结果，每条携带 source_type="knowledge_article"
+            以及 article_id、title、source_book 字段
+        """
+        try:
+            from ...framework.clients.qdrant_client import get_qdrant_client
+            qdrant = get_qdrant_client()
+
+            # 检查 collection 是否存在（优雅降级）
+            collections = await asyncio.to_thread(qdrant.get_collections)
+            collection_names = [c.name for c in collections.collections]
+            if KNOWLEDGE_ARTICLES_COLLECTION not in collection_names:
+                logger.warning(
+                    f"knowledge_articles collection 不存在，跳过知识库检索"
+                )
+                return []
+
+            vector = await asyncio.to_thread(self._embed, query)
+
+            response = await asyncio.to_thread(
+                qdrant.query_points,
+                collection_name=KNOWLEDGE_ARTICLES_COLLECTION,
+                query=vector,
+                limit=top_k,
+            )
+
+            points = response.points if hasattr(response, "points") else response
+            results = []
+            for p in points:
+                payload = p.payload or {}
+                results.append({
+                    "id": str(p.id),
+                    "score": round(p.score, 4),
+                    "text": payload.get("content", payload.get("text", "")),
+                    "payload": payload,
+                    "source_type": "knowledge_article",
+                    "article_id": payload.get("article_id", str(p.id)),
+                    "title": payload.get("title", ""),
+                    "source_book": payload.get("source_book", ""),
+                    "chapter": payload.get("chapter", ""),
+                })
+
+            logger.info(
+                f"knowledge_articles 检索完成: {len(results)} 个结果"
+            )
+            return results
+
+        except Exception as e:
+            logger.warning(f"knowledge_articles 检索失败，跳过: {e}")
+            return []
 
     async def hybrid_search(
         self,
