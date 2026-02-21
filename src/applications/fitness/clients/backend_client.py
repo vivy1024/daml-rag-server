@@ -31,7 +31,7 @@ class BackendConfig:
     def __init__(self):
         # 从环境变量读取配置
         self.base_url = os.getenv('BACKEND_API_URL', 'http://host.docker.internal:8000')
-        self.internal_token = os.getenv('INTERNAL_API_TOKEN', 'crewai-internal-secret-2025')
+        self.internal_token = os.getenv('INTERNAL_API_TOKEN', '')
         self.timeout = float(os.getenv('BACKEND_API_TIMEOUT', '10.0'))
         self.max_retries = int(os.getenv('BACKEND_API_MAX_RETRIES', '3'))
         

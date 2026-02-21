@@ -52,6 +52,32 @@ class LLMRequest:
     conversation_history: Optional[List[Dict[str, str]]] = None
     model_override: Optional[str] = None  # 蓝绿池指定的模型ID（覆盖后端默认模型）
 
+    def has_vision_content(self) -> bool:
+        """检查请求是否包含 image_url 类型的多模态内容"""
+        if not self.messages:
+            return False
+        for msg in self.messages:
+            content = msg.get("content")
+            if isinstance(content, list):
+                for part in content:
+                    if isinstance(part, dict) and part.get("type") == "image_url":
+                        return True
+        return False
+
+    def strip_vision_content(self) -> None:
+        """剥离 image_url，保留纯文本，清除 vision 模型覆盖"""
+        if not self.messages:
+            return
+        for msg in self.messages:
+            content = msg.get("content")
+            if isinstance(content, list):
+                text_parts = [
+                    p.get("text", "") for p in content
+                    if isinstance(p, dict) and p.get("type") == "text"
+                ]
+                msg["content"] = "\n".join(text_parts) if text_parts else ""
+        self.model_override = None
+
 
 @dataclass
 class LLMResponse:
@@ -311,6 +337,14 @@ class LLMFallbackManager:
                         f"retry={retry + 1}/{self.max_retries}, error={str(e)}"
                     )
                     self._mark_backend_unhealthy(backend)
+                    # Vision 降级：剥离图片，切换纯文本模式
+                    if request.has_vision_content() and self._is_vision_error(e):
+                        logger.warning(
+                            f"📷 Vision降级: {backend.value} 不支持图片，"
+                            f"切换纯文本模式"
+                        )
+                        request.strip_vision_content()
+                        break  # 跳出 retry，用下一个后端重试（纯文本）
                     if self._is_non_retryable_error(e):
                         break
                     if retry < self.max_retries - 1:
@@ -413,6 +447,19 @@ class LLMFallbackManager:
                             partial_success=True,
                         ))
                         return
+
+                    # Vision 降级：检测到 vision 错误时剥离图片，切换纯文本模式
+                    if request.has_vision_content() and self._is_vision_error(e):
+                        logger.warning(
+                            f"📷 Vision降级: {backend.value} 不支持图片，"
+                            f"切换纯文本模式"
+                        )
+                        request.strip_vision_content()
+                        yield (
+                            "📷 当前模型暂不支持图片识别，已切换为文本模式分析您的问题。\n\n",
+                            None,
+                        )
+                        break  # 跳出 retry 循环，用下一个后端重试（纯文本）
 
                     if not is_timeout and self._is_non_retryable_error(e):
                         break
@@ -552,6 +599,15 @@ class LLMFallbackManager:
         if isinstance(error, ValueError):
             return True
         return False
+
+    def _is_vision_error(self, error: Exception) -> bool:
+        """检测是否为 vision 不支持的错误（模型不支持图片内容）"""
+        err_str = str(error).lower()
+        vision_error_patterns = [
+            "image", "vision", "multimodal", "not support",
+            "invalid content type", "image_url",
+        ]
+        return any(p in err_str for p in vision_error_patterns)
 
     def _build_messages(self, request: LLMRequest) -> List[Dict[str, str]]:
         messages = [{"role": "system", "content": request.system_prompt}]

@@ -182,7 +182,7 @@ def initialize_performance_components():
             'host': os.getenv('MYSQL_HOST', 'fitness_mysql'),
             'port': int(os.getenv('MYSQL_PORT', '3306')),
             'user': os.getenv('MYSQL_USER', 'root'),
-            'password': os.getenv('MYSQL_PASSWORD', 'root_password_2025'),
+            'password': os.getenv('MYSQL_PASSWORD', ''),
             'database': os.getenv('MYSQL_DATABASE', 'fitness_app')
         }
         
