@@ -189,6 +189,62 @@ CYPHER_TEMPLATES: Dict[StructuredQueryType, str] = {
         ORDER BY e.name_zh
         LIMIT 25
     """,
+
+    # ─── v1.1.0 新增 Cypher 模板 ───
+
+    # 训练频率查询（肌肉 → 推荐频率 + 恢复时间）
+    StructuredQueryType.TRAINING_FREQUENCY: """
+        MATCH (m:Muscle)
+        WHERE (CASE WHEN $group IS NOT NULL THEN m.group = $group ELSE true END)
+          AND (CASE WHEN $group IS NULL THEN m.name_zh CONTAINS $keyword ELSE true END)
+        RETURN m.name_zh AS muscle,
+               m.optimal_frequency AS frequency,
+               m.recovery_time AS recovery_time,
+               m.mev AS mev,
+               m.mav AS mav,
+               m.group AS muscle_group
+        LIMIT 10
+    """,
+
+    # 动作替代查询（找共享目标肌肉最多的替代动作）
+    StructuredQueryType.EXERCISE_SUBSTITUTION: """
+        MATCH (e1:Exercise)-[:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m:Muscle)
+        WHERE e1.name_zh CONTAINS $keyword
+        WITH e1, collect(DISTINCT m) AS e1_muscles,
+             CASE WHEN e1.name_zh = $keyword THEN 0
+                  WHEN e1.name_zh STARTS WITH $keyword THEN 1
+                  ELSE 2 END AS match_rank,
+             size(e1.name_zh) AS name_len
+        ORDER BY match_rank, name_len
+        LIMIT 1
+        UNWIND e1_muscles AS m
+        MATCH (e2:Exercise)-[:TARGETS_PRIMARY|TARGETS_SECONDARY]->(m)
+        WHERE e1 <> e2 AND NOT e2.name_zh CONTAINS $keyword
+        WITH e1, e2, collect(DISTINCT m.name_zh) AS shared_muscles,
+             count(DISTINCT m) AS shared_count
+        WHERE shared_count >= 2
+        RETURN e1.name_zh AS original_exercise,
+               e2.name_zh AS substitute_exercise,
+               shared_muscles,
+               shared_count,
+               e2.equipment_zh AS equipment,
+               e2.difficulty AS difficulty
+        ORDER BY shared_count DESC
+        LIMIT 15
+    """,
+
+    # 食物宏量营养素查询（食物 → 蛋白质/碳水/脂肪/能量）
+    StructuredQueryType.NUTRITION_MACRO: """
+        MATCH (f:Food)-[r:CONTAINS_NUTRIENT]->(n:Nutrient)
+        WHERE f.name CONTAINS $keyword
+          AND n.name IN ['蛋白质', '碳水化合物', '脂肪', '能量']
+        RETURN f.name AS food,
+               n.name AS nutrient,
+               r.amount AS amount,
+               r.unit AS unit
+        ORDER BY f.name, n.name
+        LIMIT 40
+    """,
 }
 
 # ─── 肌肉分组映射（用户常用名 → Neo4j group 字段值） ─────────
@@ -467,6 +523,33 @@ class CypherQueryExecutor:
                 f"- {row.get('exercise', '?')} "
                 f"(机制: {row.get('mechanic_type_zh', row.get('mechanic_type', '?'))}, "
                 f"难度: {row.get('difficulty', '?')})"
+            )
+
+        elif query_type == StructuredQueryType.TRAINING_FREQUENCY:
+            return (
+                f"肌肉「{row.get('muscle', '')}」训练频率: "
+                f"推荐{row.get('frequency', '未知')}, "
+                f"恢复时间{row.get('recovery_time', '未知')}, "
+                f"MEV={row.get('mev', '未知')}, "
+                f"MAV={row.get('mav', '未知')}"
+            )
+
+        elif query_type == StructuredQueryType.EXERCISE_SUBSTITUTION:
+            shared = ", ".join(row.get("shared_muscles", []))
+            return (
+                f"「{row.get('original_exercise', '')}」的替代动作: "
+                f"「{row.get('substitute_exercise', '')}」"
+                f"（共享肌肉: {shared}, "
+                f"器械: {row.get('equipment', '未知')}, "
+                f"难度: {row.get('difficulty', '未知')}）"
+            )
+
+        elif query_type == StructuredQueryType.NUTRITION_MACRO:
+            unit = row.get('unit', 'g') or 'g'
+            return (
+                f"食物「{row.get('food', '')}」"
+                f"每100g含{row.get('nutrient', '')} "
+                f"{row.get('amount', '?')}{unit}"
             )
 
         return str(row)

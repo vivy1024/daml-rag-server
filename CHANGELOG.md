@@ -5,6 +5,17 @@
 
 ---
 
+## #10 (feat) Neo4j Cypher 模板扩展 — 2026-02-21
+
+- `src/framework/retrieval/cypher_templates.py`：新增 3 个 Cypher 查询模板
+  - TRAINING_FREQUENCY：肌肉训练频率查询（optimal_frequency + recovery_time）
+  - EXERCISE_SUBSTITUTION：动作替代查询（共享 PRIMARY+SECONDARY 肌肉匹配，按共享数排序）
+  - NUTRITION_MACRO：食物宏量营养素查询（Food→Nutrient 关系，蛋白质/碳水/脂肪/能量）
+- 模板总数从 12 → 15，覆盖 15/18 种 StructuredQueryType
+- 性能测试：3 个新模板均 < 200ms（29ms / 123.6ms / 8.8ms）
+- 测试：406/407 通过（1 个预存会员权限失败非本次引入）
+- 对应产品版本：v1.1.0
+
 ## #9 (feat) 意图分类器扩展 + A/B 测试 — 2026-02-21
 
 - `src/framework/retrieval/intent_classifier.py`：新增 6 种意图模式
