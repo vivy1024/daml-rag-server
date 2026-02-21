@@ -5,6 +5,15 @@
 
 ---
 
+## #3 (feat) 知识库入库脚本 — 2026-02-21
+
+- 创建 `scripts/import_knowledge.py` 批量入库工具
+- 支持 YAML front matter 解析 + Markdown 正文提取
+- 三端写入：MySQL（文章+引用）→ Qdrant（GTE-Large-zh 1024维向量）→ Neo4j（KnowledgeArticle 节点）
+- 首批 5 篇知识文章入库验证通过（CUDA GPU 加速）
+- 支持 --dry-run / --skip-qdrant / --skip-neo4j 参数
+- 对应产品版本：v1.0.0
+
 ## #2 (fix) 安全加固 + Vision 降级逻辑 — 2026-02-21
 
 - 清除 3 个硬编码凭证回退值（singletons.py/backend_client.py/neo4j_client.py）

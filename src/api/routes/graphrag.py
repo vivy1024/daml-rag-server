@@ -135,7 +135,7 @@ def _get_graphrag_tool():
                         graphrag_api_port=os.getenv('API_PORT', '8001'),
                         neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
                         neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
-                        neo4j_password=os.getenv('NEO4J_PASSWORD', 'build_body_2024')
+                        neo4j_password=os.getenv('NEO4J_PASSWORD', '')
                     )
                     logger.info("  → 创建新的 TrueThreeLayerEngine")
                 
@@ -149,7 +149,7 @@ def _get_graphrag_tool():
                 kg_full = KnowledgeGraphFull(
                     neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
                     neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
-                    neo4j_password=os.getenv('NEO4J_PASSWORD', 'build_body_2024'),
+                    neo4j_password=os.getenv('NEO4J_PASSWORD', ''),
                     qdrant_host=os.getenv('QDRANT_HOST', 'qdrant'),
                     qdrant_port=int(os.getenv('QDRANT_PORT', '6333')),
                     qdrant_collection=os.getenv('QDRANT_COLLECTION', 'fitness_exercises_v2'),
@@ -161,7 +161,7 @@ def _get_graphrag_tool():
                     graphrag_api_port=os.getenv('API_PORT', '8001'),
                     neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
                     neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
-                    neo4j_password=os.getenv('NEO4J_PASSWORD', 'build_body_2024')
+                    neo4j_password=os.getenv('NEO4J_PASSWORD', '')
                 )
                 
                 _graphrag_query_tool = GraphRAGQueryTool(
@@ -452,7 +452,7 @@ async def _get_knowledge_graph_stats() -> Dict[str, Any]:
 
         neo4j_uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
         neo4j_user = os.getenv('NEO4J_USER', 'neo4j')
-        neo4j_password = os.getenv('NEO4J_PASSWORD', 'build_body_2024')
+        neo4j_password = os.getenv('NEO4J_PASSWORD', '')
 
         logger.info(f"Connecting to Neo4j at {neo4j_uri}")
 
