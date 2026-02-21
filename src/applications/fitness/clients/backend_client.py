@@ -14,6 +14,7 @@ Backend API Client for Meta-Learning MCP
 """
 
 import os
+import json
 import httpx
 import logging
 from typing import Dict, Any, Optional, List
@@ -350,7 +351,7 @@ class BackendClient:
                     logger.warning(f"⚠️ 连接池预热响应异常: {response.status_code}")
             except httpx.TimeoutException:
                 logger.warning("⚠️ 连接池预热超时，但连接已建立")
-            except Exception as e:
+            except (httpx.HTTPError, ConnectionError, OSError) as e:
                 logger.warning(f"⚠️ 连接池预热失败: {e}")
             
             self._is_warmed_up = True
@@ -362,7 +363,7 @@ class BackendClient:
                 extra={'warmup_time_ms': warmup_time}
             )
             
-        except Exception as e:
+        except (httpx.HTTPError, ConnectionError, OSError, RuntimeError) as e:
             logger.error(f"连接池预热异常: {e}")
     
     def get_pool_stats(self) -> Dict[str, Any]:
@@ -396,7 +397,7 @@ class BackendClient:
         try:
             error_data = response.json()
             error_message = error_data.get('message', response.text)
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             error_message = response.text
 
         # 根据状态码抛出不同异常
@@ -509,7 +510,7 @@ class BackendClient:
                 # API错误，不重试
                 raise
 
-            except Exception as e:
+            except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
                 logger.error(
                     f"Backend API unexpected error: {e}",
                     extra={
@@ -573,7 +574,7 @@ class BackendClient:
                         f"❌ 用户档案缓存未命中: user_id={user_id}",
                         extra={'user_id': user_id, 'cache_hit': False}
                     )
-            except Exception as e:
+            except (ConnectionError, TimeoutError, OSError, RuntimeError) as e:
                 logger.warning(f"缓存查询失败，将从API获取: {e}")
         
         # 2. 缓存未命中，从API获取
@@ -597,7 +598,7 @@ class BackendClient:
                         f"💾 用户档案已缓存: user_id={user_id}",
                         extra={'user_id': user_id}
                     )
-                except Exception as e:
+                except (ConnectionError, TimeoutError, OSError, RuntimeError) as e:
                     logger.warning(f"缓存写入失败: {e}")
             
             return data
@@ -608,12 +609,12 @@ class BackendClient:
                 f"用户档案加载超时（{timeout}秒），使用降级策略: user_id={user_id}"
             )
             fallback_profile = self._get_fallback_profile(user_id)
-            
+
             # 缓存降级档案
             if self.cache_manager:
                 try:
                     await self.cache_manager.set_user_profile(user_id_str, fallback_profile)
-                except Exception as e:
+                except (ConnectionError, TimeoutError, OSError, RuntimeError) as e:
                     logger.warning(f"降级档案缓存失败: {e}")
             
             return fallback_profile
@@ -622,17 +623,17 @@ class BackendClient:
             # 用户不存在：返回空档案
             logger.info(f"用户档案不存在，使用降级策略: user_id={user_id}")
             fallback_profile = self._get_fallback_profile(user_id)
-            
+
             # 缓存降级档案
             if self.cache_manager:
                 try:
                     await self.cache_manager.set_user_profile(user_id_str, fallback_profile)
-                except Exception as e:
+                except (ConnectionError, TimeoutError, OSError, RuntimeError) as e:
                     logger.warning(f"降级档案缓存失败: {e}")
             
             return fallback_profile
             
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             # 其他错误：记录日志并返回降级档案
             logger.error(
                 f"用户档案加载失败，使用降级策略: user_id={user_id}, error={str(e)}"
@@ -643,11 +644,11 @@ class BackendClient:
             if self.cache_manager:
                 try:
                     await self.cache_manager.set_user_profile(user_id_str, fallback_profile)
-                except Exception as e:
+                except (ConnectionError, TimeoutError, OSError, RuntimeError) as e:
                     logger.warning(f"降级档案缓存失败: {e}")
-            
+
             return fallback_profile
-    
+
     def _get_fallback_profile(self, user_id: int) -> Dict[str, Any]:
         """
         获取降级用户档案（当加载失败时使用）
@@ -881,7 +882,7 @@ class BackendClient:
                         f"❌ 会员权限缓存未命中: user_id={user_id}",
                         extra={'user_id': user_id, 'cache_hit': False}
                     )
-            except Exception as e:
+            except (ConnectionError, TimeoutError, OSError, RuntimeError) as e:
                 logger.warning(f"缓存查询失败，将从API获取: {e}")
         
         # 2. 缓存未命中，从API获取
@@ -897,12 +898,12 @@ class BackendClient:
                         f"💾 会员权限已缓存: user_id={user_id}",
                         extra={'user_id': user_id}
                     )
-                except Exception as e:
+                except (ConnectionError, TimeoutError, OSError, RuntimeError) as e:
                     logger.warning(f"缓存写入失败: {e}")
             
             return membership_dict
             
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             # 错误降级：返回默认权限
             logger.error(
                 f"会员权限加载失败，使用降级策略: user_id={user_id}, error={str(e)}"
@@ -913,7 +914,7 @@ class BackendClient:
             if self.cache_manager:
                 try:
                     await self.cache_manager.set_membership_permissions(user_id_str, fallback_membership)
-                except Exception as e:
+                except (ConnectionError, TimeoutError, OSError, RuntimeError) as e:
                     logger.warning(f"降级权限缓存失败: {e}")
             
             return fallback_membership
@@ -990,7 +991,7 @@ class BackendClient:
             
             return result
             
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.warning(f"⚠️ 获取用户权限失败，使用降级数据: user_id={user_id}, error={e}")
             return self._get_fallback_membership(user_id)
         finally:
@@ -1052,7 +1053,7 @@ class BackendClient:
             
             return result
             
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.warning(f"⚠️ 用量检查失败，允许执行: user_id={user_id}, mode={mode}, error={e}")
             # 用量检查失败时，返回允许执行（避免阻塞用户）
             return {
@@ -1119,7 +1120,7 @@ class BackendClient:
             
             return result
             
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.error(f"❌ 用量增加失败: user_id={user_id}, mode={mode}, error={e}")
             # 用量增加失败不影响用户体验，只记录日志
             return {
@@ -1176,7 +1177,7 @@ class BackendClient:
             
             return result
             
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.warning(f"⚠️ 获取今日用量失败: user_id={user_id}, error={e}")
             return {
                 'dag_used': 0,
@@ -1255,7 +1256,7 @@ class BackendClient:
         except BackendNotFoundError:
             logger.info(f"用户训练日志不存在: user_id={user_id}")
             return []
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.error(f"获取训练日志失败: user_id={user_id}, error={e}")
             return []
 
@@ -1301,7 +1302,7 @@ class BackendClient:
             
             return data
             
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.error(f"获取训练统计失败: user_id={user_id}, error={e}")
             return {
                 'total_sessions': 0,
@@ -1353,7 +1354,7 @@ class BackendClient:
         except BackendNotFoundError:
             logger.info(f"用户个人最佳记录不存在: user_id={user_id}")
             return []
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.error(f"获取个人最佳记录失败: user_id={user_id}, error={e}")
             return []
 
@@ -1394,7 +1395,7 @@ class BackendClient:
         except BackendNotFoundError:
             logger.info(f"个人最佳记录不存在: user_id={user_id}, exercise_id={exercise_id}")
             return None
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.error(f"获取个人最佳记录失败: user_id={user_id}, exercise_id={exercise_id}, error={e}")
             return None
 
@@ -1460,7 +1461,7 @@ class BackendClient:
             
             return data
             
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.error(
                 f"更新个人最佳记录失败: user_id={user_id}, exercise_id={exercise_id}, error={e}"
             )
@@ -1502,7 +1503,7 @@ class BackendClient:
             
             return leaderboard
             
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.error(f"获取力量排行榜失败: user_id={user_id}, error={e}")
             return []
 
@@ -1709,7 +1710,7 @@ class BackendClient:
                 logger.error(f"HTTP error in similar conversations search: {e}")
                 raise BackendAPIError(f"相似对话搜索失败: {e.response.status_code}")
 
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.error(f"Similar conversations search failed: {e}")
             raise BackendConnectionError(f"相似对话搜索连接失败: {str(e)}")
 
@@ -1772,12 +1773,12 @@ class BackendClient:
                 try:
                     await self.cache_manager.invalidate_user_profile(str(user_id))
                     logger.debug(f"已清除用户档案缓存: user_id={user_id}")
-                except Exception as e:
+                except (ConnectionError, TimeoutError, OSError, RuntimeError) as e:
                     logger.warning(f"清除缓存失败: {e}")
             
             return data
             
-        except Exception as e:
+        except (BackendAPIError, httpx.HTTPError, ConnectionError, TimeoutError) as e:
             logger.error(
                 f"更新容量系数失败: user_id={user_id}, error={e}"
             )

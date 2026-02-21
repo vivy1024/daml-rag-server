@@ -300,9 +300,9 @@ class ExerciseStabilityManager:
                     import json
                     try:
                         actual_exercises = json.loads(actual_exercises)
-                    except:
+                    except (json.JSONDecodeError, ValueError):
                         actual_exercises = []
-                
+
                 for exercise in actual_exercises:
                     exercise_id = exercise.get('exercise_id')
                     if exercise_id:
@@ -434,9 +434,9 @@ class ExerciseStabilityManager:
                     import json
                     try:
                         actual_exercises = json.loads(actual_exercises)
-                    except:
+                    except (json.JSONDecodeError, ValueError):
                         actual_exercises = []
-                
+
                 for exercise in actual_exercises:
                     if exercise.get('exercise_id') == exercise_id:
                         # 计算周数（从今天开始）
@@ -445,7 +445,7 @@ class ExerciseStabilityManager:
                             days_ago = (datetime.now() - log_date).days
                             week_number = days_ago // 7
                             weeks_with_exercise.add(week_number)
-                        except:
+                        except (ValueError, TypeError):
                             pass
                         break
             
@@ -759,9 +759,9 @@ class ExerciseStabilityManager:
                 import json
                 try:
                     actual_exercises = json.loads(actual_exercises)
-                except:
+                except (json.JSONDecodeError, ValueError):
                     actual_exercises = []
-            
+
             for exercise in actual_exercises:
                 exercise_name = exercise.get('exercise_name', '') or exercise.get('name', '')
                 exercise_id = exercise.get('exercise_id', '')

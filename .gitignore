@@ -58,3 +58,4 @@ htmlcov/
 # macOS
 .DS_Store
 
+scripts/knowledge_output/

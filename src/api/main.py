@@ -423,7 +423,7 @@ async def log_requests(request: Request, call_next):
         try:
             from src.framework.monitoring.prometheus_integration import record_error
             record_error("exception", "api")
-        except:
+        except (ImportError, AttributeError):
             pass
         
         logger.error(
@@ -476,7 +476,7 @@ async def general_exception_handler(request: Request, exc: Exception):
         from src.framework.monitoring.prometheus_integration import record_error
         error_type = type(exc).__name__
         record_error(error_type, "api")
-    except:
+    except (ImportError, AttributeError):
         pass
 
     # 使用自定义JSON编码器处理datetime对象
