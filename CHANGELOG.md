@@ -5,15 +5,15 @@
 
 ---
 
-## #8 (feat) Alertmanager 飞书告警转发 — 2026-02-21
+## #8 (feat) Alertmanager 企业微信告警转发 — 2026-02-21
 
-- 新增 `src/api/routes/alertmanager_webhook.py`：Alertmanager → 飞书卡片消息转发
-  - 接收标准 Alertmanager webhook payload，格式化为飞书交互卡片
-  - 按 severity 显示不同颜色（critical=红/warning=橙/info=蓝）
-  - 环境变量 `FEISHU_WEBHOOK_URL` 配置飞书机器人地址
+- 新增 `src/api/routes/alertmanager_webhook.py`：Alertmanager → 企业微信 Markdown 消息转发
+  - 接收标准 Alertmanager webhook payload，格式化为企业微信 Markdown
+  - 按 severity 显示不同颜色（critical/warning=橙色, info=绿色）
+  - 环境变量 `WECHAT_WEBHOOK_URL` 配置企业微信机器人地址
   - 未配置时优雅降级为日志记录
-- 更新 `prometheus/alertmanager.yml`：Slack → 飞书 webhook 转发
-- 更新 `config/prometheus/alertmanager.yml`：同步飞书配置
+- 更新 `prometheus/alertmanager.yml`：Slack → 企业微信 webhook 转发
+- 更新 `config/prometheus/alertmanager.yml`：同步企业微信配置
 - 路由注册到 api_router（`/webhooks/alertmanager`）
 - 对应产品版本：v1.1.0
 

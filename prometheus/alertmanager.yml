@@ -1,11 +1,10 @@
-# Alertmanager 配置文件 — 飞书告警版
+# Alertmanager 配置文件 — 企业微信告警版
 #
-# 告警链路：Prometheus → Alertmanager → daml-rag-server /webhooks/alertmanager → 飞书
+# 告警链路：Prometheus → Alertmanager → daml-rag-server /webhooks/alertmanager → 企业微信
 #
 # 配置步骤：
-#   1. 在飞书群设置 → 群机器人 → 添加自定义机器人，获取 Webhook URL
-#   2. 设置环境变量 FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
-#   3. 重启 daml-rag-server 容器
+#   1. 设置环境变量 WECHAT_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx
+#   2. 重启 daml-rag-server 容器
 #
 # 路由策略：
 #   - severity=critical → 立即通知（group_wait: 0s）
