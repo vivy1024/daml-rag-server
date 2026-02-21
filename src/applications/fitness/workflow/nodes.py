@@ -638,28 +638,30 @@ async def node_retrieve_few_shot(
 async def node_select_dag_template(
     state: WorkflowState,
     template_manager=None,
-    decision_engine=None
+    decision_engine=None,
+    cache_manager=None
 ) -> StateUpdate:
     """
     步骤6.5：LLM选择DAG模板（含会员权限检查）
-    
+
     工作流程：
     1. 检查是否有用户强制指定的模板ID（template_id参数）
     2. 如果有强制指定，直接使用该模板（跳过LLM选择）
-    3. 如果没有强制指定，LLM根据用户查询选择最合适的DAG模板
+    3. 如果没有强制指定，先查缓存，未命中再调LLM选择
     4. 检查用户会员等级是否有权使用该模板
     5. 如果无权限，自动降级到用户可用的模板
     6. 返回最终选择的模板ID和权限检查结果
-    
+
     会员等级与模板对应（MVP阶段）：
     - 免费版(2个): greeting, quick_consultation
     - 暖心会员(13个): 全部模板（¥6首充福利）
     - 能量会员: 暂不开放（等Agent模式开发完成）
-    
+
     Args:
         state: 当前工作流状态
         template_manager: DAG模板管理器（可选）
         decision_engine: LLM决策引擎（可选）
+        cache_manager: 缓存管理器（可选，用于缓存LLM模板选择结果）
         
     Returns:
         StateUpdate: 状态更新，包含 dag_template_id, _permission_check_result
@@ -673,6 +675,7 @@ async def node_select_dag_template(
     force_template_id = state.get("template_id")  # 用户强制指定的模板ID
     
     selected_template_id = None
+    cached_template_id = None
     permission_denied = False
     upgrade_message = None
     
@@ -705,29 +708,51 @@ async def node_select_dag_template(
                 )
                 force_template_id = None
         
-        # 如果没有强制指定，使用LLM选择
+        # 如果没有强制指定，使用LLM选择（带缓存）
         if not force_template_id:
             # 初始化决策引擎
             if decision_engine is None:
                 decision_engine = LLMDecisionEngine(template_manager)
-            
-            # 创建选择请求
-            selection_request = DAGSelectionRequest(
-                user_query=query_text,
-                user_profile=user_profile or {},
-                available_templates=template_manager.get_all_templates(),
-                session_context={"session_id": session_id},
-                few_shot_examples=few_shot_examples
-            )
-            
-            # LLM选择DAG模板
-            selection_result = await decision_engine.select_dag_template(selection_request)
-            original_template_id = selection_result.selected_template_id
-            
-            logger.info(
-                f"🤖 [{request_id}] 步骤6.5: LLM选择模板={original_template_id}, "
-                f"置信度={selection_result.confidence:.2f}"
-            )
+
+            # 缓存key: 基于查询文本hash + 会员等级
+            user_tier = get_user_membership_tier(membership_info)
+            import hashlib
+            query_hash = hashlib.md5(query_text.encode()).hexdigest()[:12]
+            cache_key = f"dag_template:{query_hash}:{user_tier}"
+
+            # 尝试从缓存获取
+            cached_template_id = None
+            if cache_manager:
+                cached_template_id = await cache_manager.get(cache_key)
+
+            if cached_template_id:
+                # 缓存命中，跳过LLM调用
+                original_template_id = cached_template_id
+                logger.info(
+                    f"⚡ [{request_id}] 步骤6.5: 缓存命中 模板={original_template_id}, "
+                    f"key={cache_key}"
+                )
+            else:
+                # 缓存未命中，调用LLM选择
+                selection_request = DAGSelectionRequest(
+                    user_query=query_text,
+                    user_profile=user_profile or {},
+                    available_templates=template_manager.get_all_templates(),
+                    session_context={"session_id": session_id},
+                    few_shot_examples=few_shot_examples
+                )
+
+                selection_result = await decision_engine.select_dag_template(selection_request)
+                original_template_id = selection_result.selected_template_id
+
+                # 写入缓存（TTL=1小时）
+                if cache_manager and original_template_id:
+                    await cache_manager.set(cache_key, original_template_id, ttl=3600)
+
+                logger.info(
+                    f"🤖 [{request_id}] 步骤6.5: LLM选择模板={original_template_id}, "
+                    f"置信度={selection_result.confidence:.2f}, 已缓存"
+                )
         else:
             original_template_id = force_template_id
         
@@ -758,8 +783,8 @@ async def node_select_dag_template(
         
         return StateUpdate(updates={
             "dag_template_id": selected_template_id,
-            "_dag_selection_confidence": 1.0 if force_template_id else selection_result.confidence,
-            "_dag_selection_reason": "用户强制指定" if force_template_id else selection_result.selection_reason,
+            "_dag_selection_confidence": 1.0 if (force_template_id or cached_template_id) else selection_result.confidence,
+            "_dag_selection_reason": "用户强制指定" if force_template_id else ("缓存命中" if cached_template_id else selection_result.selection_reason),
             "_original_template_id": original_template_id,
             "_force_template_used": bool(force_template_id),
             "_permission_denied": permission_denied,

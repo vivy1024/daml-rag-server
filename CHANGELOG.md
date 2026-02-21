@@ -5,6 +5,23 @@
 
 ---
 
+## #14 (chore) 管线缓存 + 死代码清理 + 依赖精简 — 2026-02-22
+
+对应产品版本：v9.88.0（纯内部优化，产品版本不动）
+
+**3A: 步骤6.5 DAG模板选择缓存**
+- `nodes.py` `node_select_dag_template`: 添加 query_hash+user_tier 缓存key，TTL=1h
+- `stream_executor.py`: 传入 cache_manager 到步骤6.5
+- 预期效果：重复查询跳过LLM调用(1-3s)，响应时间-30%
+
+**3B: 死代码清理 (-4,326行)**
+- 删除9个孤岛源文件: neo4j_field_mapping.py, container.py, parallel_step_executor.py, content_safety_filter.py, image_processor.py, llm_call_logger.py, graphrag_retriever.py, query_preprocessor.py, qdrant_helper.py
+- 删除8个引用已删除模块的测试文件
+
+**3C: 依赖精简**
+- `requirements.txt`: 移除6个未使用包(faiss-cpu, aiosqlite, pypdf, FlagEmbedding, requests, python-dotenv)
+- 新增 `requirements-dev.txt`: 分离开发依赖(pytest, pytest-asyncio, black, ruff)
+
 ## #13 (refactor) Agent模式移至experimental/ + 检索层精简 — 2026-02-22
 
 对应产品版本：v9.88.0（纯内部重构，产品版本不动）

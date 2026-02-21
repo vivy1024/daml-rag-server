@@ -675,8 +675,8 @@ class StreamWorkflowExecutor(WorkflowExecutor):
     async def _execute_step_6_5(self, state: WorkflowState) -> WorkflowState:
         """执行步骤6.5"""
         from .nodes import node_select_dag_template
-        
-        result = await node_select_dag_template(state)
+        cache_manager = self._get_cache_manager()
+        result = await node_select_dag_template(state, cache_manager=cache_manager)
         if isinstance(result, StateUpdate):
             state = result.merge_into(state)
         
