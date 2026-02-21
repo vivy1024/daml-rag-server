@@ -7,13 +7,13 @@ import asyncio
 import logging
 import os
 from typing import List, Dict, Optional, Tuple
-import aiohttp
 from .bm25_engine import get_bm25_engine
 from .reranker import FitnessReranker
 
 logger = logging.getLogger(__name__)
 
 KNOWLEDGE_ARTICLES_COLLECTION = "knowledge_articles"
+TRAINING_KNOWLEDGE_COLLECTION = "training_knowledge"
 
 # ─── 意图→检索权重映射 (vector_weight, bm25_weight) ─────────────────────────
 # 健身领域关键词匹配（BM25）通常比语义相似度更精准，默认偏向 BM25
@@ -30,20 +30,17 @@ class HybridSearchEngine:
 
     def __init__(
         self,
-        graphrag_api_base: str = "http://localhost:8001/api/v1/graphrag",
         rrf_k: int = 60
     ):
         """
         初始化混合检索引擎
 
         Args:
-            graphrag_api_base: GraphRAG API地址
             rrf_k: RRF融合参数
         """
-        self.graphrag_api_base = graphrag_api_base
         self.rrf_k = rrf_k
         self.bm25_engine = get_bm25_engine()
-        self._encoder = None  # 懒加载 GTE-Large-zh，用于 knowledge_articles 检索
+        self._encoder = None  # 懒加载 GTE-Large-zh
 
         logger.info(f"初始化混合检索引擎: RRF_k={rrf_k}")
 
@@ -56,7 +53,7 @@ class HybridSearchEngine:
         user_id: Optional[str] = None
     ) -> List[Dict]:
         """
-        向量检索（通过GraphRAG API）
+        向量检索（直接查 Qdrant training_knowledge collection，与 BM25 同源）
 
         Args:
             query: 查询文本
@@ -69,39 +66,32 @@ class HybridSearchEngine:
             检索结果列表
         """
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.graphrag_api_base}/query",
-                    json={
-                        "query_text": query,
-                        "domain": domain,
-                        "query_type": "semantic_search",
-                        "top_k": top_k,
-                        "filters": filters or {},
-                        "return_reason": False,
-                        "user_id": user_id or "anonymous"
-                    },
-                    timeout=aiohttp.ClientTimeout(total=5.0)
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        results = data.get("data", {}).get("results", [])
+            from ...framework.clients.qdrant_client import get_qdrant_client
+            qdrant = get_qdrant_client()
 
-                        # 转换为统一格式
-                        unified_results = []
-                        for r in results:
-                            unified_results.append({
-                                'id': r.get('id', ''),
-                                'score': r.get('score', 0.0),
-                                'text': r.get('text', ''),
-                                'payload': r.get('metadata', {})
-                            })
+            vector = await asyncio.to_thread(self._embed, query)
 
-                        logger.info(f"向量检索完成: {len(unified_results)} 个结果")
-                        return unified_results
-                    else:
-                        logger.error(f"向量检索失败: HTTP {response.status}")
-                        return []
+            response = await asyncio.to_thread(
+                qdrant.query_points,
+                collection_name=TRAINING_KNOWLEDGE_COLLECTION,
+                query=vector,
+                limit=top_k,
+            )
+
+            points = response.points if hasattr(response, "points") else response
+            unified_results = []
+            for p in points:
+                payload = p.payload or {}
+                text = payload.get('chunk_text') or payload.get('text', '')
+                unified_results.append({
+                    'id': str(p.id),
+                    'score': round(p.score, 4),
+                    'text': text,
+                    'payload': payload
+                })
+
+            logger.info(f"向量检索完成: {len(unified_results)} 个结果")
+            return unified_results
 
         except Exception as e:
             logger.error(f"向量检索异常: {e}")

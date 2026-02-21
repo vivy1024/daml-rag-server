@@ -5,6 +5,19 @@
 
 ---
 
+## #12 (fix) 向量检索修复 — hybrid_search 直查 Qdrant 同源数据 — 2026-02-21
+
+- `src/framework/retrieval/hybrid_search.py`：`vector_search()` 重写
+  - 移除 HTTP 自调用 GraphRAG API（路径 `/api/v1/graphrag` 404 + 查错 collection）
+  - 改为直接查 Qdrant `training_knowledge` collection（与 BM25 同源 4,062 文档）
+  - 修复结果解析：从 `payload.chunk_text` 提取文本（原 `r.get('text')` 为空）
+  - 移除 `aiohttp` 依赖和 `graphrag_api_base` 参数
+- A/B 测试重新验证：
+  - Hybrid 关键词命中率：31.7% → 51.7%（新权重）/ 40.0% → 55.0%（旧等权）
+  - 纯 BM25 仍领先（65%），符合健身领域关键词匹配特性
+  - 向量检索延迟：首次 ~2.3s（模型冷启动），稳定 ~25-40ms
+- 对应产品版本：v1.1.0
+
 ## #11 (feat) Embedding 模型评估 + 口语噪声清洗预处理器 — 2026-02-21
 
 - 新增 `scripts/eval_embedding_models.py`：Embedding 模型评估框架
