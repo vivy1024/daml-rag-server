@@ -5,6 +5,19 @@
 
 ---
 
+## #11 (feat) Embedding 模型评估 + 口语噪声清洗预处理器 — 2026-02-21
+
+- 新增 `scripts/eval_embedding_models.py`：Embedding 模型评估框架
+  - 10 组健身领域 query-document 相关性对 + 8 组口语噪声测试对
+  - GTE-Large-zh 实测：100% 相关性准确率 / margin=0.3115 / 口语sim=0.8501 / 3.4ms
+  - BGE-M3 / GTE-Qwen2 容器无外网无法下载，基于公开 benchmark 对比
+  - 结论：GTE-Large-zh 当前够用，BGE-M3 迁移 ROI 低优先级不高
+- 新增 `src/framework/retrieval/query_preprocessor.py`：口语噪声清洗预处理器
+  - 28 个填充词（按长度降序匹配）+ 7 条句式正则模式
+  - 纯规则零 LLM 调用，8/8 口语清洗正确 + 2/2 正常查询不破坏
+  - 入口函数 `preprocess_query()` 可直接集成到检索管线
+- 对应产品版本：v1.1.0
+
 ## #10 (feat) Neo4j Cypher 模板扩展 — 2026-02-21
 
 - `src/framework/retrieval/cypher_templates.py`：新增 3 个 Cypher 查询模板
