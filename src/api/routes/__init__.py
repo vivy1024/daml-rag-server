@@ -27,6 +27,7 @@ from .conversation import router as conversation_router
 from .model_evaluation import router as model_evaluation_router
 from .memories import router as memories_router
 from .personas import router as personas_router
+from .alertmanager_webhook import router as alertmanager_webhook_router
 
 # 创建主路由器
 api_router = APIRouter()
@@ -80,6 +81,11 @@ api_router.include_router(
 api_router.include_router(
     personas_router,
     tags=["Persona"]
+)
+
+api_router.include_router(
+    alertmanager_webhook_router,
+    tags=["Webhooks"]
 )
 
 # 导出路由
