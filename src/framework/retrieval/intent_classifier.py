@@ -44,6 +44,13 @@ class StructuredQueryType(Enum):
     EXERCISE_BY_LEVEL = "exercise_by_level"                # 按难度级别查询
     EXERCISE_BY_FORCE = "exercise_by_force"                # 按力类型分类
     EXERCISE_BY_MECHANIC = "exercise_by_mechanic"          # 按运动学机制分类
+    # ─── v1.1.0 新增 6 种 ───
+    SUPPLEMENT_ADVICE = "supplement_advice"                # 补剂咨询
+    TRAINING_FREQUENCY = "training_frequency"              # 训练频率
+    TRAINING_SPLIT = "training_split"                      # 训练分化
+    EXERCISE_SUBSTITUTION = "exercise_substitution"        # 动作替代
+    WARMUP_STRETCHING = "warmup_stretching"                # 热身拉伸
+    NUTRITION_MACRO = "nutrition_macro"                    # 营养宏量
 
 
 @dataclass
@@ -135,6 +142,54 @@ MECHANIC_TYPE_KEYWORDS = [
     "复合动作", "孤立动作", "多关节", "单关节", "复合训练", "孤立训练",
 ]
 
+# ─── v1.1.0 新增关键词词典 ─────────────────────────────
+
+# 补剂关键词
+SUPPLEMENT_KEYWORDS = [
+    "蛋白粉", "肌酸", "BCAA", "支链氨基酸", "谷氨酰胺", "左旋肉碱",
+    "氮泵", "增肌粉", "鱼油", "维生素D", "ZMA", "咖啡因",
+    "补剂", "营养补充剂", "运动补剂", "蛋白质粉", "乳清蛋白",
+    "酪蛋白", "植物蛋白粉", "增重粉", "pre-workout",
+]
+
+# 训练频率关键词
+TRAINING_FREQUENCY_KEYWORDS = [
+    "频率", "几次", "多久练一次", "休息几天", "恢复时间",
+    "一周几练", "每周几次", "隔几天", "连续练", "休息日",
+    "练几天", "训练频率", "训练天数",
+]
+
+# 训练分化关键词
+TRAINING_SPLIT_KEYWORDS = [
+    "分化", "分化训练", "推拉腿", "PPL", "上下肢分化",
+    "胸背腿", "五天分化", "四天分化", "三天分化", "全身训练",
+    "bro split", "训练安排", "训练计划", "周计划", "训练日",
+    "怎么安排", "怎么分配",
+]
+
+# 动作替代关键词
+SUBSTITUTION_KEYWORDS = [
+    "替代", "替换", "代替", "没有", "不用", "换成",
+    "替代动作", "替代方案", "类似动作", "相似动作",
+    "用什么代替", "怎么替代", "可以换成",
+]
+
+# 热身拉伸关键词
+WARMUP_STRETCHING_KEYWORDS = [
+    "热身", "拉伸", "放松", "泡沫轴", "筋膜放松",
+    "动态拉伸", "静态拉伸", "激活", "预热", "冷身",
+    "训练前", "训练后", "练前", "练后", "warm up", "cool down",
+    "肌肉放松", "关节活动",
+]
+
+# 营养宏量关键词
+NUTRITION_KEYWORDS = [
+    "蛋白质", "碳水", "碳水化合物", "脂肪", "热量", "卡路里",
+    "摄入量", "宏量营养素", "macro", "TDEE", "基础代谢",
+    "增肌饮食", "减脂饮食", "饮食计划", "营养", "膳食",
+    "吃多少", "怎么吃", "饮食安排",
+]
+
 
 # ─── 结构化查询模式 ─────────────────────────────────
 
@@ -175,7 +230,7 @@ EXERCISE_DETAIL_PATTERNS = [
 # 模式：肌肉训练容量（"胸肌的训练量"、"背的MEV"）
 MUSCLE_CAPACITY_PATTERNS = [
     r"(.+?)(?:的)?(?:训练量|训练容量|最大可恢复量|最小有效量|最大适应量)",
-    r"(.+?)(?:的)?(?:MEV|MAV|MRV|训练频率|恢复时间)",
+    r"(.+?)(?:的)?(?:MEV|MAV|MRV)",
 ]
 
 # 模式：安全禁忌（"腰椎间盘突出不能做什么"、"膝盖损伤的禁忌动作"）
@@ -222,6 +277,58 @@ MECHANIC_TYPE_PATTERNS = [
     re.compile(r"(多|单)关节(动作|训练)?", re.IGNORECASE),
 ]
 
+# ─── v1.1.0 新增 6 种模式 ─────────────────────────────
+
+# 模式：补剂咨询（"蛋白粉怎么选"、"肌酸什么时候吃"、"需要吃补剂吗"）
+SUPPLEMENT_PATTERNS = [
+    re.compile(r"(.+?)(?:怎么选|怎么吃|什么时候吃|吃多少|有用吗|有必要吃|需要吃)", re.IGNORECASE),
+    re.compile(r"(?:推荐|选择|购买)(?:什么|哪种|哪个)(.+?)(?:好|合适)?", re.IGNORECASE),
+    re.compile(r"(.+?)(?:和|与|跟)(.+?)(?:区别|差别|哪个好|怎么选)", re.IGNORECASE),
+    re.compile(r"(.+?)(?:的)?(?:作用|功效|效果|副作用|用法|用量)", re.IGNORECASE),
+]
+
+# 模式：训练频率（"胸肌多久练一次"、"一周练几次"）
+TRAINING_FREQUENCY_PATTERNS = [
+    re.compile(r"(.+?)(?:多久|多长时间|几天)(?:练|训练)一次", re.IGNORECASE),
+    re.compile(r"一周(?:练|训练)几(?:次|天)", re.IGNORECASE),
+    re.compile(r"(.+?)(?:的)?(?:训练频率|恢复时间|休息时间)", re.IGNORECASE),
+    re.compile(r"(?:每周|一周)(?:练|训练)(.+?)几次", re.IGNORECASE),
+    re.compile(r"(.+?)(?:需要|应该)(?:休息|恢复)(?:几天|多久)", re.IGNORECASE),
+]
+
+# 模式：训练分化（"推拉腿怎么安排"、"五天分化计划"）
+TRAINING_SPLIT_PATTERNS = [
+    re.compile(r"(推拉腿|PPL|上下肢|胸背腿|全身)(?:分化|训练|计划|怎么安排|怎么练)", re.IGNORECASE),
+    re.compile(r"(三天|四天|五天|六天|[3-6]天)(?:分化|训练|计划|安排)", re.IGNORECASE),
+    re.compile(r"(?:训练|健身)(?:怎么|如何)(?:分化|安排|分配|规划)", re.IGNORECASE),
+    re.compile(r"(?:制定|设计|安排)(?:一个|一份)?(?:训练|健身)(?:计划|方案)", re.IGNORECASE),
+]
+
+# 模式：动作替代（"没有杠铃怎么练深蹲"、"引体向上的替代动作"）
+EXERCISE_SUBSTITUTION_PATTERNS = [
+    re.compile(r"(?:没有|不用|不想用)(.+?)(?:怎么|如何|用什么)(?:练|做|替代)(.+?)", re.IGNORECASE),
+    re.compile(r"(.+?)(?:的)?(?:替代|替换|代替)(?:动作|方案|方法)", re.IGNORECASE),
+    re.compile(r"(?:用什么|什么动作)(?:替代|代替|替换)(.+)", re.IGNORECASE),
+    re.compile(r"(.+?)(?:可以|能)(?:用|换成)(.+?)(?:替代|代替|替换)?", re.IGNORECASE),
+]
+
+# 模式：热身拉伸（"深蹲前怎么热身"、"训练后怎么拉伸"）
+WARMUP_STRETCHING_PATTERNS = [
+    re.compile(r"(.+?)(?:前|之前)(?:怎么|如何)?(?:热身|拉伸|激活|预热)", re.IGNORECASE),
+    re.compile(r"(.+?)(?:后|之后)(?:怎么|如何)?(?:拉伸|放松|冷身|恢复)", re.IGNORECASE),
+    re.compile(r"(?:怎么|如何)(?:热身|拉伸|放松|激活)(.+?)", re.IGNORECASE),
+    re.compile(r"(.+?)(?:的)?(?:热身|拉伸|放松|激活)(?:动作|方法|方式)", re.IGNORECASE),
+]
+
+# 模式：营养宏量（"增肌期蛋白质摄入量"、"减脂碳水怎么安排"）
+NUTRITION_MACRO_PATTERNS = [
+    re.compile(r"(增肌|减脂|维持)(?:期)?(?:的)?(.+?)(?:摄入量|吃多少|怎么安排|怎么吃)", re.IGNORECASE),
+    re.compile(r"(.+?)(?:的)?(?:摄入量|需求量|推荐量|每日摄入)", re.IGNORECASE),
+    re.compile(r"(?:每天|一天)(?:需要|应该)?(?:吃|摄入)(?:多少)(.+)", re.IGNORECASE),
+    re.compile(r"(?:怎么|如何)(?:计算|安排)(.+?)(?:摄入|饮食|营养)", re.IGNORECASE),
+    re.compile(r"(TDEE|基础代谢|热量缺口|热量盈余)(?:怎么算|是多少|怎么计算)", re.IGNORECASE),
+]
+
 
 def classify_intent(query: str) -> IntentResult:
     """
@@ -253,8 +360,11 @@ def classify_intent(query: str) -> IntentResult:
     has_postural = any(kw in query_clean for kw in POSTURAL_KEYWORDS)
     has_force = any(k in query_clean for k in FORCE_TYPE_KEYWORDS[:6])
     has_mechanic = any(k in query_clean for k in MECHANIC_TYPE_KEYWORDS[:6])
+    has_supplement = any(kw in query_clean for kw in SUPPLEMENT_KEYWORDS)
+    has_nutrition = any(kw in query_clean for kw in NUTRITION_KEYWORDS)
 
-    if (has_exercise or has_muscle or has_equipment or has_injury or has_postural) and len(query_clean) > 10:
+    if (has_exercise or has_muscle or has_equipment or has_injury
+            or has_postural or has_supplement or has_nutrition) and len(query_clean) > 10:
         # 有实体但查询较长/复杂 → hybrid
         entity = _extract_first_entity(query_clean)
         logger.info(
@@ -410,8 +520,15 @@ def _match_structured_patterns(query: str) -> Optional[IntentResult]:
     for pattern in FITNESS_LEVEL_PATTERNS:
         m = pattern.search(query)
         if m:
-            entity = m.group(1) if m.lastindex >= 1 else m.group(0)
-            entity = entity.strip()
+            # 尝试所有捕获组，找到有效的水平关键词
+            entity = None
+            for gi in range(1, (m.lastindex or 0) + 1):
+                candidate = m.group(gi).strip() if m.group(gi) else ""
+                if _is_valid_level_query(candidate):
+                    entity = candidate
+                    break
+            if entity is None:
+                entity = m.group(0).strip()
             if _is_valid_level_query(entity):
                 return IntentResult(
                     intent=QueryIntent.STRUCTURED,
@@ -449,6 +566,98 @@ def _match_structured_patterns(query: str) -> Optional[IntentResult]:
                     structured_type=StructuredQueryType.EXERCISE_BY_MECHANIC,
                     extracted_entity=entity,
                     reason=f"运动学机制查询: {entity}"
+                )
+
+    # ─── v1.1.0 新增 6 种模式匹配 ───
+
+    # 补剂咨询（"蛋白粉怎么选"、"肌酸什么时候吃"）
+    for pattern in SUPPLEMENT_PATTERNS:
+        m = pattern.search(query)
+        if m:
+            entity = m.group(1) if m.lastindex and m.lastindex >= 1 else m.group(0)
+            entity = entity.strip()
+            if _is_valid_supplement(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.85,
+                    structured_type=StructuredQueryType.SUPPLEMENT_ADVICE,
+                    extracted_entity=entity,
+                    reason=f"补剂咨询: {entity}"
+                )
+
+    # 训练频率（"胸肌多久练一次"、"一周练几次"）
+    for pattern in TRAINING_FREQUENCY_PATTERNS:
+        m = pattern.search(query)
+        if m:
+            entity = m.group(1) if m.lastindex and m.lastindex >= 1 else m.group(0)
+            entity = entity.strip() if entity else "通用"
+            if _is_valid_frequency_query(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.80,
+                    structured_type=StructuredQueryType.TRAINING_FREQUENCY,
+                    extracted_entity=entity,
+                    reason=f"训练频率查询: {entity}"
+                )
+
+    # 训练分化（"推拉腿怎么安排"、"五天分化计划"）
+    for pattern in TRAINING_SPLIT_PATTERNS:
+        m = pattern.search(query)
+        if m:
+            entity = m.group(1) if m.lastindex and m.lastindex >= 1 else m.group(0)
+            entity = entity.strip() if entity else "通用"
+            if _is_valid_split_query(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.80,
+                    structured_type=StructuredQueryType.TRAINING_SPLIT,
+                    extracted_entity=entity,
+                    reason=f"训练分化查询: {entity}"
+                )
+
+    # 动作替代（"没有杠铃怎么练深蹲"、"引体向上的替代动作"）
+    for pattern in EXERCISE_SUBSTITUTION_PATTERNS:
+        m = pattern.search(query)
+        if m:
+            entity = m.group(1) if m.lastindex and m.lastindex >= 1 else m.group(0)
+            entity = entity.strip()
+            if _is_valid_substitution_query(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.85,
+                    structured_type=StructuredQueryType.EXERCISE_SUBSTITUTION,
+                    extracted_entity=entity,
+                    reason=f"动作替代查询: {entity}"
+                )
+
+    # 热身拉伸（"深蹲前怎么热身"、"训练后怎么拉伸"）
+    for pattern in WARMUP_STRETCHING_PATTERNS:
+        m = pattern.search(query)
+        if m:
+            entity = m.group(1) if m.lastindex and m.lastindex >= 1 else m.group(0)
+            entity = entity.strip()
+            if _is_valid_warmup_query(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.80,
+                    structured_type=StructuredQueryType.WARMUP_STRETCHING,
+                    extracted_entity=entity,
+                    reason=f"热身拉伸查询: {entity}"
+                )
+
+    # 营养宏量（"增肌期蛋白质摄入量"、"减脂碳水怎么安排"）
+    for pattern in NUTRITION_MACRO_PATTERNS:
+        m = pattern.search(query)
+        if m:
+            entity = m.group(1) if m.lastindex and m.lastindex >= 1 else m.group(0)
+            entity = entity.strip()
+            if _is_valid_nutrition_query(entity):
+                return IntentResult(
+                    intent=QueryIntent.STRUCTURED,
+                    confidence=0.80,
+                    structured_type=StructuredQueryType.NUTRITION_MACRO,
+                    extracted_entity=entity,
+                    reason=f"营养宏量查询: {entity}"
                 )
 
     return None
@@ -511,6 +720,61 @@ def _is_valid_mechanic_query(keyword: str) -> bool:
     return any(k in keyword for k in ["复合", "孤立", "compound", "isolation", "多关节", "单关节"])
 
 
+def _is_valid_supplement(entity: str) -> bool:
+    """检查是否是有效的补剂名"""
+    if not entity or len(entity) > 15:
+        return False
+    return any(kw in entity for kw in SUPPLEMENT_KEYWORDS)
+
+
+def _is_valid_frequency_query(entity: str) -> bool:
+    """检查是否是有效的训练频率查询"""
+    if not entity:
+        return False
+    # 包含肌肉名或训练频率关键词
+    return (any(kw in entity for kw in MUSCLE_KEYWORDS)
+            or any(kw in entity for kw in TRAINING_FREQUENCY_KEYWORDS)
+            or entity == "通用")
+
+
+def _is_valid_split_query(entity: str) -> bool:
+    """检查是否是有效的训练分化查询"""
+    if not entity:
+        return False
+    return any(kw in entity for kw in TRAINING_SPLIT_KEYWORDS + [
+        "推拉腿", "PPL", "上下肢", "胸背腿", "全身",
+        "三天", "四天", "五天", "六天", "3天", "4天", "5天", "6天",
+        "训练", "健身",
+    ])
+
+
+def _is_valid_substitution_query(entity: str) -> bool:
+    """检查是否是有效的动作替代查询"""
+    if not entity or len(entity) > 20:
+        return False
+    return (any(kw in entity for kw in EXERCISE_KEYWORDS)
+            or any(kw in entity for kw in EQUIPMENT_KEYWORDS)
+            or any(kw in entity for kw in SUBSTITUTION_KEYWORDS))
+
+
+def _is_valid_warmup_query(entity: str) -> bool:
+    """检查是否是有效的热身拉伸查询"""
+    if not entity or len(entity) > 15:
+        return False
+    return (any(kw in entity for kw in EXERCISE_KEYWORDS)
+            or any(kw in entity for kw in MUSCLE_KEYWORDS)
+            or any(kw in entity for kw in WARMUP_STRETCHING_KEYWORDS)
+            or entity in ["训练", "健身", "运动", "力量训练", "有氧"])
+
+
+def _is_valid_nutrition_query(entity: str) -> bool:
+    """检查是否是有效的营养宏量查询"""
+    if not entity or len(entity) > 15:
+        return False
+    return (any(kw in entity for kw in NUTRITION_KEYWORDS)
+            or entity in ["增肌", "减脂", "维持", "TDEE", "基础代谢"])
+
+
 def _extract_first_entity(query: str) -> Optional[str]:
     """从查询中提取第一个匹配的实体"""
     for kw in EXERCISE_KEYWORDS:
@@ -535,6 +799,12 @@ def _extract_first_entity(query: str) -> Optional[str]:
         if kw in query:
             return kw
     for kw in MECHANIC_TYPE_KEYWORDS:
+        if kw in query:
+            return kw
+    for kw in SUPPLEMENT_KEYWORDS:
+        if kw in query:
+            return kw
+    for kw in NUTRITION_KEYWORDS:
         if kw in query:
             return kw
     return None

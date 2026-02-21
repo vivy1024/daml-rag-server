@@ -5,6 +5,23 @@
 
 ---
 
+## #9 (feat) 意图分类器扩展 + A/B 测试 — 2026-02-21
+
+- `src/framework/retrieval/intent_classifier.py`：新增 6 种意图模式
+  - SUPPLEMENT_ADVICE：补剂咨询（蛋白粉/肌酸/BCAA 等 20 个关键词）
+  - TRAINING_FREQUENCY：训练频率（多久练一次/一周几练/恢复时间）
+  - TRAINING_SPLIT：训练分化（推拉腿/PPL/上下肢/N天分化）
+  - EXERCISE_SUBSTITUTION：动作替代（替代/替换/代替/没有...怎么练）
+  - WARMUP_STRETCHING：热身拉伸（训练前热身/训练后拉伸/激活）
+  - NUTRITION_MACRO：营养宏量（蛋白质/碳水/TDEE/热量摄入）
+- 修复 `MUSCLE_CAPACITY_PATTERNS` 中 "训练频率" 关键词与新模式冲突
+- 修复 `FITNESS_LEVEL_PATTERNS` 实体提取：遍历所有捕获组找有效 level 关键词
+- 修复 `m.lastindex` 为 None 时的 TypeError（无捕获组正则安全检查）
+- 新增 `scripts/ab_test_retrieval.py`：20 查询 A/B 测试脚本
+- 新增 `scripts/test_intent_expansion.py`：42 用例意图分类测试（100% 通过）
+- 测试：406/407 通过（1 个预存会员权限失败非本次引入）
+- 对应产品版本：v1.1.0
+
 ## #8 (feat) Alertmanager 企业微信告警转发 — 2026-02-21
 
 - 新增 `src/api/routes/alertmanager_webhook.py`：Alertmanager → 企业微信 Markdown 消息转发
