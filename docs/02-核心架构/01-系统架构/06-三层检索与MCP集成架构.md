@@ -31,7 +31,7 @@
 - Layer3规则引擎扩展至11条规则
 - 新增动态上下文构建器（DynamicContextBuilder）
 - 新增用户档案约束提取（Layer3Constraints）
-- 向量模型从BGE-M3更换为GTE-Large-zh
+- 向量模型从GTE-Large-zh更换为GTE-Large-zh
 - Layer1召回倍数从3倍提升至5倍
 - 新增质量评估机制（min_confidence=0.70）
 

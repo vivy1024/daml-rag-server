@@ -40,11 +40,11 @@ USE_API_POOL=true  # 启用API池轮询
 
 ### 禁用双模型选择
 
-服务器环境无Ollama，可禁用双模型选择：
+服务器环境无Anthropic Claude，可禁用双模型选择：
 
 ```bash
 DUAL_MODEL_ENABLED=false  # 禁用双模型选择
-OLLAMA_ENABLED=false      # 禁用Ollama降级
+OLLAMA_ENABLED=false      # 禁用Anthropic Claude降级
 ```
 
 **影响**:
@@ -115,7 +115,7 @@ OLLAMA_ENABLED=false      # 禁用Ollama降级
 
 | 文件 | 说明 |
 |------|------|
-| `src/framework/clients/llm_client.py` | LLM客户端，支持DeepSeek/Ollama/Moonshot |
+| `src/framework/clients/llm_client.py` | LLM客户端，支持DeepSeek/Anthropic Claude/Moonshot |
 | `src/framework/clients/llm_fallback_manager.py` | LLM降级管理器 |
 | `src/framework/clients/api_pool_manager.py` | API池轮询管理器（v8.75.0新增） |
 | `src/framework/models/adaptive_model_selector.py` | 自适应模型选择器 |
