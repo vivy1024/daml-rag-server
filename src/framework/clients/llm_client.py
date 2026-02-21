@@ -256,7 +256,7 @@ async def call_deepseek(
             # HTTP错误通常不需要重试（如401、403等）
             break
 
-        except Exception as e:
+        except (json.JSONDecodeError, KeyError, ConnectionError, OSError) as e:
             last_error = e
             logger.error(
                 f"DeepSeek调用失败 (尝试{attempt + 1}): {e}\n"
@@ -375,7 +375,7 @@ async def call_ollama(
             tool_results=tool_results,
             reason=f"Ollama HTTP错误: {str(e)}"
         )
-    except Exception as e:
+    except (json.JSONDecodeError, KeyError, ConnectionError, OSError) as e:
         # 记录详细的错误上下文
         logger.error(
             f"Ollama调用失败: {e}\n"
@@ -465,7 +465,7 @@ async def call_moonshot(
 
             return result["choices"][0]["message"]["content"]
 
-    except Exception as e:
+    except (httpx.HTTPError, json.JSONDecodeError, KeyError, ConnectionError) as e:
         # 记录详细的错误上下文
         logger.error(
             f"Moonshot调用失败: {e}\n"
@@ -573,7 +573,7 @@ async def call_anthropic(
             last_error = e
             logger.error(f"Anthropic HTTP错误 (尝试{attempt + 1}): {e}", exc_info=True)
             break
-        except Exception as e:
+        except (json.JSONDecodeError, KeyError, ConnectionError, OSError) as e:
             last_error = e
             logger.error(f"Anthropic调用失败 (尝试{attempt + 1}): {e}", exc_info=True)
             break
@@ -860,10 +860,10 @@ async def call_deepseek_stream(
                 break
             continue
         
-        except Exception as e:
+        except Exception as e:  # 需要宽泛捕获：字符串匹配重试逻辑需要捕获未被httpx类型化的流式错误
             last_error = e
             error_msg = str(e)
-            
+
             # ✅ 检查是否为可重试的流式错误
             is_stream_error = (
                 "streaming response content" in error_msg.lower() or
@@ -1002,7 +1002,7 @@ async def call_anthropic_stream(
             if attempt >= LLMConfig.MAX_RETRIES:
                 break
             continue
-        except Exception as e:
+        except (json.JSONDecodeError, KeyError, ConnectionError, OSError) as e:
             last_error = e
             logger.error(f"Anthropic流式调用失败 (尝试{attempt + 1}): {e}", exc_info=True)
             break
@@ -1059,7 +1059,7 @@ async def stream_deepseek(
         ):
             yield chunk
 
-    except Exception as e:
+    except (httpx.HTTPError, json.JSONDecodeError, KeyError, ConnectionError, RuntimeError) as e:
         # 记录详细的错误上下文
         logger.error(
             f"DeepSeek流式调用失败: {e}\n"
