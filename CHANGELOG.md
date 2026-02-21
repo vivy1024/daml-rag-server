@@ -8,6 +8,6 @@
 ## #1 (chore) MVP 基线 — 2026-02-21
 
 - 从 legacy v9.88.0 冻结归档后的新起点
-- DAML-RAG 框架，含 DAG 编排、Agent 模式、18 个 MCP 工具
+- Python FastAPI + LangGraph DAML-RAG 框架，含 11 步 DAG 编排、三层检索、18 个 MCP Skills
 - 多模型蓝绿池（Anthropic → DeepSeek → Template）
 - 对应产品版本：v1.0.0
