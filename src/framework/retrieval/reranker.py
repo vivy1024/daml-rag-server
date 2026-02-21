@@ -130,31 +130,38 @@ class FitnessReranker:
     def rrf_fusion(
         result_lists: List[List[Dict]],
         k: int = 60,
-        id_field: str = 'id'
+        id_field: str = 'id',
+        weights: Optional[List[float]] = None
     ) -> List[Dict]:
         """
         RRF (Reciprocal Rank Fusion) 多路结果融合
-        
+
         Args:
             result_lists: 多个检索结果列表
             k: RRF 参数，默认 60
             id_field: 用于识别文档的字段名
-            
+            weights: 每路结果的权重列表，None 则等权（1.0）
+
         Returns:
             融合后的结果列表，按 RRF 分数降序排列
         """
         if not result_lists:
             return []
-        
-        # 计算每个文档的 RRF 分数
+
+        # 默认等权
+        if weights is None:
+            weights = [1.0] * len(result_lists)
+
+        # 计算每个文档的加权 RRF 分数
         rrf_scores = defaultdict(float)
         doc_map = {}  # 存储文档对象
-        
-        for result_list in result_lists:
+
+        for list_idx, result_list in enumerate(result_lists):
+            w = weights[list_idx] if list_idx < len(weights) else 1.0
             for rank, doc in enumerate(result_list, start=1):
                 doc_id = doc.get(id_field, id(doc))  # 使用 id 字段或对象 id
-                rrf_scores[doc_id] += 1.0 / (k + rank)
-                
+                rrf_scores[doc_id] += w * (1.0 / (k + rank))
+
                 # 保存文档对象（如果已存在则保留第一个）
                 if doc_id not in doc_map:
                     doc_map[doc_id] = doc.copy()
@@ -170,7 +177,7 @@ class FitnessReranker:
         fused_docs.sort(key=lambda x: x['rrf_score'], reverse=True)
         
         logger.info(
-            f"RRF 融合完成: {len(result_lists)} 路结果 -> {len(fused_docs)} 文档"
+            f"RRF 融合完成: {len(result_lists)} 路结果 (weights={[round(w, 2) for w in weights]}) -> {len(fused_docs)} 文档"
         )
         
         return fused_docs
