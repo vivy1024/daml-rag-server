@@ -810,7 +810,7 @@ async def diagnose_vector_search():
 
 **优化方向**：
 - 重新评估GTE-Large-zh模型是否适合健身领域
-- 考虑使用BGE-M3（多语言，效果更好）
+- 考虑使用GTE-Large-zh（多语言，效果更好）
 - 调整相似度阈值（从0.7降到0.5）
 - 增加向量检索的fallback机制
 

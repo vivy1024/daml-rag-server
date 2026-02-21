@@ -444,7 +444,7 @@ tool_config = {
 - ✅ DAG模板从10个扩展至13个（+plan_adjustment、fat_loss_program、strength_program）
 
 **v8.54.0 向量模型更换（+1分）**：
-- ✅ 从BGE-M3更换为GTE-Large-zh
+- ✅ 从GTE-Large-zh更换为GTE-Large-zh
 - ✅ 相关性从83.3%提升至94.4%
 - ✅ 搜索结果更精准
 

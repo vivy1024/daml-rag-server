@@ -15,7 +15,7 @@
 | [环境配置](./环境配置.md) | 各服务详细配置 - MySQL、Neo4j、Qdrant等 | v3.11.0 |
 
 **v3.11.0 重要更新** (2025-11-08):
-- ⚠️ 更新真实资源需求：86.3GB磁盘、CPU 1300%峰值、Ollama 8GB内存
+- ⚠️ 更新真实资源需求：86.3GB磁盘、CPU 1300%峰值、Anthropic Claude 8GB内存
 - ✅ 明确各服务的资源占用和配置要求
 - ✅ 新增Docker镜像清理和优化建议
 - ✅ 完善服务健康检查和故障排查流程
@@ -28,16 +28,16 @@
 
 ```
 💾 磁盘空间: 86.3 GB
-   ├─ Docker镜像: ~25GB (Neo4j 5.15、Ollama、BGE-M3等)
+   ├─ Docker镜像: ~25GB (Neo4j 5.15、Anthropic Claude、GTE-Large-zh等)
    ├─ 容器数据卷: ~45GB (MySQL、Neo4j图谱、Qdrant向量)
-   └─ Hugging Face缓存: ~16GB (BGE-M3、tokenizer等)
+   └─ Hugging Face缓存: ~16GB (GTE-Large-zh、tokenizer等)
 
 🧠 内存占用: 14-20 GB
-   ├─ Ollama (qwen3:8b): 8GB
+   ├─ Anthropic Claude (haiku-4.5): 8GB
    ├─ Neo4j 图谱: 1.5GB (512MB pagecache + 1GB heap)
    ├─ MySQL 8.4: 1-2GB
    ├─ Qdrant: 1-2GB
-   ├─ DAML-RAG Server AI服务 (BGE-M3): 2-3GB
+   ├─ DAML-RAG Server AI服务 (GTE-Large-zh): 2-3GB
    ├─ PHP后端: 512MB
    └─ 其他服务: 1-2GB
 
@@ -57,7 +57,7 @@
 | **网络** | 10Mbps | 100Mbps | 1Gbps |
 
 **⚠️ 警告**：
-- 低于16GB内存会导致Ollama OOM（内存溢出）
+- 低于16GB内存会导致Anthropic Claude OOM（内存溢出）
 - 低于4核CPU会导致AI推理超时
 - 磁盘不足会导致Docker无法启动容器
 
@@ -137,9 +137,9 @@ docker-compose down  # 停止服务
 | **phpMyAdmin** | 80 | 8080 | 数据库管理 | 100MB |
 | **Redis Commander** | 8081 | 8081 | Redis管理 | 50MB |
 | **Mailpit Web** | 8025 | 8026 | 邮件测试 | 50MB |
-| **Ollama** | 11434 | 11434 | 本地LLM | **8GB 内存** |
+| **Anthropic Claude** | 443 (HTTPS) | 443 (HTTPS) | 本地LLM | **8GB 内存** |
 
-**总计**：约14-20GB内存（包括Ollama）
+**总计**：约14-20GB内存（包括Anthropic Claude）
 
 ---
 
@@ -166,7 +166,7 @@ docker-compose down  # 停止服务
 ### 进阶文档
 - [代码参考](../03-代码参考/README.md) - 详细代码说明
 - [API文档](../05-API文档/README.md) - MCP工具API
-- [双模型使用指南](../04-开发指南/双模型框架使用指南.md) - DeepSeek + Ollama
+- [双模型使用指南](../04-开发指南/双模型框架使用指南.md) - DeepSeek + Anthropic Claude
 
 ---
 
@@ -193,7 +193,7 @@ docker system prune -a --volumes
 
 ```yaml
 services:
-  meta-learning-mcp:
+  fitness_daml_rag:
     deploy:
       resources:
         limits:
@@ -216,7 +216,7 @@ docker stats
 docker stats fitness_mcp_meta_learning fitness_neo4j fitness_qdrant
 
 # 查看容器日志
-docker-compose logs -f --tail=100 meta-learning-mcp
+docker-compose logs -f --tail=100 fitness_daml_rag
 ```
 
 ---
