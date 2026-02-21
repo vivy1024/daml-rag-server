@@ -220,11 +220,13 @@ def initialize_performance_components():
         _concurrency_limiter_instance = ConcurrencyLimiter()
         logger.info("✅ ConcurrencyLimiter初始化完成")
     
-    # 5. 兼容：performance_monitor 已删除，保留 get_performance_monitor() 作为 MetricsCollector 别名
+    # 5. 兼容：performance_monitor 已删除，保留 get_performance_monitor() 作为 prometheus 初始化别名
     if _performance_monitor_instance is None:
-        from ....framework.monitoring.metrics_collector import get_metrics_collector
-        _performance_monitor_instance = get_metrics_collector()
-        logger.info("✅ MetricsCollector初始化完成（兼容 get_performance_monitor）")
+        from ....framework.monitoring.prometheus_integration import initialize_prometheus_metrics
+        initialize_prometheus_metrics()
+        # 返回一个哨兵对象，表示已初始化
+        _performance_monitor_instance = True
+        logger.info("✅ Prometheus指标初始化完成（兼容 get_performance_monitor）")
     
     logger.info("🎉 所有性能优化组件初始化完成")
 

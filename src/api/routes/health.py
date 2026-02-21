@@ -34,11 +34,13 @@ from ..models import ApiResponse, HealthResponse
 
 # 导入监控模块
 from ...framework.monitoring.structured_logger import get_logger, set_trace_id
-from ...framework.monitoring.metrics_collector import get_metrics_collector
+from ...framework.monitoring.prometheus_integration import (
+    request_duration,
+    record_error,
+)
 
 logger = logging.getLogger(__name__)
 structured_logger = get_logger("health_check")
-metrics_collector = get_metrics_collector()
 
 # 安全加固：HTTPBearer认证（auto_error=False允许公开端点不需要认证）
 security = HTTPBearer(auto_error=False)
@@ -200,13 +202,7 @@ async def public_health_check():
         
         # 记录指标（不记录日志）
         try:
-            metrics_collector.get_metric("request_duration_seconds").observe(
-                processing_time,
-                labels={"endpoint": "/health", "method": "GET", "status": "200"}
-            )
-            metrics_collector.get_metric("requests_total").inc(
-                labels={"endpoint": "/health", "method": "GET", "status": "200"}
-            )
+            request_duration.labels(endpoint="/health", method="GET").observe(processing_time)
         except Exception:
             pass  # 指标收集失败不影响健康检查
 
@@ -226,9 +222,7 @@ async def public_health_check():
         
         # 记录错误指标
         try:
-            metrics_collector.get_metric("errors_total").inc(
-                labels={"error_type": "health_check_error", "component": "health_check"}
-            )
+            record_error("health_check_error", "health_check")
         except Exception:
             pass
         
@@ -296,15 +290,9 @@ async def detailed_health_check(credentials: HTTPAuthorizationCredentials = Depe
         )
 
         processing_time = asyncio.get_event_loop().time() - start_time
-        
+
         # 记录指标
-        metrics_collector.get_metric("request_duration_seconds").observe(
-            processing_time,
-            labels={"endpoint": "/health/detailed", "method": "GET", "status": "200"}
-        )
-        metrics_collector.get_metric("requests_total").inc(
-            labels={"endpoint": "/health/detailed", "method": "GET", "status": "200"}
-        )
+        request_duration.labels(endpoint="/health/detailed", method="GET").observe(processing_time)
 
         return ApiResponse.success(
             data=health_response,
@@ -319,10 +307,8 @@ async def detailed_health_check(credentials: HTTPAuthorizationCredentials = Depe
             error=str(e),
             component="health_check"
         )
-        
-        metrics_collector.get_metric("errors_total").inc(
-            labels={"error_type": "health_check_error", "component": "health_check"}
-        )
+
+        record_error("health_check_error", "health_check")
         
         return ApiResponse.error(
             code=500,
@@ -399,19 +385,17 @@ async def system_metrics(credentials: HTTPAuthorizationCredentials = Depends(sec
     
     try:
         metrics = await _get_system_metrics()
-        
-        # 添加收集的指标
+
+        # 使用 prometheus_client 获取已注册的指标摘要
+        from prometheus_client import REGISTRY
         collected_metrics = {}
-        for name, metric in metrics_collector.get_all_metrics().items():
-            snapshot = metric.get_snapshot()
-            if snapshot:
-                collected_metrics[name] = {
-                    "type": snapshot.metric_type.value,
-                    "value": snapshot.value,
-                    "timestamp": snapshot.timestamp,
-                    "labels": snapshot.labels
+        for metric in REGISTRY.collect():
+            for sample in metric.samples:
+                collected_metrics[sample.name] = {
+                    "value": sample.value,
+                    "labels": sample.labels,
                 }
-        
+
         metrics["collected_metrics"] = collected_metrics
 
         # 安全加固：过滤敏感信息
@@ -461,23 +445,11 @@ async def prometheus_metrics(credentials: HTTPAuthorizationCredentials = Depends
         )
     
     try:
-        # 导出所有Prometheus指标（包括streaming_metrics.py中定义的指标）
+        # 导出所有Prometheus指标（标准 prometheus_client 格式）
         prometheus_bytes = generate_latest()
-        prometheus_text = prometheus_bytes.decode('utf-8')
-        
-        # 同时包含metrics_collector的指标
-        try:
-            custom_metrics = metrics_collector.export_prometheus()
-            prometheus_text += "\n" + custom_metrics
-        except Exception as e:
-            structured_logger.warning(
-                "自定义指标导出失败",
-                error=str(e),
-                component="metrics"
-            )
-        
+
         return PlainTextResponse(
-            content=prometheus_text,
+            content=prometheus_bytes.decode('utf-8'),
             media_type=CONTENT_TYPE_LATEST
         )
     except HTTPException:
