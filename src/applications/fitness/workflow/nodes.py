@@ -1037,7 +1037,8 @@ async def node_retrieve_context(
         if hybrid_search_engine:
             try:
                 hybrid_results = await hybrid_search_engine.hybrid_search(
-                    query=query_text, domain=domain, top_k=10
+                    query=query_text, domain=domain, top_k=10,
+                    intent_type="HYBRID"
                 )
             except Exception as e:
                 logger.warning(f"⚠️ [{request_id}] 步骤8: 混合检索失败: {e}")
@@ -1064,13 +1065,16 @@ async def node_retrieve_context(
                 }
             })
 
-    # 路由3: semantic → HybridSearch（BM25 + 向量 + RRF）
+    # 路由3: semantic → HybridSearch（BM25 + 向量 + 加权RRF）
     if hybrid_search_engine:
         try:
+            # 传入意图类型，动态调整 BM25/向量权重
+            search_intent = intent_result.intent.value if intent_result else "SEMANTIC"
             hybrid_results = await hybrid_search_engine.hybrid_search(
                 query=query_text,
                 domain=domain,
-                top_k=10
+                top_k=10,
+                intent_type=search_intent
             )
             query_type_label = "hybrid_search"
             if intent_result and intent_result.intent == QueryIntent.SEMANTIC:

@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 混合检索引擎：向量检索 + BM25全文检索 + RRF融合
+支持按意图类型动态调整 BM25/向量权重
 """
 import asyncio
 import logging
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import aiohttp
 from .bm25_engine import get_bm25_engine
 from .reranker import FitnessReranker
@@ -13,6 +14,15 @@ from .reranker import FitnessReranker
 logger = logging.getLogger(__name__)
 
 KNOWLEDGE_ARTICLES_COLLECTION = "knowledge_articles"
+
+# ─── 意图→检索权重映射 (vector_weight, bm25_weight) ─────────────────────────
+# 健身领域关键词匹配（BM25）通常比语义相似度更精准，默认偏向 BM25
+INTENT_WEIGHTS: Dict[str, Tuple[float, float]] = {
+    "STRUCTURED": (0.2, 0.8),   # 结构化查询：强偏 BM25（关键词精确匹配）
+    "HYBRID":     (0.5, 0.5),   # 混合查询：均衡（有实体但语义也重要）
+    "SEMANTIC":   (0.3, 0.7),   # 语义查询：偏 BM25（健身领域默认）
+}
+DEFAULT_WEIGHTS: Tuple[float, float] = (0.3, 0.7)  # 默认偏向 BM25
 
 
 class HybridSearchEngine:
@@ -190,10 +200,11 @@ class HybridSearchEngine:
         vector_top_k: int = 20,
         bm25_top_k: int = 20,
         filters: Optional[Dict] = None,
-        user_id: Optional[str] = None
+        user_id: Optional[str] = None,
+        intent_type: Optional[str] = None
     ) -> List[Dict]:
         """
-        混合检索：向量 + BM25 + RRF融合
+        混合检索：向量 + BM25 + 加权RRF融合
 
         Args:
             query: 查询文本
@@ -203,12 +214,17 @@ class HybridSearchEngine:
             bm25_top_k: BM25检索召回数
             filters: 过滤条件
             user_id: 用户ID
+            intent_type: 意图类型（STRUCTURED/HYBRID/SEMANTIC），用于动态调整权重
 
         Returns:
             融合后的检索结果列表
         """
+        # 根据意图类型选择权重
+        vec_w, bm25_w = INTENT_WEIGHTS.get(intent_type, DEFAULT_WEIGHTS) if intent_type else DEFAULT_WEIGHTS
+
         logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         logger.info(f"🔍 混合检索: {query}")
+        logger.info(f"   权重: vector={vec_w}, bm25={bm25_w} (intent={intent_type or 'default'})")
         logger.info(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
         # 1. 向量检索
@@ -225,12 +241,13 @@ class HybridSearchEngine:
         logger.info("→ 执行BM25检索...")
         bm25_results = self.bm25_search(query, top_k=bm25_top_k)
 
-        # 3. RRF融合
-        logger.info("→ 执行RRF融合...")
+        # 3. 加权RRF融合
+        logger.info(f"→ 执行加权RRF融合 (vec={vec_w}, bm25={bm25_w})...")
         fused_results = FitnessReranker.rrf_fusion(
             result_lists=[vector_results, bm25_results],
             k=self.rrf_k,
-            id_field='id'
+            id_field='id',
+            weights=[vec_w, bm25_w]
         )
 
         # 4. 返回top_k
