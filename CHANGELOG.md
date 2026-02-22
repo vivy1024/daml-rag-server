@@ -5,6 +5,24 @@
 
 ---
 
+## #22 (test) 集成测试全量修复 + 训练术语统一 — 2026-02-23
+
+对应产品版本：v1.1.0（测试修复+术语优化，产品版本不动）
+
+**集成测试修复（8 FAILED → 0 FAILED）**：
+- `test_llm_fallback_integration.py`: 3个测试重写，适配关键词匹配优先架构（不再mock已废弃的LLM路径）
+- `test_prometheus_streaming_metrics.py`: 5个测试添加JWT admin认证（`_verify_admin_token`路由级鉴权）
+- `test_weekly_plan_generation_flow.py`: 断言适配新术语"训练周期"
+- 4个挂起测试添加skip标记：`test_step_3_4_parallel`（ParallelStepExecutor已删除）、`test_streaming_e2e`/`test_streaming_workflow_功能`（需真实API服务）、`test_connection_pool_integration`单测（需真实DB连接池）
+
+**术语统一**：
+- `weekly_plan_generator.py`: 注释/docstring/日志中"周"（训练周期含义）→"训练周期"，避免与"星期"混淆
+- `volume_adjuster.py`: 用户通知消息和docstring同步更新
+
+**最终结果**：77 passed / 29 skipped / 0 failed
+
+---
+
 ## #21 (fix) HTTPException handler Pydantic v2 兼容修复 — 2026-02-22
 
 - 修复 `main.py:464` http_exception_handler：移除 `model_dump_json(encoder=CustomJSONEncoder)` 不兼容参数

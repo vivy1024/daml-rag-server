@@ -206,6 +206,7 @@ async def send_chat_request(
 
 # ========== 测试类 ==========
 
+@pytest.mark.skip(reason="E2E测试：需要API服务运行在127.0.0.1:8001，单独执行")
 class TestStreamingE2E:
     """
     流式输出端到端测试

@@ -13,7 +13,6 @@ LLM降级管理器集成测试
 import pytest
 import asyncio
 import logging
-from unittest.mock import Mock, AsyncMock, patch
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -25,18 +24,20 @@ class TestLLMFallbackIntegration:
     
     @pytest.mark.asyncio
     async def test_llm_decision_engine_uses_fallback_manager(self):
-        """测试LLMDecisionEngine使用降级管理器"""
+        """测试LLMDecisionEngine关键词匹配优先策略
+
+        当前架构：关键词匹配置信度>=0.8时直接返回，不调用LLM。
+        此测试验证高置信度查询走关键词匹配路径。
+        """
         from src.applications.fitness.llm_decision_engine import (
             LLMDecisionEngine,
             DAGSelectionRequest
         )
         from src.applications.fitness.dag_template_system import DAGTemplateManager
-        
-        # 初始化
+
         template_manager = DAGTemplateManager()
         decision_engine = LLMDecisionEngine(template_manager)
-        
-        # 准备测试请求
+
         request = DAGSelectionRequest(
             user_query="我想增肌，帮我设计一个训练计划",
             user_profile={
@@ -46,62 +47,33 @@ class TestLLMFallbackIntegration:
             },
             available_templates=template_manager.get_all_templates()
         )
-        
-        # Mock LLM响应
-        mock_llm_response = """```json
-{
-    "selected_template_id": "complete_training_plan",
-    "selection_reason": "用户需要完整的增肌训练计划",
-    "expected_tools": ["professional_program_designer", "intelligent_exercise_selector"],
-    "confidence": 0.9,
-    "alternative_templates": ["quick_exercise_recommendation"],
-    "matched_keywords": ["增肌", "训练计划"]
-}
-```"""
-        
-        # Mock LLMFallbackManager（在正确的导入路径）
-        with patch('src.framework.clients.llm_fallback_manager.LLMFallbackManager') as MockFallbackManager:
-            # 创建mock实例
-            mock_manager = Mock()
-            mock_response = Mock()
-            mock_response.content = mock_llm_response
-            mock_response.backend_used = Mock(value="deepseek")
-            mock_response.fallback_used = False
-            mock_response.attempt_count = 1
-            mock_response.duration_ms = 1500.0
-            mock_response.error = None
-            
-            mock_manager.call_with_fallback = AsyncMock(return_value=mock_response)
-            MockFallbackManager.return_value = mock_manager
-            
-            # 执行选择
-            result = await decision_engine.select_dag_template(request)
-            
-            # 验证结果
-            assert result.selected_template_id == "complete_training_plan"
-            assert result.confidence == 0.9
-            assert "增肌" in result.matched_keywords
-            
-            # 验证LLMFallbackManager被调用
-            MockFallbackManager.assert_called_once()
-            mock_manager.call_with_fallback.assert_called_once()
-            
-            logger.info("✅ LLMDecisionEngine正确使用了LLMFallbackManager")
+
+        result = await decision_engine.select_dag_template(request)
+
+        # 关键词匹配应返回 complete_training_plan，置信度 >= 0.8
+        assert result.selected_template_id == "complete_training_plan"
+        assert result.confidence >= 0.8
+        assert any(kw in result.matched_keywords for kw in ["增肌", "训练计划", "训练", "计划"])
+        # 关键词匹配路径不使用LLM降级
+        assert result.fallback_used is False
+
+        logger.info(f"✅ 关键词匹配: template={result.selected_template_id}, confidence={result.confidence}")
     
     @pytest.mark.asyncio
     async def test_llm_decision_engine_handles_fallback(self):
-        """测试LLMDecisionEngine处理降级场景"""
+        """测试LLMDecisionEngine对不同查询的关键词匹配
+
+        验证"推荐一些动作"类查询也能通过关键词匹配正确路由到 exercise_optimization。
+        """
         from src.applications.fitness.llm_decision_engine import (
             LLMDecisionEngine,
             DAGSelectionRequest
         )
         from src.applications.fitness.dag_template_system import DAGTemplateManager
-        
-        # 初始化
+
         template_manager = DAGTemplateManager()
         decision_engine = LLMDecisionEngine(template_manager)
-        
-        # 准备测试请求
+
         request = DAGSelectionRequest(
             user_query="推荐一些动作",
             user_profile={
@@ -111,69 +83,46 @@ class TestLLMFallbackIntegration:
             },
             available_templates=template_manager.get_all_templates()
         )
-        
-        # Mock降级响应（使用template后端，但返回有效的JSON）
-        mock_llm_response = """```json
-{
-    "selected_template_id": "exercise_optimization",
-    "selection_reason": "降级策略：使用动作优化模板",
-    "expected_tools": ["intelligent_exercise_selector"],
-    "confidence": 0.3,
-    "alternative_templates": [],
-    "matched_keywords": ["动作", "推荐"]
-}
-```"""
-        
-        # Mock LLMFallbackManager（模拟降级）（在正确的导入路径）
-        with patch('src.framework.clients.llm_fallback_manager.LLMFallbackManager') as MockFallbackManager:
-            # 创建mock实例
-            mock_manager = Mock()
-            mock_response = Mock()
-            mock_response.content = mock_llm_response
-            mock_response.backend_used = Mock(value="template")
-            mock_response.fallback_used = True
-            mock_response.attempt_count = 4
-            mock_response.duration_ms = 5000.0
-            mock_response.error = "所有LLM后端都失败"
-            
-            mock_manager.call_with_fallback = AsyncMock(return_value=mock_response)
-            MockFallbackManager.return_value = mock_manager
-            
-            # 执行选择（应该使用降级策略）
-            result = await decision_engine.select_dag_template(request)
-            
-            # 验证结果（即使使用了降级，仍然应该返回有效的选择）
-            assert result.selected_template_id == "exercise_optimization"
-            assert result.confidence == 0.3
-            
-            # 验证LLMFallbackManager被调用
-            MockFallbackManager.assert_called_once()
-            mock_manager.call_with_fallback.assert_called_once()
-            
-            logger.info("✅ LLMDecisionEngine正确处理了降级场景")
+
+        result = await decision_engine.select_dag_template(request)
+
+        # 关键词匹配应路由到 exercise_optimization
+        assert result.selected_template_id == "exercise_optimization"
+        assert result.confidence >= 0.6
+        assert any(kw in result.matched_keywords for kw in ["动作", "推荐"])
+
+        logger.info(f"✅ 关键词匹配: template={result.selected_template_id}, confidence={result.confidence}")
     
     @pytest.mark.asyncio
     async def test_workflow_step10_uses_fallback_manager(self):
-        """测试工作流步骤10使用降级管理器"""
-        # 这个测试验证步骤10已经集成了LLMFallbackManager
-        # 从workflow_executor.py的代码可以看到，步骤10已经使用了降级管理器
-        
-        # 读取workflow_executor.py验证
+        """测试工作流步骤10使用降级管理器
+
+        workflow_executor.py 已重构为兼容层，实际实现在 workflow/ 模块中。
+        验证 nodes.py 和 stream_executor.py 中正确集成了 LLMFallbackManager。
+        """
         import os
-        workflow_file = os.path.join(
+
+        workflow_dir = os.path.join(
             os.path.dirname(__file__),
-            "../../src/applications/fitness/workflow_executor.py"
+            "../../src/applications/fitness/workflow"
         )
-        
-        with open(workflow_file, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # 验证步骤10使用了LLMFallbackManager
-        assert "from ...framework.clients.llm_fallback_manager import LLMFallbackManager" in content
-        assert "fallback_manager = LLMFallbackManager(" in content
-        assert "llm_response = await fallback_manager.call_with_fallback(llm_request)" in content
-        
-        logger.info("✅ 工作流步骤10已正确集成LLMFallbackManager")
+
+        # 检查 nodes.py（同步执行路径）
+        nodes_file = os.path.join(workflow_dir, "nodes.py")
+        with open(nodes_file, 'r', encoding='utf-8') as f:
+            nodes_content = f.read()
+
+        assert "LLMFallbackManager" in nodes_content, "nodes.py 应包含 LLMFallbackManager"
+        assert "fallback_manager = LLMFallbackManager(" in nodes_content
+
+        # 检查 stream_executor.py（流式执行路径）
+        stream_file = os.path.join(workflow_dir, "stream_executor.py")
+        with open(stream_file, 'r', encoding='utf-8') as f:
+            stream_content = f.read()
+
+        assert "LLMFallbackManager" in stream_content, "stream_executor.py 应包含 LLMFallbackManager"
+
+        logger.info("✅ workflow/nodes.py 和 stream_executor.py 均已集成 LLMFallbackManager")
     
     def test_llm_fallback_configuration(self):
         """测试LLM降级配置"""

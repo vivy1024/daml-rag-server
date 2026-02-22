@@ -2,14 +2,14 @@
 """
 Weekly Plan Generator Service
 
-分周动态计划生成服务，实现分周输出训练计划。
+分训练周期动态计划生成服务，实现分训练周期输出训练计划。
 核心功能：
-- 只输出第1周完整计划
-- 基于用户反馈生成下周计划
+- 只输出第1训练周期完整计划
+- 基于用户反馈生成下一训练周期计划
 - 应用个性化容量系数
 - 生成周期说明文案
 
-Requirements: 10.1, 10.2, 10.3, 10.4 - 分周动态生成
+Requirements: 10.1, 10.2, 10.3, 10.4 - 分训练周期动态生成
 
 作者: BUILD_BODY Team
 版本: 1.0.0
@@ -27,14 +27,14 @@ logger = logging.getLogger(__name__)
 
 class PeriodizationPhase(str, Enum):
     """周期化阶段"""
-    ACCUMULATION = "accumulation"  # 积累期（第1-2周）
-    INTENSIFICATION = "intensification"  # 冲刺期（第3周）
-    DELOAD = "deload"  # 减量期（第4周）
+    ACCUMULATION = "accumulation"  # 积累期（第1-2训练周期）
+    INTENSIFICATION = "intensification"  # 冲刺期（第3训练周期）
+    DELOAD = "deload"  # 减量期（第4训练周期）
 
 
 @dataclass
 class WeeklyPlanMetadata:
-    """周计划元数据"""
+    """训练周期计划元数据"""
     week_number: int
     total_weeks: int
     phase: PeriodizationPhase
@@ -48,7 +48,7 @@ class WeeklyPlanMetadata:
 
 @dataclass
 class WeeklyPlanExercise:
-    """周计划中的动作"""
+    """训练周期计划中的动作"""
     exercise_id: str
     name_zh: str
     name_en: str
@@ -63,7 +63,7 @@ class WeeklyPlanExercise:
 
 @dataclass
 class WeeklyPlanDay:
-    """周计划中的训练日"""
+    """训练周期计划中的训练日"""
     day_number: int
     day_name: str
     focus_muscle_groups: List[str]
@@ -76,7 +76,7 @@ class WeeklyPlanDay:
 
 @dataclass
 class WeeklyPlan:
-    """周训练计划"""
+    """训练周期计划"""
     metadata: WeeklyPlanMetadata
     training_days: List[WeeklyPlanDay]
     rest_days: List[int]
@@ -87,16 +87,16 @@ class WeeklyPlan:
 
 class WeeklyPlanGenerator:
     """
-    分周动态计划生成服务
-    
+    分训练周期动态计划生成服务
+
     核心功能：
-    - generate_first_week: 生成第1周计划
-    - generate_next_week: 基于反馈生成下周计划
+    - generate_first_week: 生成第1训练周期计划
+    - generate_next_week: 基于反馈生成下一训练周期计划
     - apply_volume_multiplier: 应用个性化容量系数
-    - insert_deload_week: 生成Deload周计划
+    - insert_deload_week: 生成Deload训练周期计划
     - apply_progressive_overload: 应用渐进过载计算
-    
-    Requirements: 10.1, 10.2, 10.3, 10.4 - 分周动态生成
+
+    Requirements: 10.1, 10.2, 10.3, 10.4 - 分训练周期动态生成
     Requirements: 8.1, 8.2, 8.3, 8.4 - 渐进过载自动化
     """
     
@@ -181,7 +181,7 @@ class WeeklyPlanGenerator:
         progressive_overload_calculator=None
     ):
         """
-        初始化分周计划生成器
+        初始化分训练周期计划生成器
         
         Args:
             training_log_analyzer: 训练日志分析器（可选）
@@ -226,23 +226,23 @@ class WeeklyPlanGenerator:
         total_weeks: int = 4
     ) -> WeeklyPlan:
         """
-        生成第1周计划
-        
-        从完整的多周计划中提取第1周，并添加周期说明文案。
-        
+        生成第1训练周期计划
+
+        从完整的多训练周期计划中提取第1训练周期，并添加周期说明文案。
+
         Args:
             full_program: 完整的训练计划（来自professional_program_designer）
             user_profile: 用户档案（可选）
-            total_weeks: 总周数，默认4周
-            
+            total_weeks: 总训练周期数，默认4个训练周期
+
         Returns:
-            WeeklyPlan: 第1周训练计划
-            
-        Requirements: 10.1 - 只输出第1周完整计划
+            WeeklyPlan: 第1训练周期计划
+
+        Requirements: 10.1 - 只输出第1训练周期完整计划
         """
-        logger.info(f"生成第1周计划: total_weeks={total_weeks}")
-        
-        # 获取第1周的阶段配置
+        logger.info(f"生成第1训练周期计划: total_weeks={total_weeks}")
+
+        # 获取第1训练周期的阶段配置
         phase_config = self.PHASE_CONFIG[1]
         
         # 获取个性化容量系数（使用辅助方法）
@@ -261,7 +261,7 @@ class WeeklyPlanGenerator:
             generated_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
         
-        # 提取第1周的训练日
+        # 提取第1训练周期的训练日
         training_days = self._extract_week_training_days(
             full_program,
             week_number=1,
@@ -284,7 +284,7 @@ class WeeklyPlanGenerator:
             is_first_week=True
         )
         
-        # 生成下周预览
+        # 生成下一训练周期预览
         next_week_preview = self._generate_next_week_preview(
             current_week=1,
             total_weeks=total_weeks
@@ -300,7 +300,7 @@ class WeeklyPlanGenerator:
         )
         
         logger.info(
-            f"第1周计划生成完成: "
+            f"第1训练周期计划生成完成: "
             f"training_days={len(training_days)}, "
             f"total_sets={total_weekly_sets}, "
             f"phase={phase_config['name_zh']}"
@@ -318,25 +318,25 @@ class WeeklyPlanGenerator:
         user_profile: Optional[Dict[str, Any]] = None
     ) -> WeeklyPlan:
         """
-        基于反馈生成下周计划
-        
-        分析上周的训练反馈，动态调整下周计划。
-        
+        基于反馈生成下一训练周期计划
+
+        分析上一训练周期的训练反馈，动态调整下一训练周期计划。
+
         Args:
             user_id: 用户ID
-            current_week: 当前周数（即将生成的周）
-            total_weeks: 总周数
-            last_week_feedback: 上周训练反馈
+            current_week: 当前训练周期数（即将生成的训练周期）
+            total_weeks: 总训练周期数
+            last_week_feedback: 上一训练周期训练反馈
             base_program: 基础训练计划
             user_profile: 用户档案（可选）
-            
+
         Returns:
-            WeeklyPlan: 下周训练计划
-            
+            WeeklyPlan: 下一训练周期训练计划
+
         Requirements: 10.3, 10.4 - 基于反馈动态调整
         """
         logger.info(
-            f"生成第{current_week}周计划: "
+            f"生成第{current_week}训练周期计划: "
             f"user_id={user_id}, total_weeks={total_weeks}"
         )
         
@@ -344,7 +344,7 @@ class WeeklyPlanGenerator:
         cycle_week = ((current_week - 1) % 4) + 1
         phase_config = self.PHASE_CONFIG[cycle_week]
         
-        # 分析上周反馈
+        # 分析上一训练周期反馈
         completion_rate = last_week_feedback.get('completion_rate', 0.0)
         avg_rpe = last_week_feedback.get('avg_rpe', 7.0)
         
@@ -419,7 +419,7 @@ class WeeklyPlanGenerator:
             is_deload=is_deload_week
         )
         
-        # 生成下周预览
+        # 生成下一训练周期预览
         next_week_preview = self._generate_next_week_preview(
             current_week=current_week,
             total_weeks=total_weeks
@@ -435,7 +435,7 @@ class WeeklyPlanGenerator:
         )
         
         logger.info(
-            f"第{current_week}周计划生成完成: "
+            f"第{current_week}训练周期计划生成完成: "
             f"training_days={len(training_days)}, "
             f"total_sets={total_weekly_sets}, "
             f"phase={metadata.phase_name_zh}, "
@@ -497,26 +497,26 @@ class WeeklyPlanGenerator:
         user_profile: Optional[Dict[str, Any]] = None
     ) -> WeeklyPlan:
         """
-        生成Deload周计划
-        
+        生成Deload训练周期计划
+
         Args:
             base_program: 基础训练计划
-            week_number: 周数
-            total_weeks: 总周数
+            week_number: 训练周期数
+            total_weeks: 总训练周期数
             user_profile: 用户档案（可选）
-            
+
         Returns:
-            WeeklyPlan: Deload周训练计划
+            WeeklyPlan: Deload训练周期计划
         """
-        logger.info(f"生成Deload周计划: week_number={week_number}")
-        
-        # Deload周配置
-        phase_config = self.PHASE_CONFIG[4]  # 使用第4周（减量期）配置
+        logger.info(f"生成Deload训练周期计划: week_number={week_number}")
+
+        # Deload训练周期配置
+        phase_config = self.PHASE_CONFIG[4]  # 使用第4训练周期（减量期）配置
         
         # 获取基础容量系数（使用辅助方法）
         base_multiplier = self._get_volume_multiplier(user_profile)
         
-        # Deload周容量系数（60%）
+        # Deload训练周期容量系数（60%）
         volume_multiplier = base_multiplier * 0.6
         
         # 创建元数据
@@ -547,7 +547,7 @@ class WeeklyPlanGenerator:
         # 计算总训练量
         total_weekly_sets = sum(day.total_sets for day in training_days)
         
-        # 生成Deload周说明
+        # 生成Deload训练周期说明
         cycle_explanation = self.CYCLE_EXPLANATION_TEMPLATES["deload_week"].format(
             total_weeks=total_weeks,
             week_number=week_number
@@ -563,7 +563,7 @@ class WeeklyPlanGenerator:
         )
         
         logger.info(
-            f"Deload周计划生成完成: "
+            f"Deload训练周期计划生成完成: "
             f"training_days={len(training_days)}, "
             f"total_sets={total_weekly_sets}"
         )
@@ -578,28 +578,28 @@ class WeeklyPlanGenerator:
         is_deload: bool = False
     ) -> List[WeeklyPlanDay]:
         """
-        从完整计划中提取指定周的训练日
-        
+        从完整计划中提取指定训练周期的训练日
+
         Args:
             full_program: 完整训练计划
-            week_number: 周数
+            week_number: 训练周期数
             volume_multiplier: 容量系数
-            is_deload: 是否为Deload周
-            
+            is_deload: 是否为Deload训练周期
+
         Returns:
             List[WeeklyPlanDay]: 训练日列表
         """
         training_days = []
-        
-        # 尝试从weekly_programs中获取指定周
+
+        # 尝试从weekly_programs中获取指定训练周期
         weekly_programs = full_program.get("weekly_programs", [])
         weekly_program = full_program.get("weekly_program", {})
         
-        # 如果有多周计划，获取指定周
+        # 如果有多训练周期计划，获取指定训练周期
         if weekly_programs and len(weekly_programs) >= week_number:
             source_program = weekly_programs[week_number - 1]
         else:
-            # 否则使用第一周作为模板
+            # 否则使用第一个训练周期作为模板
             source_program = weekly_program if weekly_program else full_program
         
         source_days = source_program.get("training_days", [])
@@ -613,7 +613,7 @@ class WeeklyPlanGenerator:
                 original_sets = ex_data.get("sets", 3)
                 adjusted_sets = max(1, int(original_sets * volume_multiplier))
                 
-                # 如果是Deload周，进一步减少组数
+                # 如果是Deload训练周期，进一步减少组数
                 if is_deload:
                     adjusted_sets = max(1, adjusted_sets // 2)
                 
@@ -675,7 +675,7 @@ class WeeklyPlanGenerator:
         
         total_minutes += 10  # 放松时间
         
-        # Deload周时间减半
+        # Deload训练周期时间减半
         if is_deload:
             total_minutes = max(30, total_minutes * 0.6)
         
@@ -727,29 +727,29 @@ class WeeklyPlanGenerator:
         """
         判断是否需要强制Deload
         
-        Requirements: 9.2 - 连续2周RPE>9或完成率<85%时提示Deload
+        Requirements: 9.2 - 连续2个训练周期RPE>9或完成率<85%时提示Deload
         """
-        # 检查当前周指标
+        # 检查当前训练周期指标
         current_week_needs_deload = avg_rpe > 9.0 or completion_rate < 0.85
-        
-        # 检查是否连续两周
+
+        # 检查是否连续两个训练周期
         previous_week_rpe = last_week_feedback.get('previous_avg_rpe', 7.0)
         previous_week_completion = last_week_feedback.get('previous_completion_rate', 0.9)
         previous_week_needs_deload = previous_week_rpe > 9.0 or previous_week_completion < 0.85
-        
-        # 连续两周需要Deload
+
+        # 连续两个训练周期需要Deload
         if current_week_needs_deload and previous_week_needs_deload:
             logger.warning(
-                f"检测到连续两周疲劳累积: "
+                f"检测到连续两个训练周期疲劳累积: "
                 f"current_rpe={avg_rpe:.1f}, current_completion={completion_rate:.0%}, "
                 f"previous_rpe={previous_week_rpe:.1f}, previous_completion={previous_week_completion:.0%}"
             )
             return True
-        
-        # 单周极端情况
+
+        # 单个训练周期极端情况
         if avg_rpe > 9.5 and completion_rate < 0.80:
             logger.warning(
-                f"检测到单周极端疲劳: "
+                f"检测到单个训练周期极端疲劳: "
                 f"rpe={avg_rpe:.1f}, completion={completion_rate:.0%}"
             )
             return True
@@ -840,7 +840,7 @@ class WeeklyPlanGenerator:
         将WeeklyPlan转换为输出格式
         
         Args:
-            weekly_plan: 周训练计划
+            weekly_plan: 训练周期计划
             
         Returns:
             Dict: 输出格式的训练计划
@@ -908,20 +908,20 @@ class WeeklyPlanGenerator:
         user_profile: Optional[Dict[str, Any]] = None
     ) -> WeeklyPlan:
         """
-        应用渐进过载计算到周计划
-        
-        为每个动作计算下周建议重量，并添加重量变化标注。
-        
+        应用渐进过载计算到训练周期计划
+
+        为每个动作计算下一训练周期建议重量，并添加重量变化标注。
+
         Args:
-            weekly_plan: 周训练计划
+            weekly_plan: 训练周期计划
             user_id: 用户ID
-            last_week_weights: 上周各动作使用的重量 {exercise_id: weight}
-            last_week_completion: 上周各动作是否完成所有目标次数 {exercise_id: bool}
+            last_week_weights: 上一训练周期各动作使用的重量 {exercise_id: weight}
+            last_week_completion: 上一训练周期各动作是否完成所有目标次数 {exercise_id: bool}
             user_profile: 用户档案（可选）
-            
+
         Returns:
-            WeeklyPlan: 应用渐进过载后的周计划
-            
+            WeeklyPlan: 应用渐进过载后的训练周期计划
+
         Requirements: 8.1, 8.2, 8.3, 8.4 - 渐进过载自动化
         """
         if not self.progressive_overload_calculator:
@@ -939,12 +939,12 @@ class WeeklyPlanGenerator:
             for exercise in day.exercises:
                 exercise_id = exercise.exercise_id
                 
-                # 获取上周数据
+                # 获取上一训练周期数据
                 last_weight = last_week_weights.get(exercise_id, 0.0)
                 completed_all_reps = last_week_completion.get(exercise_id, True)
                 
                 if last_weight <= 0:
-                    # 没有上周数据，跳过
+                    # 没有上一训练周期数据，跳过
                     continue
                 
                 # 计算渐进过载
@@ -977,7 +977,7 @@ class WeeklyPlanGenerator:
                 if result.mav_warning:
                     day.notes.append(result.mav_message)
         
-        # 如果有小片建议，添加到周计划说明中
+        # 如果有小片建议，添加到训练周期计划说明中
         if micro_plate_suggestions:
             micro_plate_note = "\n\n💡 **小片购买建议**：\n"
             micro_plate_note += "以下孤立动作建议使用1.25kg小片实现更精细的渐进过载：\n"
@@ -1004,7 +1004,7 @@ class WeeklyPlanGenerator:
         
         Args:
             exercises: 动作列表
-            last_week_weights: 上周各动作使用的重量
+            last_week_weights: 上一训练周期各动作使用的重量
             
         Returns:
             Dict[str, str]: {exercise_id: annotation}

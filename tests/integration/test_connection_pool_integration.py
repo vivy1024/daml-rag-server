@@ -150,6 +150,7 @@ async def test_connection_pool_stats():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(reason="E2E测试：需要真实数据库连接池初始化+三层检索，单独执行")
 async def test_three_layer_engine_with_connection_pool():
     """测试三层检索引擎使用连接池"""
     from src.applications.fitness.workflow_executor import get_connection_pool_manager

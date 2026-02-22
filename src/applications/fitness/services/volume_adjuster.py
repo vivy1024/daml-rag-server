@@ -129,7 +129,7 @@ class VolumeAdjuster:
             
         Requirements: 7.1 - 分析中周期训练表现
         """
-        # 限制周数在4-6周范围内
+        # 限制训练周期数在4-6个训练周期范围内
         mesocycle_weeks = max(4, min(6, mesocycle_weeks))
         
         analysis = await self.training_log_analyzer.analyze_mesocycle(
@@ -270,57 +270,57 @@ class VolumeAdjuster:
         previous_week_completion: Optional[float] = None
     ) -> Tuple[bool, Optional[str]]:
         """
-        判断是否应该建议Deload周
-        
+        判断是否应该建议Deload训练周期
+
         触发条件（Requirements 9.2）：
-        - 连续2周RPE > 9
-        - 连续2周完成率 < 85%
-        - RPE > 9.5 且 完成率 < 85%（单周严重情况）
-        
+        - 连续2个训练周期RPE > 9
+        - 连续2个训练周期完成率 < 85%
+        - RPE > 9.5 且 完成率 < 85%（单个训练周期严重情况）
+
         Args:
-            avg_rpe: 当前周平均RPE值
-            avg_completion_rate: 当前周平均完成率
-            consecutive_high_rpe_weeks: 连续高RPE周数
-            consecutive_low_completion_weeks: 连续低完成率周数
-            previous_week_rpe: 上周平均RPE（用于连续周检测）
-            previous_week_completion: 上周平均完成率（用于连续周检测）
-            
+            avg_rpe: 当前训练周期平均RPE值
+            avg_completion_rate: 当前训练周期平均完成率
+            consecutive_high_rpe_weeks: 连续高RPE训练周期数
+            consecutive_low_completion_weeks: 连续低完成率训练周期数
+            previous_week_rpe: 上一训练周期平均RPE（用于连续检测）
+            previous_week_completion: 上一训练周期平均完成率（用于连续检测）
+
         Returns:
             Tuple[bool, Optional[str]]: (是否建议Deload, 原因)
-            
-        Requirements: 9.1, 9.2, 9.3 - Deload周提示
+
+        Requirements: 9.1, 9.2, 9.3 - Deload训练周期提示
         """
         reasons = []
         
         # 检查连续高RPE（Requirements 9.2）
-        # 方式1：通过传入的连续周数
+        # 方式1：通过传入的连续训练周期数
         if consecutive_high_rpe_weeks >= self.CONSECUTIVE_WEEKS_FOR_DELOAD:
-            reasons.append(f"连续{consecutive_high_rpe_weeks}周RPE过高(>9)")
-        
-        # 方式2：通过上周数据检测连续两周
+            reasons.append(f"连续{consecutive_high_rpe_weeks}个训练周期RPE过高(>9)")
+
+        # 方式2：通过上一训练周期数据检测连续两个训练周期
         if previous_week_rpe is not None:
             current_week_high_rpe = avg_rpe > self.DELOAD_RPE_THRESHOLD
             previous_week_high_rpe = previous_week_rpe > self.DELOAD_RPE_THRESHOLD
             if current_week_high_rpe and previous_week_high_rpe:
-                reasons.append(f"连续2周RPE过高（本周{avg_rpe:.1f}，上周{previous_week_rpe:.1f}，阈值>9）")
-        
+                reasons.append(f"连续2个训练周期RPE过高（本训练周期{avg_rpe:.1f}，上一训练周期{previous_week_rpe:.1f}，阈值>9）")
+
         # 检查连续低完成率（Requirements 9.2）
-        # 方式1：通过传入的连续周数
+        # 方式1：通过传入的连续训练周期数
         if consecutive_low_completion_weeks >= self.CONSECUTIVE_WEEKS_FOR_DELOAD:
-            reasons.append(f"连续{consecutive_low_completion_weeks}周完成率过低(<85%)")
-        
-        # 方式2：通过上周数据检测连续两周
+            reasons.append(f"连续{consecutive_low_completion_weeks}个训练周期完成率过低(<85%)")
+
+        # 方式2：通过上一训练周期数据检测连续两个训练周期
         if previous_week_completion is not None:
             current_week_low_completion = avg_completion_rate < self.DELOAD_COMPLETION_THRESHOLD
             previous_week_low_completion = previous_week_completion < self.DELOAD_COMPLETION_THRESHOLD
             if current_week_low_completion and previous_week_low_completion:
                 reasons.append(
-                    f"连续2周完成率过低（本周{avg_completion_rate:.0%}，上周{previous_week_completion:.0%}，阈值<85%）"
+                    f"连续2个训练周期完成率过低（本训练周期{avg_completion_rate:.0%}，上一训练周期{previous_week_completion:.0%}，阈值<85%）"
                 )
-        
-        # 检查当前周期的严重情况（单周极端情况）
+
+        # 检查当前训练周期的严重情况（单个训练周期极端情况）
         if avg_rpe > self.HIGH_RPE_THRESHOLD and avg_completion_rate < self.DELOAD_COMPLETION_THRESHOLD:
-            reasons.append(f"单周极端疲劳：RPE过高({avg_rpe:.1f}>9.5)且完成率过低({avg_completion_rate:.0%}<85%)")
+            reasons.append(f"单个训练周期极端疲劳：RPE过高({avg_rpe:.1f}>9.5)且完成率过低({avg_completion_rate:.0%}<85%)")
         
         # 检查单项严重超标
         if avg_rpe > 9.5:
@@ -338,7 +338,7 @@ class VolumeAdjuster:
         
         if should_deload:
             logger.info(
-                f"建议进入Deload周: reasons={deload_reason}",
+                f"建议进入Deload训练周期: reasons={deload_reason}",
                 extra={
                     'avg_rpe': avg_rpe,
                     'avg_completion_rate': avg_completion_rate,
@@ -366,19 +366,19 @@ class VolumeAdjuster:
         复用现有PeriodizationModel的Deload阶段配置，生成完整的Deload建议。
         
         Args:
-            avg_rpe: 当前周平均RPE值
-            avg_completion_rate: 当前周平均完成率
-            consecutive_high_rpe_weeks: 连续高RPE周数
-            consecutive_low_completion_weeks: 连续低完成率周数
-            previous_week_rpe: 上周平均RPE
-            previous_week_completion: 上周平均完成率
-            current_week_number: 当前周数
-            total_weeks: 总周数
+            avg_rpe: 当前训练周期平均RPE值
+            avg_completion_rate: 当前训练周期平均完成率
+            consecutive_high_rpe_weeks: 连续高RPE训练周期数
+            consecutive_low_completion_weeks: 连续低完成率训练周期数
+            previous_week_rpe: 上一训练周期平均RPE
+            previous_week_completion: 上一训练周期平均完成率
+            current_week_number: 当前训练周期数
+            total_weeks: 总训练周期数
             
         Returns:
             Dict[str, Any]: Deload建议详情
             
-        Requirements: 9.1, 9.2, 9.3 - Deload周提示和通知
+        Requirements: 9.1, 9.2, 9.3 - Deload训练周期提示和通知
         """
         should_deload, deload_reason = self.should_suggest_deload(
             avg_rpe=avg_rpe,
@@ -440,7 +440,7 @@ class VolumeAdjuster:
         avg_completion_rate: float
     ) -> str:
         """
-        生成Deload周通知消息
+        生成Deload训练周期通知消息
         
         Requirements: 9.3 - 进入Deload阶段时，通知用户并解释原因
         
@@ -454,7 +454,7 @@ class VolumeAdjuster:
         Returns:
             str: 通知消息
         """
-        message = f"""🔄 **建议进入减量恢复周**
+        message = f"""🔄 **建议进入减量恢复训练周期**
 
 📊 **检测到的问题**：
 {deload_reason}
@@ -462,25 +462,25 @@ class VolumeAdjuster:
 📈 **当前训练指标**：
 - 平均RPE: {avg_rpe:.1f}/10
 - 完成率: {avg_completion_rate:.0%}
-- 当前周期: 第{current_week_number}周/{total_weeks}周
+- 当前进度: 第{current_week_number}训练周期/{total_weeks}个训练周期
 
-💡 **减量周说明**：
-减量周（Deload）是周期化训练的重要组成部分，目的是：
+💡 **减量训练周期说明**：
+减量训练周期（Deload）是周期化训练的重要组成部分，目的是：
 1. 消除累积的疲劳
 2. 促进肌肉和神经系统恢复
 3. 为下一个训练周期做准备
 
-📋 **减量周调整**：
+📋 **减量训练周期调整**：
 - 训练容量降至60%（组数减半）
 - 训练强度降至80%（重量适当降低）
 - 保持训练频率不变
 
 ⚠️ **注意事项**：
-- 减量周不是休息周，仍需保持训练
+- 减量训练周期不是休息，仍需保持训练
 - 专注于动作质量和技术细节
 - 充分休息和营养补充
 
-完成减量周后，您将以更好的状态进入下一个训练周期！"""
+完成减量训练周期后，您将以更好的状态进入下一个训练周期！"""
         
         return message
 
