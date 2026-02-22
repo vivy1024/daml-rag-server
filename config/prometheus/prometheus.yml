@@ -27,3 +27,11 @@ scrape_configs:
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+
+  # Laravel 后端监控
+  - job_name: 'laravel'
+    static_configs:
+      - targets: ['fitness_nginx_v2:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
