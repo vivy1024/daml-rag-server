@@ -170,11 +170,7 @@ async def _trigger_step3_preload(
     """
     if not user_id:
         return
-    
-    # 根据feature flag选择新旧预加载器
-    import os
-    use_new_cache = os.getenv('USE_NEW_CACHE', 'false').lower() in ('true', '1', 'yes')
-    
+
     # 尝试获取预热器（如果未传入）
     if smart_preloader is None:
         try:
@@ -396,14 +392,10 @@ async def _record_preload_cache_hit(
     Requirements:
         - 3.3: WHEN step 3 executes, THE Membership_Cache SHALL find data already in cache
     """
-    # 根据feature flag选择新旧预加载器
-    import os
-    use_new_cache = os.getenv('USE_NEW_CACHE', 'false').lower() in ('true', '1', 'yes')
-    
     # 尝试获取预热器（如果未传入）
     if smart_preloader is None:
         try:
-            # 新预热系统暂时没有record_cache_hit方法，跳过追踪
+            # 预热系统暂时没有record_cache_hit方法，跳过追踪
             logger.debug(
                 f"📊 [{request_id}] 步骤3预热效果追踪（暂不支持）: user_id={user_id}"
             )

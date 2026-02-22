@@ -5,6 +5,49 @@
 
 ---
 
+## #27 (chore) 死代码清理 — _use_new_cache feature flag 退役 — 2026-02-23
+
+对应产品版本：v1.1.0（内部清理，产品版本不动）
+
+- 删除 `singletons.py` 中 `_use_new_cache()` 函数（硬编码 return True）
+- 清理 `user.py`/`main.py`/`nodes.py` 中 4 处 feature flag 条件分支，内联 True 分支
+- 删除 4 个死脚本：`checkpoint_phase2_verification.py`/`test_cache_integration.py`/`test_new_cache_enabled.py`/根目录 `test_cache_integration.py`
+- 删除 3 个 `.bak` 归档文件 + 2 个空脚本
+- 修复 `main.py` 重复 logger.info 行
+- 验证：860 passed / 6 skipped / 0 failed
+
+---
+
+## #26 (refactor) professional_program_designer.py Mixin 拆分 — 2026-02-23
+
+对应产品版本：v1.1.0（内部重构，产品版本不动）
+
+- 2028 行 → 5 文件 Mixin 拆分（`program_designer/` 子包）
+- `models.py`：枚举 + Pydantic schemas（~150 行）
+- `volume_mixin.py`：训练量计算 + 周期化 + 减量日（~230 行）
+- `program_generator_mixin.py`：周计划生成 + 训练日创建 + 热身/放松（~310 行）
+- `program_analysis_mixin.py`：平衡分析 + 安全评估 + 执行建议（~280 行）
+- 主文件保留 execute() + 训练周期 + 肌群数据 + 动作选择（~480 行）
+- Re-export 所有模型类，API 完全向后兼容
+
+---
+
+## #25 (refactor) backend_client.py Mixin 拆分 — 2026-02-23
+
+对应产品版本：v1.1.0（内部重构，产品版本不动）
+
+- 2240 行 → 7 文件 Mixin 拆分（`clients/` 子包）
+- `models.py`：数据模型 + 枚举 + 异常类
+- `base_client.py`：BackendConfig + HTTP 核心基础设施
+- `user_client.py`：用户档案 API（UserMixin）
+- `credit_client.py`：会员权限 + 用量统计 API（CreditMixin）
+- `chat_client.py`：对话记录 API（ChatMixin）
+- `health_client.py`：健康检查 + 训练数据 API（HealthMixin）
+- 修复 `BackendConnectionError` → `BackendAPIError`（原 line 1715 不存在的异常类）
+- 验证：860 passed / 6 skipped / 0 failed
+
+---
+
 ## #24 (refactor) LLM 客户端迁移到 DI 容器 — 2026-02-23
 
 对应产品版本：v1.1.0（内部重构，产品版本不动）

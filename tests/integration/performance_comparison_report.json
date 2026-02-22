@@ -1,5 +1,5 @@
 {
-  "test_date": "2026-01-12T16:31:36.008842",
+  "test_date": "2026-02-23T05:24:04.900134",
   "baseline_performance": {
     "training_plan": 81.3,
     "user_profile": 129.9,
@@ -16,58 +16,40 @@
       "scenario": "训练计划生成",
       "query": "我想制定一个增肌训练计划，每周训练4次",
       "baseline": 81.3,
-      "current": 9.357808113098145,
-      "improvement": 71.94219188690185,
-      "improvement_percent": 88.48978091869847,
+      "current": 12.198889255523682,
+      "improvement": 69.10111074447632,
+      "improvement_percent": 84.99521616786755,
       "status": "✅ 通过"
     },
     {
       "scenario": "用户档案查询",
       "query": "我的基本信息是什么？",
       "baseline": 129.9,
-      "current": 10.907755613327026,
-      "improvement": 118.99224438667298,
-      "improvement_percent": 91.60295949705387,
+      "current": 8.231043815612793,
+      "improvement": 121.66895618438721,
+      "improvement_percent": 93.66355364463989,
       "status": "✅ 通过"
     },
     {
       "scenario": "营养规划",
       "query": "帮我设计一份营养餐食计划",
       "baseline": 105.6,
-      "current": 12.789654016494751,
-      "improvement": 92.81034598350524,
-      "improvement_percent": 87.8885852116527,
-      "status": "✅ 通过"
-    },
-    {
-      "scenario": "动作推荐",
-      "query": "推荐一些胸肌训练动作",
-      "baseline": 105.6,
-      "current": 10.540854930877686,
-      "improvement": 95.05914506912231,
-      "improvement_percent": 90.01812980030522,
-      "status": "✅ 通过"
-    },
-    {
-      "scenario": "安全检查",
-      "query": "我有腰椎间盘突出，哪些动作我不能做？",
-      "baseline": 105.6,
-      "current": 7.706017732620239,
-      "improvement": 97.89398226737976,
-      "improvement_percent": 92.7026347228975,
+      "current": 13.082551002502441,
+      "improvement": 92.51744899749755,
+      "improvement_percent": 87.61122064156966,
       "status": "✅ 通过"
     }
   ],
   "statistics": {
-    "avg_baseline": 105.6,
-    "avg_current": 10.26041808128357,
-    "avg_improvement": 95.33958191871643,
-    "avg_improvement_percent": 90.2836949987845,
+    "avg_baseline": 105.59999999999998,
+    "avg_current": 11.170828024546305,
+    "avg_improvement": 94.42917197545368,
+    "avg_improvement_percent": 89.4215643706948,
     "max_baseline": 129.9,
-    "max_current": 12.789654016494751,
+    "max_current": 13.082551002502441,
     "min_baseline": 81.3,
-    "min_current": 7.706017732620239,
-    "passed_count": 5,
-    "total_count": 5
+    "min_current": 8.231043815612793,
+    "passed_count": 3,
+    "total_count": 3
   }
 }
