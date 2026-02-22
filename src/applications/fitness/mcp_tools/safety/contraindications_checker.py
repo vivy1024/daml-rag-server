@@ -377,8 +377,8 @@ class ContraindicationsChecker(BaseMCPTool):
                e.muscles_primary_zh
         """
         
-        result = await self.neo4j_client.query(query, {"exercise_id": exercise_id})
-        
+        result = await self.neo4j_client.execute_query(query, {"exercise_id": exercise_id})
+
         if result and len(result) > 0:
             return dict(result[0])
         return None
@@ -446,7 +446,7 @@ class ContraindicationsChecker(BaseMCPTool):
         ORDER BY r.severity DESC
         """
 
-        result = await self.neo4j_client.query(query, {
+        result = await self.neo4j_client.execute_query(query, {
             "exercise_id": exercise_id,
             "health_conditions": health_conditions
         })
@@ -511,7 +511,7 @@ class ContraindicationsChecker(BaseMCPTool):
           r.movement_type as movement_type
         """
         
-        result = await self.neo4j_client.query(query, {
+        result = await self.neo4j_client.execute_query(query, {
             "exercise_id": exercise_id,
             "injured_joints": injured_joints
         })
@@ -593,7 +593,7 @@ class ContraindicationsChecker(BaseMCPTool):
           posture.name as posture_name_en
         """
 
-        result = await self.neo4j_client.query(query, {
+        result = await self.neo4j_client.execute_query(query, {
             "exercise_id": exercise_id,
             "postural_issues": postural_issues
         })

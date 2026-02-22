@@ -5,6 +5,44 @@
 
 ---
 
+## #20 (fix) contraindications_checker Neo4j API对齐 + 安全扫描基础设施 — 2026-02-22
+
+对应产品版本：v1.1.0（内部bug修复+工具链，产品版本不动）
+
+- `contraindications_checker.py`: 4处 `neo4j_client.query()` → `execute_query()`（Neo4jClient无query方法，端到端验证发现）
+- 测试mock同步更新: `mock_neo4j_client.query` → `mock_neo4j_client.execute_query`
+- 端到端验证通过: Neo4j真实数据 exercise_id=1063 lower_back_pain severity=moderate 238ms
+- 新增安全扫描基础设施: `scripts/security-scan/`（SOUL.md + scan.sh + crontab + 首次报告）
+- PHP依赖扫描发现5漏洞: symfony/http-foundation CVE-2025-64500(high) 需升级
+
+## #19 (fix) health_conditions字段名对齐 — 用户健康档案数据链路修复 — 2026-02-22
+
+对应产品版本：v9.88.0（内部bug修复，产品版本不动）
+
+- `_build_health_conditions()`: 读取key从`health_profile`改为`health_status`（对齐后端InternalUserController）
+- 字段名对齐: `chronic_conditions`→`chronic_diseases`, 移除不存在的`current_symptoms`, 新增`medications`支持
+- `_generate_medical_guidance()`: 同步字段名修复
+- 更新5个测试用例mock数据为实际string[]格式（后端传递的是字符串数组，非dict）
+
+## #18 (feat) 意图分类器扩展 — 带伤训练场景覆盖 — 2026-02-22
+
+对应产品版本：v9.88.0（内部优化，产品版本不动）
+
+- INJURY_KEYWORDS 新增20+口语化表达（腰突/膝盖疼/肩膀疼/崴脚/鼠标手等）
+- SAFETY_CONTRAINDICATION_PATTERNS 新增4个带伤训练正则模式
+- 实体提取后清理尾部标点和助词（的/了/，）
+- 测试覆盖: 14个查询中12个正确路由（之前仅6个）
+
+## #17 (fix) 禁忌症系统修复 — Neo4j数据补全+Cypher属性对齐+checker bug修复 — 2026-02-22
+
+对应产品版本：v9.88.0（内部bug修复，产品版本不动）
+
+- Neo4j数据补全: 11个孤立InjuryType补充3,293条CONTRAINDICATED_FOR关系（3,078→6,371）
+- Cypher模板修复: SAFETY_CONTRAINDICATIONS移除不存在的description/intensity_limit属性
+- INJURY_SYNONYMS同义词映射: 60+条口语→正式医学术语映射
+- contraindications_checker.py: 修复6处属性名不匹配（category_zh→category等）
+- 39 checker tests passed, 840 total unit tests passed
+
 ## #16 (docs) 文档清理 — 删除冗余测试报告 + 更新过时代码引用 — 2026-02-22
 
 对应产品版本：v9.88.0（纯文档清理，产品版本不动）
