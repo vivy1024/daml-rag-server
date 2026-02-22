@@ -475,7 +475,7 @@ class TestExecuteIntegration:
     async def test_execute_no_contraindications(self, checker, mock_neo4j_client):
         """测试无禁忌症场景"""
         # 模拟Neo4j返回
-        mock_neo4j_client.query.side_effect = [
+        mock_neo4j_client.execute_query.side_effect = [
             # 第一次调用：获取动作信息
             [
                 {
@@ -513,7 +513,7 @@ class TestExecuteIntegration:
         # 1. _get_exercise_info (query)
         # 2. _query_injury_contraindications (query)
         # 3. _query_joint_contraindications (query) — "膝盖损伤"包含关节关键词"膝"
-        mock_neo4j_client.query.side_effect = [
+        mock_neo4j_client.execute_query.side_effect = [
             # 第一次调用：获取动作信息
             [
                 {
@@ -565,7 +565,7 @@ class TestExecuteIntegration:
     async def test_execute_exercise_not_found(self, checker, mock_neo4j_client):
         """测试动作不存在场景"""
         # 模拟Neo4j返回空结果
-        mock_neo4j_client.query.return_value = []
+        mock_neo4j_client.execute_query.return_value = []
         
         input_data = {
             "user_id": "user_123",
