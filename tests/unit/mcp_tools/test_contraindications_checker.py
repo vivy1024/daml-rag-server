@@ -531,22 +531,20 @@ class TestExecuteIntegration:
                     "name_zh": "深蹲",
                     "name_en": "Squat",
                     "category": "力量",
-                    "difficulty": "中级",
+                    "difficulty_zh": "中级",
                     "safety_level": "MEDIUM_RISK",
-                    "primary_muscle_zh": "股四头肌"
+                    "muscles_primary_zh": "股四头肌"
                 }
             ],
             # 第二次调用：查询损伤禁忌症（CONTRAINDICATED_FOR）
             [
                 {
                     "injury_name_zh": "膝盖损伤",
-                    "injury_name_en": "Knee Injury",
-                    "category_zh": "关节损伤",
-                    "risk_level": "HIGH",
-                    "reason": "可能加重膝盖负担",
-                    "severity_score": 7,
-                    "body_parts": ["膝盖"],
-                    "medical_source": "运动医学指南"
+                    "injury_name_en": "knee_injury",
+                    "category": "膝盖损伤",
+                    "severity": "high",
+                    "confidence": 0.8,
+                    "reason": "可能加重膝盖负担"
                 }
             ],
             # 第三次调用：查询关节禁忌症（INVOLVES_JOINT）— "膝盖损伤"触发关节查询
