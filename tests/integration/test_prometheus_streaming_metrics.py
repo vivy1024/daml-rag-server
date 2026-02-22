@@ -11,6 +11,8 @@ Prometheus流式会话指标验收测试
 
 import pytest
 import time
+import os
+import jwt as pyjwt
 from fastapi.testclient import TestClient
 
 from src.api.main import app
@@ -24,23 +26,45 @@ from src.framework.monitoring.streaming_metrics import (
     record_streaming_metrics
 )
 
+# 测试用 JWT secret
+TEST_JWT_SECRET = "test-secret-for-prometheus-metrics"
+
+
+def _make_admin_token() -> str:
+    """生成测试用 admin JWT token"""
+    return pyjwt.encode(
+        {"sub": "1", "role": "admin"},
+        TEST_JWT_SECRET,
+        algorithm="HS256"
+    )
+
 
 class TestPrometheusStreamingMetrics:
     """Prometheus流式会话指标验收测试"""
-    
+
+    @pytest.fixture(autouse=True)
+    def _set_jwt_secret(self, monkeypatch):
+        """设置测试用 JWT_SECRET 环境变量"""
+        monkeypatch.setenv("JWT_SECRET", TEST_JWT_SECRET)
+
     @pytest.fixture
     def client(self):
         """创建测试客户端"""
         return TestClient(app)
+
+    @pytest.fixture
+    def auth_headers(self):
+        """admin 认证头"""
+        return {"Authorization": f"Bearer {_make_admin_token()}"}
     
-    def test_prometheus_endpoint_accessible(self, client):
+    def test_prometheus_endpoint_accessible(self, client, auth_headers):
         """测试Prometheus端点可访问"""
-        response = client.get("/api/health/metrics/prometheus")
+        response = client.get("/api/health/metrics/prometheus", headers=auth_headers)
         
         assert response.status_code == 200
         assert "text/plain" in response.headers["content-type"]
     
-    def test_streaming_metrics_exposed(self, client):
+    def test_streaming_metrics_exposed(self, client, auth_headers):
         """测试流式会话指标被暴露"""
         # 先记录一些指标
         metrics = StreamingSessionMetrics(
@@ -52,11 +76,11 @@ class TestPrometheusStreamingMetrics:
         metrics.end_time = time.time() + 2.0
         metrics.total_tokens = 100
         metrics.success = True
-        
+
         record_streaming_metrics(metrics)
-        
+
         # 获取Prometheus输出
-        response = client.get("/api/health/metrics/prometheus")
+        response = client.get("/api/health/metrics/prometheus", headers=auth_headers)
         content = response.text
         
         # 验证5个流式会话指标存在
@@ -66,7 +90,7 @@ class TestPrometheusStreamingMetrics:
         assert "streaming_session_success_total" in content, "成功计数指标未暴露"
         assert "streaming_session_failure_total" in content, "失败计数指标未暴露"
     
-    def test_streaming_metrics_format(self, client):
+    def test_streaming_metrics_format(self, client, auth_headers):
         """测试流式会话指标格式正确"""
         # 记录测试指标
         metrics = StreamingSessionMetrics(
@@ -78,11 +102,11 @@ class TestPrometheusStreamingMetrics:
         metrics.end_time = time.time() + 1.5
         metrics.total_tokens = 50
         metrics.success = True
-        
+
         record_streaming_metrics(metrics)
-        
+
         # 获取Prometheus输出
-        response = client.get("/api/health/metrics/prometheus")
+        response = client.get("/api/health/metrics/prometheus", headers=auth_headers)
         content = response.text
         
         # 验证指标格式（Prometheus格式）
@@ -100,10 +124,10 @@ class TestPrometheusStreamingMetrics:
         assert "# TYPE streaming_session_success_total counter" in content
         assert "# TYPE streaming_session_failure_total counter" in content
     
-    def test_streaming_metrics_values(self, client):
+    def test_streaming_metrics_values(self, client, auth_headers):
         """测试流式会话指标值正确"""
         # 获取初始值
-        initial_response = client.get("/api/health/metrics/prometheus")
+        initial_response = client.get("/api/health/metrics/prometheus", headers=auth_headers)
         initial_content = initial_response.text
         
         # 提取初始成功计数
@@ -126,22 +150,22 @@ class TestPrometheusStreamingMetrics:
         record_streaming_metrics(metrics)
         
         # 获取更新后的值
-        final_response = client.get("/api/health/metrics/prometheus")
+        final_response = client.get("/api/health/metrics/prometheus", headers=auth_headers)
         final_content = final_response.text
-        
+
         final_success_count = self._extract_counter_value(
             final_content,
             "streaming_session_success_total"
         )
-        
+
         # 验证计数器增加
         assert final_success_count == initial_success_count + 1, \
             f"成功计数器应该增加1，但从{initial_success_count}变为{final_success_count}"
-    
-    def test_streaming_metrics_failure_count(self, client):
+
+    def test_streaming_metrics_failure_count(self, client, auth_headers):
         """测试流式会话失败计数"""
         # 获取初始失败计数
-        initial_response = client.get("/api/health/metrics/prometheus")
+        initial_response = client.get("/api/health/metrics/prometheus", headers=auth_headers)
         initial_content = initial_response.text
         
         initial_failure_count = self._extract_counter_value(
@@ -164,7 +188,7 @@ class TestPrometheusStreamingMetrics:
         record_streaming_metrics(metrics)
         
         # 获取更新后的值
-        final_response = client.get("/api/health/metrics/prometheus")
+        final_response = client.get("/api/health/metrics/prometheus", headers=auth_headers)
         final_content = final_response.text
         
         final_failure_count = self._extract_counter_value(

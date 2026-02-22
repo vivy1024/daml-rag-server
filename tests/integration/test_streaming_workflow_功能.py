@@ -135,6 +135,7 @@ async def collect_sse_events(
     return collector
 
 
+@pytest.mark.skip(reason="E2E测试：需要API服务运行在127.0.0.1:8001，单独执行")
 class TestStreamingWorkflowFunctionality:
     """流式工作流功能测试"""
     

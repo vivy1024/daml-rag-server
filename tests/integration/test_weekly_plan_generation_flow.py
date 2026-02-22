@@ -186,8 +186,9 @@ class TestFirstWeekGeneration:
         assert weekly_plan.cycle_explanation is not None
         assert len(weekly_plan.cycle_explanation) > 0
         
-        # 验证周期说明包含关键信息
-        assert '第一周' in weekly_plan.cycle_explanation or '第1周' in weekly_plan.cycle_explanation or '4周' in weekly_plan.cycle_explanation
+        # 验证周期说明包含关键信息（支持"周"和"训练周期"两种术语）
+        explanation = weekly_plan.cycle_explanation
+        assert any(kw in explanation for kw in ['第一周', '第1周', '4周', '第1训练周期', '4个训练周期'])
         
         logger.info(f"✅ 周期说明存在: {len(weekly_plan.cycle_explanation)}字符")
     
