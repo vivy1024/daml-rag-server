@@ -88,7 +88,7 @@
 
 ### FitnessGraphRAGRetriever 统一接口
 
-**文件位置**: `src/framework/retrieval/graphrag_retriever.py`
+**文件位置**: ~~`src/framework/retrieval/graphrag_retriever.py`~~ (已删除，检索功能由HybridSearchEngine统一处理)
 
 **核心职责**:
 - 封装 neo4j-graphrag-python 官方包
