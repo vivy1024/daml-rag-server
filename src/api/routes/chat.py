@@ -454,7 +454,9 @@ async def chat_stream(request: Request, body: Dict[str, Any]):
         session_id = body.get("session_id") or str(uuid.uuid4())
         topic_id = body.get("topic_id")  # 话题ID，用于多轮对话
         domain = body.get("domain", "fitness")
-        strategy = "dag"  # 统一使用DAG模式
+        strategy = body.get("strategy", "dag")  # dag(默认) 或 agent
+        if strategy not in ("dag", "agent"):
+            strategy = "dag"
         template_id = body.get("template_id")  # DAG模板ID（用户选择时强制使用）
         persona_id = body.get("persona_id")  # SystemPersona风格ID
         attachments = body.get("attachments")  # 图片附件列表（multimodal）

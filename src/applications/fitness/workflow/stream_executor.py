@@ -154,7 +154,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             user_profile: 用户档案
             session_id: 会话ID
             topic_id: 话题ID（用于多轮对话）
-            strategy: 执行策略（仅dag，默认dag）
+            strategy: 执行策略（dag或agent，默认dag）
             **kwargs: 其他参数
             
         Yields:
@@ -227,6 +227,7 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         )
         
         # 将上下文信息添加到状态
+        state["strategy"] = strategy
         if context_result:
             state["conversation_history"] = conversation_history
             state["topic_id"] = context_result.topic_id
@@ -683,7 +684,16 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         return state
     
     async def _execute_steps_7_8(self, state: WorkflowState) -> WorkflowState:
-        """执行步骤7-8"""
+        """执行步骤7-8（支持 DAG 固定编排 / Agent 动态决策）"""
+        strategy = state.get("strategy", "dag")
+
+        if strategy == "agent":
+            return await self._execute_steps_7_8_agent(state)
+
+        return await self._execute_steps_7_8_dag(state)
+
+    async def _execute_steps_7_8_dag(self, state: WorkflowState) -> WorkflowState:
+        """步骤7-8: DAG 固定编排模式"""
         from .nodes import node_execute_dag, node_retrieve_context
         from .singletons import get_mcp_orchestrator, get_hybrid_search_engine, get_cypher_executor
 
@@ -706,7 +716,59 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 state = result.merge_into(state)
 
         return state
-    
+
+    async def _execute_steps_7_8_agent(self, state: WorkflowState) -> WorkflowState:
+        """步骤7-8: Agent 动态决策模式（LangGraph tool-calling loop）"""
+        from .nodes import node_retrieve_context
+        from .singletons import get_hybrid_search_engine, get_cypher_executor
+
+        request_id = state.get("request_id", "?")
+        logger.info(f"🤖 [{request_id}] 步骤7-8: Agent模式执行")
+
+        try:
+            from ..agent.executor import create_agent_executor_from_singletons
+            agent_executor = create_agent_executor_from_singletons()
+
+            # 从管线 state 提取 Agent 所需参数
+            agent_result = await agent_executor.execute(
+                user_id=state.get("user_id", ""),
+                query=state.get("query_text", ""),
+                user_profile=state.get("user_profile"),
+                conversation_history=state.get("conversation_history"),
+                membership_level=state.get("membership_info", {}).get("tier", "free") if isinstance(state.get("membership_info"), dict) else "free",
+            )
+
+            # 将 Agent tool_results 转换为 dag_results 格式
+            # Agent 返回 [{tool_name, result, ...}]，DAG 期望 {tool_name: result}
+            dag_results = {}
+            for tr in agent_result.get("tool_results", []):
+                tool_name = tr.get("tool_name") or tr.get("name", "unknown")
+                dag_results[tool_name] = tr.get("result", tr)
+
+            state["dag_results"] = dag_results
+            state["_agent_response"] = agent_result.get("final_response")
+            state["_agent_tool_calls_count"] = agent_result.get("tool_calls_count", 0)
+            state["_agent_skills_loaded"] = agent_result.get("skills_loaded", [])
+
+            logger.info(
+                f"🤖 [{request_id}] Agent完成: "
+                f"tools={agent_result.get('tool_calls_count', 0)}, "
+                f"skills={agent_result.get('skills_loaded', [])}"
+            )
+
+        except Exception as e:
+            logger.error(f"🤖 [{request_id}] Agent执行失败，降级到检索: {e}")
+            # Agent 失败时降级到检索
+            result = await node_retrieve_context(
+                state,
+                hybrid_search_engine=get_hybrid_search_engine(),
+                cypher_executor=get_cypher_executor(),
+            )
+            if isinstance(result, StateUpdate):
+                state = result.merge_into(state)
+
+        return state
+
     async def _execute_step_9(self, state: WorkflowState) -> WorkflowState:
         """执行步骤9"""
         from .nodes import node_aggregate_data

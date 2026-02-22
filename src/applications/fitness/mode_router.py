@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-执行模式路由器（简化版）
+执行模式路由器
 
-v3.0.0: Agent模式已移至experimental/，统一使用DAG模式。
+v4.0.0: Agent模式恢复，作为管线步骤7的执行方式。
+- DAG: 固定编排（默认，所有用户）
+- Agent: LangGraph动态决策（energy+会员）
 
-版本: v3.0.0
+版本: v4.0.0
 日期: 2026-02-22
 """
 
@@ -13,7 +15,10 @@ from typing import Optional, Literal
 
 logger = logging.getLogger(__name__)
 
-ExecutionMode = Literal["dag"]
+ExecutionMode = Literal["dag", "agent"]
+
+# Agent 模式所需的最低会员等级
+AGENT_ALLOWED_TIERS = {"energy", "energy_plus", "pro", "admin"}
 
 
 def resolve_execution_mode(
@@ -21,13 +26,19 @@ def resolve_execution_mode(
     membership_level: str = "free",
 ) -> ExecutionMode:
     """
-    解析最终执行模式（统一返回DAG）
+    解析最终执行模式
 
     Args:
-        requested_mode: 请求的模式（忽略，统一DAG）
-        membership_level: 会员等级（保留参数兼容性）
+        requested_mode: 前端请求的模式（"dag" 或 "agent"）
+        membership_level: 会员等级
 
     Returns:
-        "dag"
+        "dag" 或 "agent"
     """
+    if requested_mode == "agent":
+        if membership_level.lower() in AGENT_ALLOWED_TIERS:
+            return "agent"
+        logger.info(f"Agent模式需要energy+会员，当前={membership_level}，降级为DAG")
+        return "dag"
+
     return "dag"
