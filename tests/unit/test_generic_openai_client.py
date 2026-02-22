@@ -37,6 +37,7 @@ def mock_request():
     """创建模拟的 LLMRequest"""
     req = MagicMock()
     req.messages = None
+    req.model_override = None
     req.system_prompt = "你是一个健身教练"
     req.query = "如何做深蹲？"
     req.few_shot_examples = []
@@ -116,54 +117,54 @@ class TestGenericOpenAIClientInit:
 class TestCall:
     """非流式调用测试"""
 
-    def test_call_success(self, client, mock_request):
+    @pytest.mark.asyncio
+    async def test_call_success(self, client, mock_request):
         """正常调用返回 content"""
         mock_resp = _make_json_response("深蹲要注意膝盖不超过脚尖")
         mock_http = _make_http_client_mock(post_return=mock_resp)
 
         with patch(PATCH_TARGET, return_value=mock_http):
-            result = asyncio.get_event_loop().run_until_complete(
-                client.call(mock_request, timeout=10)
-            )
+            result = await client.call(mock_request, timeout=10)
 
         assert result == "深蹲要注意膝盖不超过脚尖"
         mock_http.post.assert_called_once()
         call_url = mock_http.post.call_args[0][0]
         assert "/chat/completions" in call_url
 
-    def test_call_uses_prebuilt_messages(self, client, mock_request_with_messages):
+    @pytest.mark.asyncio
+    async def test_call_uses_prebuilt_messages(self, client, mock_request_with_messages):
         """当 request.messages 存在时直接使用"""
         mock_resp = _make_json_response("OK")
         mock_http = _make_http_client_mock(post_return=mock_resp)
 
         with patch(PATCH_TARGET, return_value=mock_http):
-            result = asyncio.get_event_loop().run_until_complete(
-                client.call(mock_request_with_messages)
-            )
+            result = await client.call(mock_request_with_messages)
 
         assert result == "OK"
         payload = mock_http.post.call_args[1]["json"]
         assert payload["messages"] == mock_request_with_messages.messages
 
-    def test_call_sends_correct_headers(self, client, mock_request):
+    @pytest.mark.asyncio
+    async def test_call_sends_correct_headers(self, client, mock_request):
         """验证 Authorization 和 Content-Type 头"""
         mock_resp = _make_json_response("test")
         mock_http = _make_http_client_mock(post_return=mock_resp)
 
         with patch(PATCH_TARGET, return_value=mock_http):
-            asyncio.get_event_loop().run_until_complete(client.call(mock_request))
+            await client.call(mock_request)
 
         headers = mock_http.post.call_args[1]["headers"]
         assert headers["Authorization"] == "Bearer sk-test-key-123"
         assert headers["Content-Type"] == "application/json"
 
-    def test_call_payload_structure(self, client, mock_request):
+    @pytest.mark.asyncio
+    async def test_call_payload_structure(self, client, mock_request):
         """验证请求 payload 结构"""
         mock_resp = _make_json_response("ok")
         mock_http = _make_http_client_mock(post_return=mock_resp)
 
         with patch(PATCH_TARGET, return_value=mock_http):
-            asyncio.get_event_loop().run_until_complete(client.call(mock_request))
+            await client.call(mock_request)
 
         payload = mock_http.post.call_args[1]["json"]
         assert payload["model"] == "test-model-v1"
@@ -179,44 +180,48 @@ class TestCall:
 class TestHealthCheck:
     """健康检查测试"""
 
-    def test_health_check_success(self, client):
+    @pytest.mark.asyncio
+    async def test_health_check_success(self, client):
         """API 返回 200 时健康"""
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_http = _make_http_client_mock(get_return=mock_resp)
 
         with patch(PATCH_TARGET, return_value=mock_http):
-            result = asyncio.get_event_loop().run_until_complete(client.health_check())
+            result = await client.health_check()
 
         assert result is True
         call_url = mock_http.get.call_args[0][0]
         assert call_url.endswith("/models")
 
-    def test_health_check_failure(self, client):
+    @pytest.mark.asyncio
+    async def test_health_check_failure(self, client):
         """API 返回非 200 时不健康"""
         mock_resp = MagicMock()
         mock_resp.status_code = 401
         mock_http = _make_http_client_mock(get_return=mock_resp)
 
         with patch(PATCH_TARGET, return_value=mock_http):
-            result = asyncio.get_event_loop().run_until_complete(client.health_check())
+            result = await client.health_check()
 
         assert result is False
 
-    def test_health_check_no_api_key(self):
+    @pytest.mark.asyncio
+    async def test_health_check_no_api_key(self):
         """api_key 为空时直接返回 False"""
         c = GenericOpenAIClient("test", "https://api.test.com", "", "model")
-        result = asyncio.get_event_loop().run_until_complete(c.health_check())
+        result = await c.health_check()
         assert result is False
 
-    def test_health_check_network_error(self, client):
+    @pytest.mark.asyncio
+    async def test_health_check_network_error(self, client):
         """网络异常时返回 False"""
         mock_http = _make_http_client_mock(
             get_side_effect=Exception("Connection refused")
         )
 
         with patch(PATCH_TARGET, return_value=mock_http):
-            result = asyncio.get_event_loop().run_until_complete(client.health_check())
+            result = await client.health_check()
 
         assert result is False
 
