@@ -232,52 +232,52 @@ class ContraindicationsChecker(BaseMCPTool):
         return {}
     
     def _build_health_conditions(
-        self, 
-        input_data: Dict[str, Any], 
+        self,
+        input_data: Dict[str, Any],
         user_profile: Dict[str, Any]
     ) -> List[str]:
         """
         构建健康状况列表（整合用户档案和输入）
+
+        数据来源：
+        - user_profile["health_status"] — 后端 InternalUserController 传递
+          字段：injury_history(str[]), chronic_diseases(str[]), medications(str[]), other_notes(str)
+        - input_data["health_conditions"] — MCP调用时直接传入的额外条件
         """
         conditions = set()
-        
-        # 从用户档案获取
-        health_profile = user_profile.get("health_profile", {})
-        
-        # 慢性病
-        chronic_conditions = health_profile.get("chronic_conditions", [])
-        for condition in chronic_conditions:
-            if isinstance(condition, dict):
-                conditions.add(condition.get("name", ""))
-                if condition.get("severity"):
-                    conditions.add(f"{condition.get('name')}_{condition.get('severity')}")
-            else:
-                conditions.add(str(condition))
-        
-        # 损伤史
-        injury_history = health_profile.get("injury_history", [])
+
+        # 从用户档案获取（后端以 health_status 为 key）
+        health_status = user_profile.get("health_status", {})
+        if not health_status:
+            health_status = {}
+
+        # 损伤史（string数组，如 ["腰椎间盘突出", "膝盖受伤"]）
+        injury_history = health_status.get("injury_history", [])
         for injury in injury_history:
-            if isinstance(injury, dict):
-                conditions.add(injury.get("type", ""))
-                if injury.get("body_part"):
-                    conditions.add(f"{injury.get('type')}_{injury.get('body_part')}")
-            else:
-                conditions.add(str(injury))
-        
-        # 当前症状
-        current_symptoms = health_profile.get("current_symptoms", [])
-        for symptom in current_symptoms:
-            conditions.add(str(symptom))
-        
+            if isinstance(injury, str) and injury.strip():
+                conditions.add(injury.strip())
+
+        # 慢性病（string数组，如 ["高血压", "糖尿病"]）
+        chronic_diseases = health_status.get("chronic_diseases", [])
+        for disease in chronic_diseases:
+            if isinstance(disease, str) and disease.strip():
+                conditions.add(disease.strip())
+
+        # 用药情况（可能影响运动安全性）
+        medications = health_status.get("medications", [])
+        for med in medications:
+            if isinstance(med, str) and med.strip():
+                conditions.add(med.strip())
+
         # 从输入参数获取
         extra_conditions = input_data.get("health_conditions", [])
         if extra_conditions:
             for condition in extra_conditions:
                 conditions.add(str(condition))
-        
+
         # 移除空字符串
         conditions.discard("")
-        
+
         return list(conditions)
     
     async def _check_exercises_contraindications(
@@ -820,9 +820,9 @@ class ContraindicationsChecker(BaseMCPTool):
             guidance.append("可以进行常规训练，保持健康生活方式")
         
         # 如果有慢性病
-        health_profile = user_profile.get("health_profile", {})
-        chronic_conditions = health_profile.get("chronic_conditions", [])
-        if chronic_conditions:
+        health_status = user_profile.get("health_status", {}) or {}
+        chronic_diseases = health_status.get("chronic_diseases", [])
+        if chronic_diseases:
             guidance.append("请严格遵循医生给出的运动建议")
         
         return "；".join(guidance)
