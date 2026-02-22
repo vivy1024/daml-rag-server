@@ -384,11 +384,9 @@ adjusted_volume = base_volume * recovery_factor
 
 服务层组件位于 `src/applications/fitness/services/`，负责业务逻辑处理和数据转换：
 
-### 1. content_safety_filter.py - 内容安全过滤器
+### 1. ~~content_safety_filter.py~~ - 内容安全过滤器 (已删除)
 
-**功能**：过滤和检测不安全的内容
-**数据源**：配置文件 + 规则引擎
-**应用场景**：用户输入过滤、输出内容审核
+**状态**：已删除（架构审计Batch 3），安全检查功能内联到workflow nodes
 
 ### 2. equipment_alias_mapper.py - 器械别名映射器
 

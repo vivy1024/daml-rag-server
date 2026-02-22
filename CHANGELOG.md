@@ -5,6 +5,18 @@
 
 ---
 
+## #16 (docs) 文档清理 — 删除冗余测试报告 + 更新过时代码引用 — 2026-02-22
+
+对应产品版本：v9.88.0（纯文档清理，产品版本不动）
+
+- 删除 11 个冗余测试报告（07-测试报告/01-06,08,10,11,15,21）
+- 更新 5 个代码参考文档中已删除模块的路径标注
+  - `05-代码目录结构.md`: membership_controller, parallel_step_executor, strategy_selector, neo4j_field_mapping, content_safety_filter
+  - `09-步骤8-三层检索.md`: graphrag_retriever.py
+  - `06-三层检索与MCP集成架构.md`: graphrag_retriever.py
+  - `03-MCP工具架构.md`: content_safety_filter.py
+  - `02-框架层代码文件说明.md`: strategy_selector.py
+
 ## #15 (refactor) Agent模块化重构 — 管线步骤7双模式执行 — 2026-02-22
 
 对应产品版本：v9.88.0（内部重构，产品版本不动）
@@ -13,11 +25,11 @@
 - `agent/` 从 `experimental/` 移回 `src/applications/fitness/agent/`
 - `stream_executor.py`: `_execute_steps_7_8()` 拆分为 `_dag` 和 `_agent` 两个方法
   - DAG模式: 固定模板编排MCP工具（默认，所有用户）
-  - Agent模式: LangGraph动态决策tool-calling loop（energy+会员）
+  - Agent模式: LangGraph动态决策tool-calling loop（积分体系，所有用户可用）
   - Agent输出 `tool_results` 转换为 `dag_results` 格式，步骤9统一处理
   - Agent失败时降级到检索(node_retrieve_context)
 - `chat.py`: 恢复 `strategy` 参数从请求读取（`dag`/`agent`）
-- `mode_router.py` v4.0: 恢复Agent权限检查（energy+会员才允许）
+- `mode_router.py` v4.1: 积分体系对齐，所有用户可用Agent模式（权限由积分消耗控制）
 - `executor.py`: 修复 `framework.skills` import 为绝对路径
 
 **架构**: 步骤1-6(共享) → 步骤7(DAG或Agent) → 步骤8-11(共享)
