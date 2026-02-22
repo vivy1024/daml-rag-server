@@ -5,6 +5,16 @@
 
 ---
 
+## #21 (fix) HTTPException handler Pydantic v2 兼容修复 — 2026-02-22
+
+- 修复 `main.py:464` http_exception_handler：移除 `model_dump_json(encoder=CustomJSONEncoder)` 不兼容参数
+- 根因：Pydantic v2 的 `model_dump_json()` 不支持 `encoder` 参数（v1 语法残留），导致所有 HTTPException（401/403/404）被 general_exception_handler 捕获后返回 500
+- 影响范围：所有需要认证的 /api/health/metrics/* 端点、以及任何抛出 HTTPException 的路由
+- 验证：/api/health/metrics/prometheus 正确返回 401（无有效JWT时）而非 500
+- 对应产品版本：v1.1.0（内部bug修复，产品版本不动）
+
+---
+
 ## #20 (fix) contraindications_checker Neo4j API对齐 + 安全扫描基础设施 — 2026-02-22
 
 对应产品版本：v1.1.0（内部bug修复+工具链，产品版本不动）

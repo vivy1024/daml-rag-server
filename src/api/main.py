@@ -461,7 +461,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
     return JSONResponse(
         status_code=exc.status_code,
-        content=json.loads(response_data.model_dump_json(exclude_none=True, encoder=CustomJSONEncoder)),
+        content=json.loads(response_data.model_dump_json(exclude_none=True)),
         media_type="application/json"
     )
 
