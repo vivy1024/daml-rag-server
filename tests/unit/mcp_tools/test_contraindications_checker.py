@@ -104,41 +104,31 @@ class TestHealthConditionsBuilder:
         assert isinstance(conditions, list)
         assert len(conditions) == 0
     
-    def test_build_health_conditions_with_chronic_conditions(self, checker):
-        """测试慢性病"""
+    def test_build_health_conditions_with_chronic_diseases(self, checker):
+        """测试慢性病（后端以 string[] 格式传递）"""
         input_data = {"user_id": "user_123"}
         user_profile = {
-            "health_profile": {
-                "chronic_conditions": [
-                    {"name": "高血压", "severity": "轻度"},
-                    {"name": "糖尿病", "severity": "中度"}
-                ]
+            "health_status": {
+                "chronic_diseases": ["高血压", "糖尿病"]
             }
         }
-        
+
         conditions = checker._build_health_conditions(input_data, user_profile)
         assert "高血压" in conditions
         assert "糖尿病" in conditions
-        assert "高血压_轻度" in conditions
-        assert "糖尿病_中度" in conditions
     
     def test_build_health_conditions_with_injury_history(self, checker):
-        """测试损伤史"""
+        """测试损伤史（后端以 string[] 格式传递）"""
         input_data = {"user_id": "user_123"}
         user_profile = {
-            "health_profile": {
-                "injury_history": [
-                    {"type": "肩部损伤", "body_part": "左肩"},
-                    {"type": "膝盖损伤", "body_part": "右膝"}
-                ]
+            "health_status": {
+                "injury_history": ["肩部损伤", "膝盖损伤"]
             }
         }
-        
+
         conditions = checker._build_health_conditions(input_data, user_profile)
         assert "肩部损伤" in conditions
         assert "膝盖损伤" in conditions
-        assert "肩部损伤_左肩" in conditions
-        assert "膝盖损伤_右膝" in conditions
     
     def test_build_health_conditions_with_input_conditions(self, checker):
         """测试输入参数中的健康状况"""
@@ -159,17 +149,17 @@ class TestHealthConditionsBuilder:
             "health_conditions": ["腰椎间盘突出"]
         }
         user_profile = {
-            "health_profile": {
-                "chronic_conditions": [{"name": "高血压"}],
-                "injury_history": [{"type": "肩部损伤"}],
-                "current_symptoms": ["头晕"]
+            "health_status": {
+                "chronic_diseases": ["高血压"],
+                "injury_history": ["肩部损伤"],
+                "medications": ["降压药"]
             }
         }
-        
+
         conditions = checker._build_health_conditions(input_data, user_profile)
         assert "高血压" in conditions
         assert "肩部损伤" in conditions
-        assert "头晕" in conditions
+        assert "降压药" in conditions
         assert "腰椎间盘突出" in conditions
 
 
@@ -429,15 +419,15 @@ class TestMedicalGuidance:
         
         assert "医疗专业人士" in guidance or "健康检查" in guidance
     
-    def test_generate_medical_guidance_with_chronic_conditions(self, checker):
+    def test_generate_medical_guidance_with_chronic_diseases(self, checker):
         """测试有慢性病的医学建议"""
         overall_assessment = {
             "risk_level": "MODERATE",
             "total_risk_score": 10
         }
         user_profile = {
-            "health_profile": {
-                "chronic_conditions": [{"name": "高血压"}]
+            "health_status": {
+                "chronic_diseases": ["高血压"]
             }
         }
         
