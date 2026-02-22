@@ -252,10 +252,20 @@ class LLMFallbackManager:
 
     # ─── 非流式调用 ──────────────────────────────────────
 
-    async def call_with_fallback(self, request: LLMRequest) -> LLMResponse:
-        """带降级的LLM调用（非流式）"""
+    async def call_with_fallback(
+        self, request: LLMRequest, *, primary_backend: Optional[str] = None,
+        fallback_backends: Optional[List[str]] = None,
+    ) -> LLMResponse:
+        """带降级的LLM调用（非流式）
+
+        Args:
+            primary_backend: 覆盖默认主后端（蓝绿池路由用）
+            fallback_backends: 覆盖默认降级链
+        """
         start_time = time.time()
-        backends_to_try = [self.primary_backend] + self.fallback_backends
+        effective_primary = BackendType(primary_backend) if primary_backend else self.primary_backend
+        effective_fallbacks = [BackendType(b) for b in fallback_backends] if fallback_backends else self.fallback_backends
+        backends_to_try = [effective_primary] + effective_fallbacks
         last_error = None
         attempt_count = 0
 
@@ -307,7 +317,7 @@ class LLMFallbackManager:
                         continue
 
                     duration_ms = (time.time() - start_time) * 1000
-                    fallback_used = backend != self.primary_backend
+                    fallback_used = backend != effective_primary
                     logger.info(
                         f"✅ LLM调用成功: backend={backend.value}, "
                         f"fallback={fallback_used}, attempts={attempt_count}, "
@@ -360,11 +370,19 @@ class LLMFallbackManager:
     # ─── 流式调用 ─────────────────────────────────────────
 
     async def call_with_fallback_stream(
-        self, request: LLMRequest
+        self, request: LLMRequest, *, primary_backend: Optional[str] = None,
+        fallback_backends: Optional[List[str]] = None,
     ) -> AsyncIterator[tuple[str, Optional[LLMResponse]]]:
-        """带降级的LLM流式调用"""
+        """带降级的LLM流式调用
+
+        Args:
+            primary_backend: 覆盖默认主后端（蓝绿池路由用）
+            fallback_backends: 覆盖默认降级链
+        """
         start_time = time.time()
-        backends_to_try = [self.primary_backend] + self.fallback_backends
+        effective_primary = BackendType(primary_backend) if primary_backend else self.primary_backend
+        effective_fallbacks = [BackendType(b) for b in fallback_backends] if fallback_backends else self.fallback_backends
+        backends_to_try = [effective_primary] + effective_fallbacks
         last_error = None
         attempt_count = 0
         accumulated_content = ""
@@ -414,7 +432,7 @@ class LLMFallbackManager:
                         continue
 
                     duration_ms = (time.time() - start_time) * 1000
-                    fallback_used = backend != self.primary_backend
+                    fallback_used = backend != effective_primary
                     logger.info(
                         f"✅ LLM流式调用成功: backend={backend.value}, "
                         f"fallback={fallback_used}, attempts={attempt_count}, "

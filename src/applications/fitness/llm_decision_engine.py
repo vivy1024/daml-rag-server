@@ -389,17 +389,11 @@ class LLMDecisionEngine:
         降级策略：DeepSeek → Ollama → Template
         """
         try:
-            # ✅ 使用LLM降级管理器
-            from ...framework.clients.llm_fallback_manager import LLMFallbackManager, LLMRequest
-            
-            # 初始化降级管理器
-            fallback_manager = LLMFallbackManager(
-                primary_backend="anthropic",
-                fallback_backends=["deepseek", "template"],
-                max_retries=3,
-                timeout=30,
-                enable_health_check=True
-            )
+            # ✅ 使用DI容器单例
+            from ..workflow.singletons import get_llm_degradation_manager
+            from ...framework.clients.llm_fallback_manager import LLMRequest
+
+            fallback_manager = get_llm_degradation_manager()
             
             # 准备LLM请求
             llm_request = LLMRequest(

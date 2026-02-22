@@ -949,12 +949,15 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 logger.debug(f"[{request_id}] TokenBudgetManager跳过: {budget_err}")
 
             # 初始化LLM降级管理器（根据模板路由选择后端）
-            from ....framework.clients.llm_fallback_manager import LLMFallbackManager, LLMRequest
+            from .singletons import get_llm_degradation_manager
+            from ....framework.clients.llm_fallback_manager import LLMRequest
             from ...fitness.config.model_routing import get_backend_for_template, PoolEntry
 
             routed = get_backend_for_template(selected_template_id)
             model_override = None  # 蓝绿池模型覆盖
             pool_meta = None  # 蓝绿池元数据（用于DAML-Eval）
+            routed_primary = None  # 路由覆盖的主后端
+            routed_fallbacks = None  # 路由覆盖的降级链
 
             if isinstance(routed, PoolEntry):
                 # YAML蓝绿池返回完整条目
@@ -964,38 +967,21 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                     "backend": routed.backend,
                 }
                 model_override = routed.model
-                fallback_manager = LLMFallbackManager(
-                    primary_backend=routed.backend,
-                    fallback_backends=["anthropic", "deepseek", "template"],
-                    max_retries=3,
-                    timeout=30,
-                    enable_health_check=True
-                )
+                routed_primary = routed.backend
+                routed_fallbacks = ["anthropic", "deepseek", "template"]
                 logger.info(
                     f"🔀 [{request_id}] 步骤10: 蓝绿池 {selected_template_id} → "
                     f"{routed.backend}/{routed.model} (tier={routed.cost_tier})"
                 )
             elif routed:
                 # 固定覆盖或环境变量池（返回字符串）
-                fallback_manager = LLMFallbackManager(
-                    primary_backend=routed,
-                    fallback_backends=["anthropic", "deepseek", "template"],
-                    max_retries=3,
-                    timeout=30,
-                    enable_health_check=True
-                )
+                routed_primary = routed
+                routed_fallbacks = ["anthropic", "deepseek", "template"]
                 logger.info(
                     f"🔀 [{request_id}] 步骤10: 模板路由 {selected_template_id} → {routed}"
                 )
-            else:
-                # 未配置路由，走默认降级链
-                fallback_manager = LLMFallbackManager(
-                    primary_backend="anthropic",
-                    fallback_backends=["deepseek", "template"],
-                    max_retries=3,
-                    timeout=30,
-                    enable_health_check=True
-                )
+
+            fallback_manager = get_llm_degradation_manager()
             
             # 准备LLM请求
             few_shot_dicts = [{"query": ex["query"], "response": ex["response"]} for ex in few_shot_examples]
@@ -1049,14 +1035,9 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                             weights = [e.get("weight", 10) for e in vp_entries]
                             chosen_v = random.choices(vp_entries, weights=weights, k=1)[0]
                             llm_request.model_override = chosen_v["model"]
-                            # 重建 fallback_manager 使用 vision 后端
-                            fallback_manager = LLMFallbackManager(
-                                primary_backend=chosen_v["backend"],
-                                fallback_backends=["anthropic", "deepseek", "template"],
-                                max_retries=3,
-                                timeout=60,  # Vision 调用给更长超时
-                                enable_health_check=True,
-                            )
+                            # Vision 路由覆盖（复用单例，通过参数覆盖后端）
+                            routed_primary = chosen_v["backend"]
+                            routed_fallbacks = ["anthropic", "deepseek", "template"]
                             pool_meta = {
                                 "model_id": chosen_v["model"],
                                 "cost_tier": chosen_v.get("cost_tier", "free"),
@@ -1071,8 +1052,12 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 except (ImportError, KeyError, ValueError, ConnectionError) as ve:
                     logger.warning(f"[{request_id}] Vision分支初始化失败，回退文本模式: {ve}")
 
-            # 流式调用LLM
-            async for chunk, response in fallback_manager.call_with_fallback_stream(llm_request):
+            # 流式调用LLM（传入路由覆盖参数）
+            async for chunk, response in fallback_manager.call_with_fallback_stream(
+                llm_request,
+                primary_backend=routed_primary,
+                fallback_backends=routed_fallbacks,
+            ):
                 if chunk:  # 只处理非空的chunk
                     yield {"content": chunk}
                 if response:

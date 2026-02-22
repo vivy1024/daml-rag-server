@@ -1455,14 +1455,8 @@ async def node_llm_analysis(
         
         # 7. 调用LLM
         if fallback_manager is None:
-            from ....framework.clients.llm_fallback_manager import LLMFallbackManager, LLMRequest
-            fallback_manager = LLMFallbackManager(
-                primary_backend="anthropic",
-                fallback_backends=["deepseek", "template"],
-                max_retries=3,
-                timeout=30,
-                enable_health_check=True
-            )
+            from .singletons import get_llm_degradation_manager
+            fallback_manager = get_llm_degradation_manager()
         
         few_shot_dicts = [{"query": ex["query"], "response": ex["response"]} for ex in few_shot_examples]
         
