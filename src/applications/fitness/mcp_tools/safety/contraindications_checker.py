@@ -371,10 +371,10 @@ class ContraindicationsChecker(BaseMCPTool):
         RETURN e.id as exercise_id,
                e.name_zh,
                e.name_en,
-               e.category,
+               e.equipment_zh as category,
                e.difficulty_zh,
                e.safety_level,
-               e.primary_muscle_zh
+               e.muscles_primary_zh
         """
         
         result = await self.neo4j_client.query(query, {"exercise_id": exercise_id})
@@ -433,55 +433,48 @@ class ContraindicationsChecker(BaseMCPTool):
         MATCH (e:Exercise {id: $exercise_id})
         OPTIONAL MATCH (e)-[r:CONTRAINDICATED_FOR]->(injury:InjuryType)
         WHERE injury.name_zh IN $health_conditions
-           OR injury.name_en IN $health_conditions
-           OR injury.category_zh IN $health_conditions
-        
+           OR injury.name IN $health_conditions
+           OR injury.category IN $health_conditions
+
         RETURN
           injury.name_zh as injury_name_zh,
-          injury.name_en as injury_name_en,
-          injury.category_zh as category_zh,
-          r.risk_level as risk_level,
+          injury.name as injury_name_en,
+          injury.category as category,
           r.severity as severity,
-          r.reason as reason,
-          r.severity_score as severity_score,
-          injury.affected_body_parts as body_parts,
-          injury.medical_source as medical_source
-        ORDER BY r.severity_score DESC
+          r.confidence as confidence,
+          r.reason as reason
+        ORDER BY r.severity DESC
         """
-        
+
         result = await self.neo4j_client.query(query, {
             "exercise_id": exercise_id,
             "health_conditions": health_conditions
         })
-        
+
         contraindications = []
         for row in result:
             # 跳过空结果
             if row.get("injury_name_zh") is None:
                 continue
-            
-            body_parts = row.get("body_parts", [])
-            if isinstance(body_parts, list):
-                body_part_str = ", ".join(body_parts)
-            else:
-                body_part_str = str(body_parts) if body_parts else "Unknown"
-            
-            # 获取severity字段（absolute/relative/caution）
-            severity = row.get("severity", "relative")
-            
+
+            # 从 severity 字符串映射到风险等级和分数
+            severity_str = row.get("severity", "moderate")
+            risk_level = "HIGH" if severity_str == "high" else "MODERATE"
+            severity_score = 7 if severity_str == "high" else 5
+
             contraindications.append({
                 "exercise_id": exercise_id,
                 "exercise_name_zh": "",  # 将在上层填充
                 "exercise_name_en": "",  # 将在上层填充
-                "contraindication_type": row.get("category_zh") or "损伤禁忌",
-                "risk_level": self._map_risk_level(row.get("risk_level")),
-                "severity": severity,
+                "contraindication_type": row.get("category") or "损伤禁忌",
+                "risk_level": risk_level,
+                "severity": severity_str,
                 "reason": row.get("reason") or "基于医学指导",
-                "severity_score": int(row.get("severity_score") or 5),
-                "body_part_affected": body_part_str,
-                "medical_source": row.get("medical_source")
+                "severity_score": severity_score,
+                "body_part_affected": row.get("category") or "Unknown",
+                "medical_source": None
             })
-        
+
         return contraindications
     
     async def _query_joint_contraindications(
@@ -491,13 +484,9 @@ class ContraindicationsChecker(BaseMCPTool):
     ) -> List[Dict[str, Any]]:
         """
         查询关节禁忌（INVOLVES_JOINT关系）
-        
-        Requirements: 4.5 - 添加INVOLVES_JOINT关系查询排除危险动作
-        
-        逻辑：
-        1. 从health_conditions中提取关节相关的条件
-        2. 查询动作涉及的关节（INVOLVES_JOINT关系）
-        3. 如果动作涉及受伤关节，标记为禁忌
+
+        注意: 当前数据库中无 INVOLVES_JOINT 关系和 Joint 节点，
+        此方法预留给未来数据扩展。目前总是返回空列表。
         """
         # 提取关节相关的健康状况
         joint_keywords = ["关节", "膝", "肩", "肘", "腕", "踝", "髋", "脊柱", "颈椎", "腰椎"]
@@ -505,19 +494,19 @@ class ContraindicationsChecker(BaseMCPTool):
             cond for cond in health_conditions
             if any(keyword in cond for keyword in joint_keywords)
         ]
-        
+
         if not injured_joints:
             return []
-        
+
         query = """
         MATCH (e:Exercise {id: $exercise_id})
         OPTIONAL MATCH (e)-[r:INVOLVES_JOINT]->(joint:Joint)
         WHERE joint.name_zh IN $injured_joints
-           OR joint.name_en IN $injured_joints
-        
+           OR joint.name IN $injured_joints
+
         RETURN
           joint.name_zh as joint_name_zh,
-          joint.name_en as joint_name_en,
+          joint.name as joint_name_en,
           r.stress_level as stress_level,
           r.movement_type as movement_type
         """
@@ -597,26 +586,24 @@ class ContraindicationsChecker(BaseMCPTool):
         MATCH (e:Exercise {id: $exercise_id})
         OPTIONAL MATCH (e)-[r:AGGRAVATES]->(posture:PosturalIssue)
         WHERE posture.name_zh IN $postural_issues
-           OR posture.name_en IN $postural_issues
-        
+           OR posture.name IN $postural_issues
+
         RETURN
           posture.name_zh as posture_name_zh,
-          posture.name_en as posture_name_en,
-          posture.description_zh as description,
-          r.reason as reason
+          posture.name as posture_name_en
         """
-        
+
         result = await self.neo4j_client.query(query, {
             "exercise_id": exercise_id,
             "postural_issues": postural_issues
         })
-        
+
         contraindications = []
         for row in result:
             # 跳过空结果
             if row.get("posture_name_zh") is None:
                 continue
-            
+
             contraindications.append({
                 "exercise_id": exercise_id,
                 "exercise_name_zh": "",  # 将在上层填充
@@ -624,7 +611,7 @@ class ContraindicationsChecker(BaseMCPTool):
                 "contraindication_type": "体态问题禁忌",
                 "risk_level": "MODERATE",
                 "severity": "caution",
-                "reason": row.get("reason") or f"可能加重体态问题：{row.get('posture_name_zh')}",
+                "reason": f"可能加重体态问题：{row.get('posture_name_zh')}",
                 "severity_score": 5,
                 "body_part_affected": row.get("posture_name_zh", "Unknown"),
                 "medical_source": None

@@ -113,13 +113,13 @@ CYPHER_TEMPLATES: Dict[StructuredQueryType, str] = {
     # 安全禁忌查询（损伤/疾病 → 禁忌动作）
     StructuredQueryType.SAFETY_CONTRAINDICATIONS: """
         MATCH (e:Exercise)-[r:CONTRAINDICATED_FOR]->(i:InjuryType)
-        WHERE i.name CONTAINS $keyword OR i.description CONTAINS $keyword
+        WHERE i.name CONTAINS $keyword OR i.name_zh CONTAINS $keyword
            OR i.category CONTAINS $keyword
         RETURN e.name_zh AS exercise, i.name AS injury_type,
-               i.category AS category, i.description AS description,
-               i.intensity_limit AS intensity_limit,
-               e.difficulty AS difficulty, e.safety_level AS safety_level
-        ORDER BY e.difficulty
+               i.name_zh AS injury_name_zh, i.category AS category,
+               r.severity AS severity, r.reason AS reason,
+               e.difficulty_zh AS difficulty, e.safety_level AS safety_level
+        ORDER BY r.severity DESC, e.difficulty_zh
         LIMIT 20
     """,
 
@@ -297,6 +297,62 @@ MUSCLE_SYNONYMS: Dict[str, str] = {
     "前臂": "前臂肌群",
 }
 
+# 伤病/体态同义词映射（用户口语 → Neo4j InjuryType.name_zh）
+INJURY_SYNONYMS: Dict[str, str] = {
+    "腰突": "腰椎间盘突出",
+    "椎间盘突出": "腰椎间盘突出",
+    "腰间盘突出": "腰椎间盘突出",
+    "腰椎突出": "腰椎间盘突出",
+    "腰痛": "下背部疼痛",
+    "下背痛": "下背部疼痛",
+    "腰疼": "下背部疼痛",
+    "膝盖疼": "膝盖受伤",
+    "膝盖痛": "膝盖受伤",
+    "膝关节损伤": "膝盖受伤",
+    "前叉": "前交叉韧带损伤",
+    "ACL": "前交叉韧带损伤",
+    "acl": "前交叉韧带损伤",
+    "十字韧带": "前交叉韧带损伤",
+    "髌骨软化": "髌骨软化症",
+    "跑步膝": "髌骨软化症",
+    "ITBS": "髂胫束综合征",
+    "itbs": "髂胫束综合征",
+    "髂胫束": "髂胫束综合征",
+    "肩袖": "肩袖损伤",
+    "肩袖撕裂": "肩袖损伤",
+    "肩峰撞击": "肩峰撞击",
+    "肩膀疼": "肩部受伤",
+    "肩痛": "肩部受伤",
+    "腕管": "腕管综合征",
+    "鼠标手": "腕管综合征",
+    "手腕疼": "腕部受伤",
+    "手腕痛": "腕部受伤",
+    "脚踝扭伤": "踝关节扭伤",
+    "崴脚": "踝关节扭伤",
+    "跟腱": "跟腱炎",
+    "足底筋膜": "足底筋膜炎",
+    "脚底疼": "足底筋膜炎",
+    "颈椎": "颈椎病",
+    "脖子疼": "颈部受伤",
+    "脖子痛": "颈部受伤",
+    "网球肘": "网球肘",
+    "高尔夫球肘": "高尔夫球肘",
+    "髋关节疼": "髋部受伤",
+    "髋关节痛": "髋部受伤",
+    "FAI": "髋关节撞击",
+    "fai": "髋关节撞击",
+    "圆肩": "圆肩",
+    "驼背": "胸椎后凸过度(驼背)",
+    "骨盆前倾": "骨盆前倾",
+    "骨盆后倾": "骨盆后倾",
+    "头前伸": "头前伸",
+    "X型腿": "膝外翻(X型腿)",
+    "O型腿": "膝内翻(O型腿)",
+    "脊柱侧弯": "脊柱侧弯",
+    "扁平足": "扁平足",
+    "高弓足": "高弓足",
+}
+
 
 class CypherQueryExecutor:
     """Neo4j Cypher 直查执行器"""
@@ -352,6 +408,9 @@ class CypherQueryExecutor:
 
         # 同义词规范化：将用户常用名映射到 Neo4j 实际名称
         normalized_entity = MUSCLE_SYNONYMS.get(entity, entity)
+        # 伤病/体态同义词（安全禁忌和体态查询时优先使用）
+        if query_type in (StructuredQueryType.SAFETY_CONTRAINDICATIONS, StructuredQueryType.POSTURAL_EXERCISES):
+            normalized_entity = INJURY_SYNONYMS.get(entity, entity)
 
         # 肌肉分组匹配：优先用 group 字段精确匹配
         muscle_group = MUSCLE_GROUP_MAP.get(entity)
@@ -467,12 +526,14 @@ class CypherQueryExecutor:
             )
 
         elif query_type == StructuredQueryType.SAFETY_CONTRAINDICATIONS:
+            severity = row.get('severity', '未知')
+            severity_label = {'high': '高风险', 'moderate': '中风险'}.get(severity, severity)
             return (
                 f"⚠️ 动作「{row.get('exercise', '')}」"
-                f"对「{row.get('injury_type', '')}」"
+                f"对「{row.get('injury_name_zh', '') or row.get('injury_type', '')}」"
                 f"（{row.get('category', '未知')}）存在禁忌。"
-                f"强度限制: {row.get('intensity_limit', '未知')}, "
-                f"安全等级: {row.get('safety_level', '未知')}"
+                f"风险等级: {severity_label}, "
+                f"原因: {row.get('reason', '未知')}"
             )
 
         elif query_type == StructuredQueryType.POSTURAL_EXERCISES:
