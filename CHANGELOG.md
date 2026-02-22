@@ -5,6 +5,18 @@
 
 ---
 
+## #24 (refactor) LLM 客户端迁移到 DI 容器 — 2026-02-23
+
+对应产品版本：v1.1.0（内部重构，产品版本不动）
+
+- `call_with_fallback`/`call_with_fallback_stream` 新增 `primary_backend`/`fallback_backends` 覆盖参数
+- 消除 3 个文件中 6 处 `LLMFallbackManager` 直接实例化（llm_decision_engine/nodes/stream_executor）
+- 蓝绿池路由通过参数覆盖实现，不再每次请求创建新实例
+- 更新 `test_llm_fallback_integration.py` 断言适配 DI 容器模式
+- 验证：860 unit + 74 integration passed / 0 failed
+
+---
+
 ## #23 (refactor) DI 容器重构 — singletons 全局单例集中管理 — 2026-02-23
 
 对应产品版本：v1.1.0（内部重构，产品版本不动）

@@ -98,7 +98,7 @@ class TestLLMFallbackIntegration:
         """测试工作流步骤10使用降级管理器
 
         workflow_executor.py 已重构为兼容层，实际实现在 workflow/ 模块中。
-        验证 nodes.py 和 stream_executor.py 中正确集成了 LLMFallbackManager。
+        验证 nodes.py 和 stream_executor.py 通过 DI 容器获取 LLMFallbackManager 单例。
         """
         import os
 
@@ -107,22 +107,22 @@ class TestLLMFallbackIntegration:
             "../../src/applications/fitness/workflow"
         )
 
-        # 检查 nodes.py（同步执行路径）
+        # 检查 nodes.py（同步执行路径）— 通过 DI 容器获取单例
         nodes_file = os.path.join(workflow_dir, "nodes.py")
         with open(nodes_file, 'r', encoding='utf-8') as f:
             nodes_content = f.read()
 
-        assert "LLMFallbackManager" in nodes_content, "nodes.py 应包含 LLMFallbackManager"
-        assert "fallback_manager = LLMFallbackManager(" in nodes_content
+        assert "get_llm_degradation_manager" in nodes_content, "nodes.py 应通过 DI 容器获取 LLM 降级管理器"
 
-        # 检查 stream_executor.py（流式执行路径）
+        # 检查 stream_executor.py（流式执行路径）— 通过 DI 容器获取单例
         stream_file = os.path.join(workflow_dir, "stream_executor.py")
         with open(stream_file, 'r', encoding='utf-8') as f:
             stream_content = f.read()
 
-        assert "LLMFallbackManager" in stream_content, "stream_executor.py 应包含 LLMFallbackManager"
+        assert "get_llm_degradation_manager" in stream_content, "stream_executor.py 应通过 DI 容器获取 LLM 降级管理器"
+        assert "call_with_fallback_stream" in stream_content, "stream_executor.py 应使用流式降级调用"
 
-        logger.info("✅ workflow/nodes.py 和 stream_executor.py 均已集成 LLMFallbackManager")
+        logger.info("✅ workflow/nodes.py 和 stream_executor.py 均已通过 DI 容器集成 LLMFallbackManager")
     
     def test_llm_fallback_configuration(self):
         """测试LLM降级配置"""
