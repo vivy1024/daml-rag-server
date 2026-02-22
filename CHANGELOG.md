@@ -5,6 +5,18 @@
 
 ---
 
+## #23 (refactor) DI 容器重构 — singletons 全局单例集中管理 — 2026-02-23
+
+对应产品版本：v1.1.0（内部重构，产品版本不动）
+
+- 新增 `src/framework/container.py`：轻量 AppContainer（11 个工厂函数，零新依赖）
+- `singletons.py` 从 601 行重构为 ~150 行薄代理层，所有 get_xxx() 委托到容器
+- 支持 `override()` 测试注入 + `reset()` 状态清理，替代原有 `reset_all_singletons()`
+- 修复 `from ....framework` 相对 import 超出包边界问题（改为绝对 import）
+- 验证：104 passed / 0 failed（5 个核心组件测试文件）
+
+---
+
 ## #22 (test) 集成测试全量修复 + 训练术语统一 — 2026-02-23
 
 对应产品版本：v1.1.0（测试修复+术语优化，产品版本不动）
