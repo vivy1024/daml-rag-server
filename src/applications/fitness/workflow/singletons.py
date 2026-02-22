@@ -16,13 +16,6 @@ from src.framework.container import get_container, reset_container
 logger = logging.getLogger(__name__)
 
 
-# ============ Feature Flag（保留兼容，永远返回 True） ============
-
-def _use_new_cache() -> bool:
-    """历史遗留，旧缓存已移除，永远返回 True"""
-    return True
-
-
 # ============ 用户缓存 ============
 
 def get_user_cache(backend_client=None, redis_client=None):

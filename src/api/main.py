@@ -129,67 +129,60 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 logger.warning(f"⚠️ Skills架构初始化失败: {e}")
 
-        # ✅ 启动预热系统（根据feature flag选择新旧系统）
+        # ✅ 启动预热系统（WarmupManager）
         try:
-            import os
-            use_new_cache = os.getenv('USE_NEW_CACHE', 'false').lower() in ('true', '1', 'yes')
-            
-            if use_new_cache:
-                # 使用新预热系统（WarmupManager）
-                from src.framework.storage.warmup import (
-                    WarmupManager,
-                    WarmupConfig,
-                    set_warmup_manager
-                )
-                
-                # 创建 BackendClient
-                from src.applications.fitness.clients.backend_client import BackendClient
-                backend_client = BackendClient()
-                
-                # 获取实际用户ID列表
-                critical_user_ids = []
-                try:
-                    real_users = await backend_client.get_active_user_ids(limit=20)
-                    if real_users:
-                        critical_user_ids = real_users
-                        logger.info(f"✅ 从后端获取到 {len(critical_user_ids)} 个实际用户ID: {critical_user_ids[:5]}...")
-                    else:
-                        logger.info("ℹ️ 后端暂无活跃用户，跳过用户预热")
-                except Exception as user_fetch_error:
-                    logger.warning(f"⚠️ 获取用户ID列表失败: {user_fetch_error}，跳过用户预热")
-                
-                # 初始化缓存单例
-                from src.applications.fitness.workflow.singletons import (
-                    get_user_cache,
-                    get_membership_cache
-                )
-                user_cache = get_user_cache(backend_client=backend_client)
-                membership_cache = get_membership_cache(backend_client=backend_client)
-                
-                # 配置新预热系统
-                warmup_config = WarmupConfig(
-                    enabled=True,
-                    batch_size=10,
-                    max_concurrent=5,
-                    timeout=30
-                )
-                
-                # 创建并启动新预热管理器
-                warmup_manager = WarmupManager(
-                    config=warmup_config,
-                    user_profile_cache=user_cache,
-                    membership_cache=membership_cache
-                )
-                
-                # 设置全局单例
-                set_warmup_manager(warmup_manager)
-                
-                # 启动预热（非阻塞）
-                await warmup_manager.start()
-                
-                logger.info("✅ 预热系统（WarmupManager）已启动")
-                
-                logger.info("✅ 预热系统（WarmupManager）已启动")
+            from src.framework.storage.warmup import (
+                WarmupManager,
+                WarmupConfig,
+                set_warmup_manager
+            )
+
+            # 创建 BackendClient
+            from src.applications.fitness.clients.backend_client import BackendClient
+            backend_client = BackendClient()
+
+            # 获取实际用户ID列表
+            critical_user_ids = []
+            try:
+                real_users = await backend_client.get_active_user_ids(limit=20)
+                if real_users:
+                    critical_user_ids = real_users
+                    logger.info(f"✅ 从后端获取到 {len(critical_user_ids)} 个实际用户ID: {critical_user_ids[:5]}...")
+                else:
+                    logger.info("ℹ️ 后端暂无活跃用户，跳过用户预热")
+            except Exception as user_fetch_error:
+                logger.warning(f"⚠️ 获取用户ID列表失败: {user_fetch_error}，跳过用户预热")
+
+            # 初始化缓存单例
+            from src.applications.fitness.workflow.singletons import (
+                get_user_cache,
+                get_membership_cache
+            )
+            user_cache = get_user_cache(backend_client=backend_client)
+            membership_cache = get_membership_cache(backend_client=backend_client)
+
+            # 配置新预热系统
+            warmup_config = WarmupConfig(
+                enabled=True,
+                batch_size=10,
+                max_concurrent=5,
+                timeout=30
+            )
+
+            # 创建并启动新预热管理器
+            warmup_manager = WarmupManager(
+                config=warmup_config,
+                user_profile_cache=user_cache,
+                membership_cache=membership_cache
+            )
+
+            # 设置全局单例
+            set_warmup_manager(warmup_manager)
+
+            # 启动预热（非阻塞）
+            await warmup_manager.start()
+
+            logger.info("✅ 预热系统（WarmupManager）已启动")
             
         except Exception as warmup_error:
             logger.warning(f"⚠️ 预热系统启动失败: {warmup_error}，服务继续运行")

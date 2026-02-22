@@ -6,20 +6,22 @@
 - BackendClient: 用于调用yuzhen-backend API
 - UserProfile: 用户档案数据模型
 - MembershipPermissions: 会员权限数据模型
-
-作者: BUILD_BODY Team
-版本: v1.0.0
-日期: 2025-12-13
 """
 
-from .backend_client import (
-    BackendClient,
-    BackendConfig,
+from .models import (
     UserProfile,
     MembershipPermissions,
     MembershipTier,
-    MembershipFeature
+    MembershipFeature,
+    BackendAPIError,
+    BackendAuthError,
+    BackendNotFoundError,
+    BackendValidationError,
+    BackendServerError,
 )
+
+from .base_client import BackendConfig
+from .backend_client import BackendClient
 
 __all__ = [
     'BackendClient',
@@ -27,5 +29,10 @@ __all__ = [
     'UserProfile',
     'MembershipPermissions',
     'MembershipTier',
-    'MembershipFeature'
+    'MembershipFeature',
+    'BackendAPIError',
+    'BackendAuthError',
+    'BackendNotFoundError',
+    'BackendValidationError',
+    'BackendServerError',
 ]
