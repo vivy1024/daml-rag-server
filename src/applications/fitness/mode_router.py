@@ -2,11 +2,12 @@
 """
 执行模式路由器
 
-v4.0.0: Agent模式恢复，作为管线步骤7的执行方式。
-- DAG: 固定编排（默认，所有用户）
-- Agent: LangGraph动态决策（energy+会员）
+v4.1.0: 积分体系对齐 — 所有用户均可使用Agent模式，
+权限控制由积分消耗机制统一处理（与DAG模板一致）。
+- DAG: 固定编排（默认）
+- Agent: LangGraph动态决策（前端请求即可）
 
-版本: v4.0.0
+版本: v4.1.0
 日期: 2026-02-22
 """
 
@@ -17,28 +18,23 @@ logger = logging.getLogger(__name__)
 
 ExecutionMode = Literal["dag", "agent"]
 
-# Agent 模式所需的最低会员等级
-AGENT_ALLOWED_TIERS = {"energy", "energy_plus", "pro", "admin"}
-
 
 def resolve_execution_mode(
     requested_mode: Optional[str] = None,
-    membership_level: str = "free",
 ) -> ExecutionMode:
     """
     解析最终执行模式
 
+    积分体系下不再按会员等级限制，前端请求agent即返回agent。
+    积分消耗在执行层统一扣减。
+
     Args:
         requested_mode: 前端请求的模式（"dag" 或 "agent"）
-        membership_level: 会员等级
 
     Returns:
         "dag" 或 "agent"
     """
     if requested_mode == "agent":
-        if membership_level.lower() in AGENT_ALLOWED_TIERS:
-            return "agent"
-        logger.info(f"Agent模式需要energy+会员，当前={membership_level}，降级为DAG")
-        return "dag"
+        return "agent"
 
     return "dag"
