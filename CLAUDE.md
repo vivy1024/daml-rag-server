@@ -71,10 +71,11 @@ Zeabur 命令行不可用（卡顿、无法粘贴、每字符数秒），所有�
 |--------|--------------|-------------|------|
 | Neo4j | `bolt://neo4j:7687` | `bolt://182.92.78.183:32372` | neo4j / build_body_2024 |
 | MySQL | `mysql:3306` | `182.92.78.183:30932` | root / root_password_2025 |
-| Qdrant | `qdrant:6333` | 内网 `${FITNESS_QDRANT_HOST}:6333` ⚠️ 无公网 | API Key: yuzhen_qdrant_2025_secure_abc123xyz789 |
+| Qdrant | `qdrant:6333` | `182.92.78.183:32091`（gRPC plain）或 `qdrant.yuzhen-fitness.cn` | API Key: yuzhen_qdrant_2025_secure_abc123xyz789 |
 | Redis | `redis:6379` | 内网 `${FITNESS_REDIS_HOST}:6379` ⚠️ 无公网 | 密码: NyVZkW8jOT1032suQ9XCo4wc56mIqK7J |
 
-⚠️ Qdrant/Redis 无公网端口，只能通过 Zeabur 容器内网访问或代码层面同步
+⚠️ Qdrant 公网端口 32091 是 gRPC 映射（非 HTTP），必须用 `prefer_grpc=True, https=False`
+⚠️ Redis 无公网端口，只能通过 Zeabur 容器内网访问
 
 ### 数据概况（2026-02-24）
 
@@ -82,7 +83,7 @@ Zeabur 命令行不可用（卡顿、无法粘贴、每字符数秒），所有�
 |--------|------|------|---------|
 | Neo4j | 4,264 节点 / 65,147 关系 | ✅ 已同步一致 | sync.py（公网 bolt） |
 | MySQL | 基本为空（开发用） | 24,685 行（exercises/foods/users等） | Laravel migration（代码部署自动执行） |
-| Qdrant | 7,708 points / 7 collections | 3 核心 collection 已同步 | scripts/migrate_qdrant_to_production.py |
+| Qdrant | 7,708 points / 7 collections | 5 collections / 核心3个已同步 | gRPC 公网直连（`prefer_grpc=True, https=False`） |
 | Redis | 缓存数据（不需同步） | 缓存数据 | 无需同步，各环境独立 |
 
 ### Neo4j 同步工具（`scripts/neo4j_migrations/`）
@@ -106,8 +107,9 @@ docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py 
 - Neo4j: `CONTRAINDICATED_FOR` 是禁忌症安全核心（6,371 条），必须保持同步
 - MySQL: 生产数据由 Laravel migration + 用户操作产生，本地不需要同步生产数据
 - MySQL: 结构变更通过 `php artisan migrate` 在部署时自动执行
-- Qdrant: 生产无公网端口，同步需通过 `scripts/migrate_qdrant_to_production.py`（从容器内连内网）
+- Qdrant: 公网 gRPC 可连（`182.92.78.183:32091`，`prefer_grpc=True, https=False`），HTTP 不可用
 - Qdrant: 核心 collection: fitness_exercises_v2(1790), training_knowledge(4062), food_nutrition_vector(1851)
+- Qdrant: knowledge_articles(5) 和 user_memory(0) 需要同步到生产
 
 ## 关键目录
 
