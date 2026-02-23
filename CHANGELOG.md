@@ -12,6 +12,7 @@
 - `tool_node` 将 Agent state 中的 `user_profile` 注入到 MCP 工具参数，解决工具内 `_get_user_profile()` 未实现导致档案为空的问题
 - `tdee_calculator._merge_user_info` 兼容 `weight`/`height` 和 `weight_kg`/`height_cm` 两种字段名
 - 端到端验证通过：Agent → load_skill(nutrition_planning) → tdee_calculator → TDEE=2651卡
+- 测试指标：TTFB=36.7s, 总耗时=54.5s, 字符=2545, Agent执行=27.03s, tools=2, cost=0.10, credits=3
 
 ## #33 (fix) Agent Function Calling 修复 — 2026-02-24
 
