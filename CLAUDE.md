@@ -7,7 +7,7 @@
 - **框架**: FastAPI + DAML-RAG 自研框架
 - **Python**: 3.11（容器内）
 - **向量库**: Qdrant (`fitness_qdrant`，端口 6333/6334，1024维 GTE-Large-zh)
-- **图数据库**: Neo4j (`fitness_neo4j`，端口 7474/7687，4,246节点)
+- **图数据库**: Neo4j (`fitness_neo4j`，端口 7474/7687，4,264节点/65,147关系)
 - **运行环境**: `fitness_daml_rag` 容器（端口 8001）
 - **LLM**: Anthropic Claude haiku-4.5（主）→ DeepSeek（备）→ Template（兜底）
 
@@ -61,6 +61,38 @@ docker exec fitness_daml_rag python -m pytest tests/ > /f/build_body/_output.txt
 - **域名**: ai.yuzhen-fitness.cn（仅内网，前端不直连）
 - **健康检查**: `/api/health`, `/health/components`, `/health/metrics`
 
+## Neo4j 数据库同步（⚠️ 重要）
+
+Zeabur 命令行不可用（卡顿、无法粘贴），所有 Neo4j 数据操作从本地发起。
+
+**连接信息**：
+| 环境 | Bolt 地址 | 用户 | 密码 |
+|------|----------|------|------|
+| 本地 | `bolt://neo4j:7687`（容器内） | neo4j | build_body_2024 |
+| 生产 | `bolt://182.92.78.183:32372`（公网） | neo4j | build_body_2024 |
+
+**数据概况**（2026-02-24）：4,264 节点 / 65,147 关系 / 20 种关系类型
+
+**同步工具**（`scripts/neo4j_migrations/`）：
+```bash
+# 主方案：全量对比+同步（幂等，可重复执行）
+docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/sync.py --check"   # 只看差异
+docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/sync.py --sync"    # 执行同步
+
+# 辅助方案：Migration 版本管理
+docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --status --target prod"  # 查状态
+docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --target prod"           # 执行
+docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --all"                   # 本地+生产
+docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --sync-status"           # 对比
+```
+
+**开发流程**：修改本地 Neo4j 数据 → 写 migration 脚本 → sync.py --sync 同步生产 → 验证
+
+**关键关系**：
+- `(Exercise)-[:CONTRAINDICATED_FOR]->(InjuryType)` — 禁忌症安全系统核心，6,371 条
+- Exercise 节点用 `id` 属性匹配（不是 exercise_id），InjuryType 用 `name`
+- 关系属性：severity, reason, confidence, created_at
+
 ## 关键目录
 
 ```
@@ -72,6 +104,7 @@ src/dag/                     # DAG 编排定义
 src/agent/                   # Agent 模式逻辑
 config/                      # 配置文件
 tests/                       # 测试目录
+scripts/neo4j_migrations/    # Neo4j 同步 + Migration 工具
 ```
 
 ## 按需加载参考
