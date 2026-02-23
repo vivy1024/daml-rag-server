@@ -41,7 +41,7 @@ class RecordTrainingFeedbackInput(BaseModel):
     session_id: str = Field(..., description="训练会话ID")
     fatigue_level: int = Field(..., ge=1, le=10, description="疲劳程度（1-10分）")
     subjective_feeling: str = Field(..., description="主观感受（文本描述）")
-    training_records: List[TrainingRecord] = Field(..., min_items=1, description="训练记录列表")
+    training_records: List[TrainingRecord] = Field(..., min_length=1, description="训练记录列表")
     date: Optional[str] = Field(None, description="日期（ISO 8601格式，默认今天）")
 
 

@@ -25,7 +25,7 @@ import time
 from datetime import datetime
 
 from ..base_tool import BaseMCPTool
-from ..exceptions import ToolValidationError
+from src.framework.exceptions import ValidationError as ToolValidationError
 
 
 # =============================================================================
