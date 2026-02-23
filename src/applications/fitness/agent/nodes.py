@@ -61,14 +61,22 @@ async def agent_node(state: AgentState, *, llm_client, tool_schemas: list) -> Di
 
     v2.0: tool_schemas 包含 load_skill + 辅助工具，
     LLM 优先调用 load_skill 获取 Skill 详情。
+
+    v2.1: 首次调用使用 tool_choice="required" 强制触发 FC，
+    后续循环使用 "auto" 让 LLM 自行决策。
     """
     start = time.time()
     messages = state.get("messages", [])
+    call_count = state.get("tool_calls_count", 0)
+
+    # 首次调用强制使用工具，后续循环让 LLM 自行决策
+    tool_choice = "required" if call_count == 0 and tool_schemas else "auto"
 
     response = await llm_client.chat_with_tools(
         messages=messages,
         tools=tool_schemas,
         temperature=0.3,
+        tool_choice=tool_choice,
     )
 
     elapsed = time.time() - start

@@ -69,9 +69,19 @@ def _build_skills_system_prompt(skills_prompt: str, persona_id: str = None) -> s
 
 
 FALLBACK_SYSTEM_PROMPT = (
-    "根据用户的问题，决定是否需要调用工具获取数据，"
-    "还是直接回答。每次只调用必要的工具，避免冗余调用。"
-    "回答时使用中文，专业但友好。"
+    "你是玉珍健身的AI教练助手，拥有多种专业健身工具。\n\n"
+    "## 核心规则\n"
+    "1. 当用户询问训练计划、动作推荐、营养饮食、体能评估、禁忌症检查等健身相关问题时，"
+    "你**必须**调用相应的工具来获取专业数据，然后基于工具返回的数据生成回答。\n"
+    "2. 只有简单问候（如'你好'、'谢谢'）才可以直接回答，不需要调用工具。\n"
+    "3. 每次只调用必要的工具，避免冗余调用。\n"
+    "4. 回答时使用中文，专业但友好。\n\n"
+    "## 📐 输出格式要求（前端渲染）\n"
+    "你的回答将直接在移动端App中以Markdown渲染，必须严格遵守：\n"
+    "1. 使用标准Markdown：标题用 ##/###，列表用 -/1.，加粗用 **文字**\n"
+    "2. 每个主要段落标题前加一个相关emoji（如 💪🏋️🥗⚠️📊）\n"
+    "3. 结构清晰，用空行分隔段落\n"
+    "4. 安全/禁忌信息用 > ⚠️ 引用块格式"
 )
 
 
@@ -177,7 +187,15 @@ class AgentExecutor:
         """构建初始状态"""
         request_id = str(uuid.uuid4())[:8]
 
-        messages = [SystemMessage(content=self.system_prompt)]
+        # 注入用户上下文到 system prompt，让 LLM 知道 user_id（FC 必需）
+        user_context = f"\n\n## 当前用户信息\n- 用户ID: {user_id}"
+        if user_profile:
+            name = user_profile.get("name", "")
+            if name:
+                user_context += f"\n- 姓名: {name}"
+        system_content = self.system_prompt + user_context
+
+        messages = [SystemMessage(content=system_content)]
         for hist in (conversation_history or []):
             role = hist.get("role", "")
             content = hist.get("content", "")
@@ -342,12 +360,13 @@ def create_agent_executor_from_singletons() -> "AgentExecutor":
     # 2. 工具 schemas
     tool_registry = get_mcp_tool_registry()
     tool_schemas = _build_tool_schemas_from_registry(tool_registry)
-    logger.info(f"Agent tool schemas: {len(tool_schemas)} tools from registry")
+    tool_names = [s["function"]["name"] for s in tool_schemas if "function" in s]
+    logger.info(f"Agent tool schemas: {len(tool_schemas)} tools from registry: {tool_names}")
 
     # 3. SkillManager（从 SkillsIntegration 获取）
     skill_manager = None
     try:
-        from framework.skills import get_skills_integration
+        from src.framework.skills import get_skills_integration
         integration = get_skills_integration()
         skill_manager = integration.get_skill_manager()
         if skill_manager:
