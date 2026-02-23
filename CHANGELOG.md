@@ -5,6 +5,17 @@
 
 ---
 
+## #35 (feat) 统一可观测性仪表盘 — 性能字段上报 — 2026-02-24
+
+对应产品版本：v1.3.0
+
+- credit_reporter: report_consumption() 新增 5 个性能参数（ttfb_ms/duration_ms/tokens_per_sec/fallback_count/error_type）
+- stream_executor: 对话完成后采集性能指标传递给 credit_reporter
+- executor: 同步执行器同样采集性能指标（ttfb_ms=0）
+- pytest: TestPerformanceFields 3 用例通过，总计 25/25 passed
+
+---
+
 ## #34 (fix) Agent user_profile 注入 + TDEE 字段兼容 — 2026-02-24
 
 对应产品版本：v1.2.0
