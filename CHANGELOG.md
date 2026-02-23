@@ -5,6 +5,14 @@
 
 ---
 
+## #34 (fix) Agent user_profile 注入 + TDEE 字段兼容 — 2026-02-24
+
+对应产品版本：v1.2.0
+
+- `tool_node` 将 Agent state 中的 `user_profile` 注入到 MCP 工具参数，解决工具内 `_get_user_profile()` 未实现导致档案为空的问题
+- `tdee_calculator._merge_user_info` 兼容 `weight`/`height` 和 `weight_kg`/`height_cm` 两种字段名
+- 端到端验证通过：Agent → load_skill(nutrition_planning) → tdee_calculator → TDEE=2651卡
+
 ## #33 (fix) Agent Function Calling 修复 — 2026-02-24
 
 对应产品版本：v1.2.0
