@@ -259,6 +259,25 @@ class APIPoolManager:
                 self.mark_success(status)
                 return
             
+            except httpx.HTTPStatusError as e:
+                last_error = e
+                error_msg = str(e)
+                status_code = e.response.status_code
+                logger.warning(
+                    f"API Key {status.masked_key} 调用失败 (HTTP {status_code}): {error_msg[:100]}"
+                )
+                self.mark_failure(status, error_msg)
+
+                # 4xx 客户端错误：请求本身有问题，换 Key 也没用，立即抛出
+                if 400 <= status_code < 500:
+                    logger.warning(
+                        f"HTTP {status_code} 是客户端错误，停止 Key 轮询，直接抛出"
+                    )
+                    raise
+
+                # 5xx 服务端错误：继续尝试下一个 Key
+                continue
+
             except Exception as e:
                 last_error = e
                 error_msg = str(e)
@@ -266,7 +285,7 @@ class APIPoolManager:
                     f"API Key {status.masked_key} 调用失败: {error_msg[:100]}"
                 )
                 self.mark_failure(status, error_msg)
-                
+
                 # 继续尝试下一个Key
                 continue
         

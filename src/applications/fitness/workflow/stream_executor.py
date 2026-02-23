@@ -838,18 +838,27 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 except (TypeError, ValueError):
                     user_profile_for_prompt = str(user_profile)
             
-            # 准备MCP工具结果字符串
+            # 准备MCP工具结果字符串（LLM摘要版，完整数据已通过structured_data发送给前端）
             mcp_tools_result_str = '无MCP工具结果'
             if aggregated_data:
                 try:
+                    from .tool_result_summarizer import summarize_for_llm
+
                     # 只提取MCP工具的结果，排除工作流元数据
                     mcp_results = {}
                     for key, value in aggregated_data.items():
                         if not key.startswith('_') and key not in ['workflow_metadata', 'retrieval_results']:
                             # 处理特殊对象类型（如MembershipPermissions）
-                            mcp_results[key] = self._make_json_serializable(value)
+                            serializable = self._make_json_serializable(value)
+                            # 压缩为LLM摘要（大型工具结果如训练计划只保留核心参数）
+                            mcp_results[key] = summarize_for_llm(key, serializable)
                     if mcp_results:
                         mcp_tools_result_str = json.dumps(mcp_results, ensure_ascii=False, indent=2)
+                        logger.info(
+                            f"📦 [{request_id}] MCP工具结果LLM摘要: "
+                            f"{len(mcp_tools_result_str):,} chars "
+                            f"(原始aggregated_data keys: {list(aggregated_data.keys())})"
+                        )
                 except (TypeError, ValueError) as e:
                     logger.warning(f"序列化MCP工具结果失败: {e}")
                     mcp_tools_result_str = str(aggregated_data)

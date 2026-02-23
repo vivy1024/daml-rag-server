@@ -27,8 +27,8 @@ from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-# 中文平均每 token 字符数（与 TokenCompressor 一致）
-AVG_CHARS_PER_TOKEN = 2.5
+# 中文平均每 token 字符数（校准值，更接近 Claude/DeepSeek 实际 tokenization）
+AVG_CHARS_PER_TOKEN = 1.8
 
 
 def estimate_tokens(text: str) -> int:
@@ -70,7 +70,7 @@ class TokenBudgetManager:
     超预算时按 COMPRESSION_PRIORITY 顺序压缩。
     """
 
-    DEFAULT_BUDGET = 8000
+    DEFAULT_BUDGET = 12000
 
     # 各组件默认 token 上限
     COMPONENT_LIMITS = {
@@ -82,8 +82,8 @@ class TokenBudgetManager:
         "user_memory": 400,
         "few_shot_examples": 500,
         "web_search": 500,
-        "mcp_tools_result": 1500,
-        "conversation_history": 3000,
+        "mcp_tools_result": 3000,
+        "conversation_history": 4000,
     }
 
     # 不可压缩的组件

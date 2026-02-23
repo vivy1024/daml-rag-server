@@ -14,7 +14,7 @@ import logging
 import asyncio
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,14 @@ class WarmupRequest(BaseModel):
     """预热请求模型"""
     user_id: str
     force_refresh: bool = False  # 是否强制刷新缓存（用户档案更新时设为True）
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def coerce_user_id(cls, v):
+        """兼容前端发送的整数 user_id，自动转为字符串"""
+        if isinstance(v, (int, float)):
+            return str(int(v))
+        return v
 
 
 class WarmupResponse(BaseModel):
