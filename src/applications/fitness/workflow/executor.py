@@ -212,7 +212,9 @@ class WorkflowExecutor:
                 mode="dag",  # 同步执行器默认使用DAG模式
                 template_name=state.get("dag_template_id"),
                 conversation_id=session_id,
-                request_id=request_id
+                request_id=request_id,
+                duration_ms=int(processing_time * 1000),
+                backend_used=state.get("backend_used", "unknown"),
             )
             
             logger.info(f"🎉 [{request_id}] 工作流执行成功! 耗时: {processing_time:.2f}秒")
@@ -562,7 +564,9 @@ class WorkflowExecutor:
         mode: str,
         template_name: Optional[str] = None,
         conversation_id: Optional[str] = None,
-        request_id: str = "unknown"
+        request_id: str = "unknown",
+        duration_ms: int = 0,
+        backend_used: str = "unknown",
     ) -> bool:
         """
         上报积分消耗到后端
@@ -602,7 +606,13 @@ class WorkflowExecutor:
                 template_name=template_name,
                 conversation_id=conversation_id,
                 input_tokens=input_tokens,
-                output_tokens=output_tokens
+                output_tokens=output_tokens,
+                backend_used=backend_used,
+                ttfb_ms=0,  # 同步执行器无 TTFB
+                duration_ms=duration_ms,
+                tokens_per_sec=output_tokens / max(duration_ms / 1000, 0.1) if duration_ms > 0 else 0.0,
+                fallback_count=0,
+                error_type="",
             )
             
             if result.get("success"):

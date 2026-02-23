@@ -131,7 +131,13 @@ class CreditReporter:
         conversation_id: Optional[str] = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
-        backend_used: str = "unknown"
+        backend_used: str = "unknown",
+        # 性能监控字段（unified-observability-dashboard）
+        ttfb_ms: int = 0,
+        duration_ms: int = 0,
+        tokens_per_sec: float = 0.0,
+        fallback_count: int = 0,
+        error_type: str = "",
     ) -> Dict[str, Any]:
         """
         上报积分消耗到后端
@@ -145,6 +151,11 @@ class CreditReporter:
             input_tokens: 输入Token数量
             output_tokens: 输出Token数量
             backend_used: 实际使用的LLM后端（anthropic/deepseek/template）
+            ttfb_ms: 首字节时间(毫秒)
+            duration_ms: 总耗时(毫秒)
+            tokens_per_sec: 令牌生成速率
+            fallback_count: 降级次数
+            error_type: 错误类型
 
         Returns:
             dict: 上报结果
@@ -173,6 +184,12 @@ class CreditReporter:
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
             "backend_used": backend_used,
+            # 性能监控字段
+            "ttfb_ms": ttfb_ms,
+            "duration_ms": duration_ms,
+            "tokens_per_sec": round(tokens_per_sec, 2),
+            "fallback_count": fallback_count,
+            "error_type": error_type or None,
         }
 
         self._report_count += 1
@@ -296,7 +313,12 @@ async def report_credit_consumption(
     conversation_id: Optional[str] = None,
     input_tokens: int = 0,
     output_tokens: int = 0,
-    backend_used: str = "unknown"
+    backend_used: str = "unknown",
+    ttfb_ms: int = 0,
+    duration_ms: int = 0,
+    tokens_per_sec: float = 0.0,
+    fallback_count: int = 0,
+    error_type: str = "",
 ) -> Dict[str, Any]:
     """
     便捷函数：上报积分消耗
@@ -310,6 +332,11 @@ async def report_credit_consumption(
         input_tokens: 输入Token数量（可选）
         output_tokens: 输出Token数量（可选）
         backend_used: 实际使用的LLM后端（可选）
+        ttfb_ms: 首字节时间(毫秒)
+        duration_ms: 总耗时(毫秒)
+        tokens_per_sec: 令牌生成速率
+        fallback_count: 降级次数
+        error_type: 错误类型
 
     Returns:
         dict: 上报结果
@@ -324,4 +351,9 @@ async def report_credit_consumption(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         backend_used=backend_used,
+        ttfb_ms=ttfb_ms,
+        duration_ms=duration_ms,
+        tokens_per_sec=tokens_per_sec,
+        fallback_count=fallback_count,
+        error_type=error_type,
     )

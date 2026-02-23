@@ -532,7 +532,13 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 mode=strategy,
                 template_name=state.get("dag_template_id"),
                 conversation_id=session_id,
-                request_id=request_id
+                request_id=request_id,
+                # 性能监控字段（unified-observability-dashboard）
+                ttfb_ms=int(ttfb_ms) if ttfb_ms is not None else 0,
+                duration_ms=int(processing_time * 1000),
+                backend_used=state.get("backend_used", "unknown"),
+                fallback_count=state.get("fallback_count", 0),
+                error_type="",
             )
             
             # 发送完成事件
@@ -1380,7 +1386,13 @@ class StreamWorkflowExecutor(WorkflowExecutor):
         mode: str,
         template_name: Optional[str] = None,
         conversation_id: Optional[str] = None,
-        request_id: str = "unknown"
+        request_id: str = "unknown",
+        # 性能监控字段
+        ttfb_ms: int = 0,
+        duration_ms: int = 0,
+        backend_used: str = "unknown",
+        fallback_count: int = 0,
+        error_type: str = "",
     ) -> bool:
         """
         上报积分消耗到后端
@@ -1421,7 +1433,13 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 template_name=template_name,
                 conversation_id=conversation_id,
                 input_tokens=input_tokens,
-                output_tokens=output_tokens
+                output_tokens=output_tokens,
+                backend_used=backend_used,
+                ttfb_ms=ttfb_ms,
+                duration_ms=duration_ms,
+                tokens_per_sec=output_tokens / max(duration_ms / 1000, 0.1) if duration_ms > 0 else 0.0,
+                fallback_count=fallback_count,
+                error_type=error_type,
             )
             
             if result.get("success"):
