@@ -61,19 +61,32 @@ docker exec fitness_daml_rag python -m pytest tests/ > /f/build_body/_output.txt
 - **域名**: ai.yuzhen-fitness.cn（仅内网，前端不直连）
 - **健康检查**: `/api/health`, `/health/components`, `/health/metrics`
 
-## Neo4j 数据库同步（⚠️ 重要）
+## 数据库同步（⚠️ 重要）
 
-Zeabur 命令行不可用（卡顿、无法粘贴），所有 Neo4j 数据操作从本地发起。
+Zeabur 命令行不可用（卡顿、无法粘贴、每字符数秒），所有数据库操作从本地发起。
 
-**连接信息**：
-| 环境 | Bolt 地址 | 用户 | 密码 |
-|------|----------|------|------|
-| 本地 | `bolt://neo4j:7687`（容器内） | neo4j | build_body_2024 |
-| 生产 | `bolt://182.92.78.183:32372`（公网） | neo4j | build_body_2024 |
+### 连接信息
 
-**数据概况**（2026-02-24）：4,264 节点 / 65,147 关系 / 20 种关系类型
+| 数据库 | 本地（容器内） | 生产（公网） | 认证 |
+|--------|--------------|-------------|------|
+| Neo4j | `bolt://neo4j:7687` | `bolt://182.92.78.183:32372` | neo4j / build_body_2024 |
+| MySQL | `mysql:3306` | `182.92.78.183:30932` | root / root_password_2025 |
+| Qdrant | `qdrant:6333` | 内网 `${FITNESS_QDRANT_HOST}:6333` ⚠️ 无公网 | API Key: yuzhen_qdrant_2025_secure_abc123xyz789 |
+| Redis | `redis:6379` | 内网 `${FITNESS_REDIS_HOST}:6379` ⚠️ 无公网 | 密码: NyVZkW8jOT1032suQ9XCo4wc56mIqK7J |
 
-**同步工具**（`scripts/neo4j_migrations/`）：
+⚠️ Qdrant/Redis 无公网端口，只能通过 Zeabur 容器内网访问或代码层面同步
+
+### 数据概况（2026-02-24）
+
+| 数据库 | 本地 | 生产 | 同步方式 |
+|--------|------|------|---------|
+| Neo4j | 4,264 节点 / 65,147 关系 | ✅ 已同步一致 | sync.py（公网 bolt） |
+| MySQL | 基本为空（开发用） | 24,685 行（exercises/foods/users等） | Laravel migration（代码部署自动执行） |
+| Qdrant | 7,708 points / 7 collections | 3 核心 collection 已同步 | scripts/migrate_qdrant_to_production.py |
+| Redis | 缓存数据（不需同步） | 缓存数据 | 无需同步，各环境独立 |
+
+### Neo4j 同步工具（`scripts/neo4j_migrations/`）
+
 ```bash
 # 主方案：全量对比+同步（幂等，可重复执行）
 docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/sync.py --check"   # 只看差异
@@ -81,17 +94,20 @@ docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/sync.py --
 
 # 辅助方案：Migration 版本管理
 docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --status --target prod"  # 查状态
-docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --target prod"           # 执行
-docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --all"                   # 本地+生产
-docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --sync-status"           # 对比
+docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --all"                   # 本地+生产同时执行
+docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --sync-status"           # 对比migration状态
 ```
 
 **开发流程**：修改本地 Neo4j 数据 → 写 migration 脚本 → sync.py --sync 同步生产 → 验证
 
-**关键关系**：
-- `(Exercise)-[:CONTRAINDICATED_FOR]->(InjuryType)` — 禁忌症安全系统核心，6,371 条
-- Exercise 节点用 `id` 属性匹配（不是 exercise_id），InjuryType 用 `name`
-- 关系属性：severity, reason, confidence, created_at
+### 同步注意事项
+
+- Neo4j: Exercise 节点用 `id` 属性匹配（不是 exercise_id），InjuryType 用 `name`
+- Neo4j: `CONTRAINDICATED_FOR` 是禁忌症安全核心（6,371 条），必须保持同步
+- MySQL: 生产数据由 Laravel migration + 用户操作产生，本地不需要同步生产数据
+- MySQL: 结构变更通过 `php artisan migrate` 在部署时自动执行
+- Qdrant: 生产无公网端口，同步需通过 `scripts/migrate_qdrant_to_production.py`（从容器内连内网）
+- Qdrant: 核心 collection: fitness_exercises_v2(1790), training_knowledge(4062), food_nutrition_vector(1851)
 
 ## 关键目录
 
