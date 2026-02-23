@@ -39,7 +39,7 @@ class CompressionConfig:
     summary_max_tokens: int = 500    # 摘要最大Token数
     
     # Token计数配置
-    avg_chars_per_token: float = 2.5  # 中文平均每Token字符数
+    avg_chars_per_token: float = 1.8  # 中文平均每Token字符数（校准值）
 
 
 class TokenCompressor:

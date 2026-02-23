@@ -7,12 +7,12 @@ Fitness Services Module
 
 from .training_log_analyzer import TrainingLogAnalyzer
 from .weekly_plan_generator import WeeklyPlanGenerator
-from .training_plan_summarizer import TrainingPlanSummarizer
-from .safety_reminder_generator import SafetyReminderGenerator
-from .volume_adjuster import VolumeAdjuster
+from .training_plan_summarizer import TrainingPlanSummarizer  # TODO: legacy，核心功能已被 tool_result_summarizer 替代
+from .safety_reminder_generator import SafetyReminderGenerator  # TODO: 待接入工作流（步骤10 LLM输出后处理）
+from .volume_adjuster import VolumeAdjuster  # TODO: 待接入工作流（periodized_program_designer）
 from .progressive_overload import ProgressiveOverloadCalculator
-from .exercise_stability_manager import ExerciseStabilityManager
-from .training_goal_recommender import (
+from .exercise_stability_manager import ExerciseStabilityManager  # TODO: 待接入工作流（professional_program_designer）
+from .training_goal_recommender import (  # TODO: 待接入工作流（greeting模板）
     TrainingGoalRecommender,
     get_training_goal_recommender,
     UserType
@@ -30,7 +30,7 @@ from .three_track_rating import (
     PersonalizationGrade,
     create_three_track_rating_service
 )
-from .intensity_converter import (
+from .intensity_converter import (  # TODO: 待接入工作流（intelligent_weight_calculator RPE/1RM互转）
     IntensityConverter,
     IntensityMetric,
     IntensityValue,

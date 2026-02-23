@@ -482,7 +482,9 @@ class LLMFallbackManager:
                     if not is_timeout and self._is_non_retryable_error(e):
                         break
                     if retry < self.max_retries - 1:
-                        await asyncio.sleep(1.0 * (retry + 1))
+                        # 指数退避: 200ms → 400ms → 800ms → 1600ms → 2000ms(上限)
+                        delay = min(0.2 * (2 ** retry), 2.0)
+                        await asyncio.sleep(delay)
                     continue
 
         # 所有后端失败
@@ -613,7 +615,11 @@ class LLMFallbackManager:
     def _is_non_retryable_error(self, error: Exception) -> bool:
         import httpx
         if isinstance(error, httpx.HTTPStatusError):
-            return error.response.status_code in [401, 403, 404]
+            status = error.response.status_code
+            # 4xx 客户端错误一律不重试（400/401/403/404/422 等）
+            # 请求本身有问题，重试也不会成功
+            if 400 <= status < 500:
+                return True
         if isinstance(error, ValueError):
             return True
         return False

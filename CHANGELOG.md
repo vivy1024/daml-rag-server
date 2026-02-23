@@ -5,6 +5,20 @@
 
 ---
 
+## #28 (fix) 流式对话可靠性修复 — Token预算+降级策略+接口兼容 — 2026-02-23
+
+对应产品版本：v1.2.0
+
+- **tool_result_summarizer 部署生效**：MCP工具结果 132K→6.7K chars（95%压缩），LLM 正常返回增肌计划（TTFB 12.3s）
+- **LLM 降级管理器 400 快速失败**：`_is_non_retryable_error()` 扩展为全部 4xx 不重试，避免 3轮×10Key 重试风暴
+- **指数退避重试**：重试间隔从线性（1s→2s→3s）改为指数退避（200ms→400ms→800ms→2000ms）
+- **API Pool 4xx 透传**：`api_pool_manager.call_stream()` 检测 4xx 立即抛出，不继续轮询其他 Key
+- **Warmup 422 修复**：`WarmupRequest.user_id` 添加 `field_validator` 自动 int→str，消除前端 422 错误
+- **Token 预算参数校准**：`AVG_CHARS_PER_TOKEN` 2.5→1.8，`DEFAULT_BUDGET` 8000→12000，`mcp_tools_result` 限额 1500→3000
+- **死代码服务标记**：6 个未调用 services 添加 `# TODO: 待接入工作流` 注释
+
+---
+
 ## #27 (chore) 死代码清理 — _use_new_cache feature flag 退役 — 2026-02-23
 
 对应产品版本：v1.1.0（内部清理，产品版本不动）
