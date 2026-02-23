@@ -43,6 +43,7 @@ class PoolEntry:
     weight: int         # 权重（加权随机用）
     api_base: str       # API基础URL
     cost_tier: str      # 成本层级: free/free_quota/low/baseline
+    context_window: int = 32000  # 模型最大上下文窗口（tokens），默认保守值
     note: str = ""      # 备注
 
 
@@ -116,6 +117,7 @@ def _load_yaml_pool() -> tuple:
                 weight=item.get("weight", 10),
                 api_base=item.get("api_base", ""),
                 cost_tier=item.get("cost_tier", "free"),
+                context_window=item.get("context_window", 32000),
                 note=item.get("note", ""),
             )
             entries.append(entry)
