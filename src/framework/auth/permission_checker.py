@@ -293,33 +293,17 @@ class PermissionChecker:
             
             # 3. 检查用量（实时，不缓存）
             usage = await self._check_usage(user_id, mode)
-            
+
             if not usage.can_execute:
-                # 用量已达上限
-                upgrade_hint = None
-                if mode == "agent" and tier != "energy":
-                    upgrade_hint = "升级到能量会员可解锁无限Agent模式"
-                elif tier == "free":
-                    upgrade_hint = "升级会员可获得更多每日次数"
-                
+                # 积分/次数不足
                 return PermissionResult(
                     allowed=False,
                     tier=tier,
                     remaining=0,
                     message=usage.message,
-                    upgrade_hint=upgrade_hint
+                    upgrade_hint="充值积分可继续使用"
                 )
-            
-            # 4. 检查模式权限
-            if mode == "agent" and tier == "free":
-                return PermissionResult(
-                    allowed=False,
-                    tier=tier,
-                    remaining=usage.agent_remaining,
-                    message="免费用户不支持Agent模式",
-                    upgrade_hint="升级到能量会员可解锁Agent模式"
-                )
-            
+
             # 计算剩余次数
             remaining = usage.dag_remaining if mode == "dag" else usage.agent_remaining
             
