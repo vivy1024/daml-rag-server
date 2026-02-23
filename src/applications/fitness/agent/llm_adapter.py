@@ -10,6 +10,7 @@ ToolCallableLLM 适配器
 日期: 2026-02-17
 """
 
+import json
 import logging
 import time
 from typing import List, Dict, Any, Optional
@@ -183,6 +184,7 @@ class ToolCallableLLM:
         messages: List[BaseMessage],
         tools: List[Dict[str, Any]],
         temperature: float = 0.3,
+        tool_choice: str = "auto",
     ) -> AIMessage:
         """
         带 function calling 的 LLM 调用。
@@ -191,19 +193,21 @@ class ToolCallableLLM:
             messages: LangChain 消息列表
             tools: OpenAI function-calling schema 列表
             temperature: 采样温度
+            tool_choice: 工具选择策略 ("auto" | "required" | "none")
 
         Returns:
             AIMessage，可能包含 tool_calls 属性（LLM 决定调用工具时）
         """
         if self._use_custom_backend:
-            return await self._call_custom_backend(messages, tools, temperature)
-        return await self._call_pool_backend(messages, tools, temperature)
+            return await self._call_custom_backend(messages, tools, temperature, tool_choice)
+        return await self._call_pool_backend(messages, tools, temperature, tool_choice)
 
     async def _call_custom_backend(
         self,
         messages: List[BaseMessage],
         tools: List[Dict[str, Any]],
         temperature: float,
+        tool_choice: str = "auto",
     ) -> AIMessage:
         """直接调用自定义后端（不走 APIPoolManager）"""
         openai_messages = [_langchain_msg_to_dict(m) for m in messages]
@@ -215,7 +219,7 @@ class ToolCallableLLM:
         }
         if tools:
             request_body["tools"] = tools
-            request_body["tool_choice"] = "auto"
+            request_body["tool_choice"] = tool_choice
 
         start = time.time()
         timeout_config = httpx.Timeout(
@@ -255,6 +259,7 @@ class ToolCallableLLM:
         messages: List[BaseMessage],
         tools: List[Dict[str, Any]],
         temperature: float,
+        tool_choice: str = "auto",
     ) -> AIMessage:
         """通过 APIPoolManager 调用（原有逻辑）"""
         pool = get_api_pool_manager()
@@ -269,7 +274,7 @@ class ToolCallableLLM:
         }
         if tools:
             request_body["tools"] = tools
-            request_body["tool_choice"] = "auto"
+            request_body["tool_choice"] = tool_choice
 
         # 复用 APIPoolManager 的多 Key 轮询逻辑
         tried_keys = set()
@@ -287,7 +292,12 @@ class ToolCallableLLM:
             tried_keys.add(status.key)
 
             try:
-                logger.info(f"ToolCallableLLM 使用 API Key: {status.masked_key}")
+                logger.info(
+                    f"ToolCallableLLM 使用 API Key: {status.masked_key}, "
+                    f"model={pool.model}, tools={len(tools)}, "
+                    f"messages={len(openai_messages)}, "
+                    f"system_prompt_len={len(openai_messages[0].get('content','')) if openai_messages else 0}"
+                )
                 start = time.time()
 
                 timeout_config = httpx.Timeout(

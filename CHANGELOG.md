@@ -5,6 +5,16 @@
 
 ---
 
+## #33 (fix) Agent Function Calling 修复 — 2026-02-24
+
+对应产品版本：v1.2.0
+
+- 增强 Agent fallback system prompt，明确要求调用工具而非直接回答
+- 首次 agent_node 调用使用 `tool_choice="required"` 强制触发 FC
+- system prompt 注入当前 user_id，解决 DeepSeek-V3 因缺少上下文不触发 FC 的问题
+- `chat_with_tools` 新增 `tool_choice` 参数透传
+- Agent 测试通过：skills=['nutrition_planning'], tools=1, 14.74s
+
 ## #31 (test) 4xx快速失败 + 降级链耗时测试 — 2026-02-23
 
 对应产品版本：v1.2.0
