@@ -8,6 +8,10 @@
 #   low        — 低价（DeepSeek V3）
 #   baseline   — 基准/付费（Claude/Kimi K2）
 #
+# context_window: 模型最大上下文窗口（tokens）
+#   用于 TokenBudgetManager 动态预算分配
+#   input_budget = context_window × 0.6（预留输出+安全边际）
+#
 # 必需环境变量（每个 backend 需要对应的 API_KEY）:
 #   GLM_API_KEY        — 智谱 BigModel 开放平台
 #   SILICONFLOW_API_KEY — SiliconFlow 平台
@@ -20,8 +24,8 @@
 # 但仍建议在 .env 中设置 XXX_ENABLED=true 以确保显式注册。
 # 无 API_KEY 的后端会在选择时被自动过滤。
 #
-# 版本: v1.1.0
-# 日期: 2026-02-21
+# 版本: v1.2.0
+# 日期: 2026-02-23
 
 # 是否启用 YAML 池（false 时回退到 MULTI_MODEL_POOL 环境变量）
 enabled: true
@@ -32,13 +36,15 @@ pool:
     model: glm-4.7-flash
     weight: 20
     api_base: https://open.bigmodel.cn/api/paas/v4
+    context_window: 128000
     cost_tier: free
-    note: "智谱免费，200K上下文，稳定快速"
+    note: "智谱免费，128K上下文，稳定快速"
 
   - backend: siliconflow
     model: Qwen/Qwen3-8B
     weight: 15
     api_base: https://api.siliconflow.cn/v1
+    context_window: 32000
     cost_tier: free
     note: "SiliconFlow免费，通义千问8B"
 
@@ -46,6 +52,7 @@ pool:
     model: THUDM/GLM-Z1-9B-0414
     weight: 10
     api_base: https://api.siliconflow.cn/v1
+    context_window: 32000
     cost_tier: free
     note: "SiliconFlow免费，GLM推理模型"
 
@@ -53,6 +60,7 @@ pool:
     model: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
     weight: 10
     api_base: https://api.siliconflow.cn/v1
+    context_window: 32000
     cost_tier: free
     note: "SiliconFlow免费，DeepSeek蒸馏"
 
@@ -61,6 +69,7 @@ pool:
     model: deepseek-chat
     weight: 15
     api_base: https://api.deepseek.com/v1
+    context_window: 64000
     cost_tier: low
     note: "DeepSeek V3，低价高质"
 
@@ -69,6 +78,7 @@ pool:
     model: qwen-turbo
     weight: 5
     api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+    context_window: 128000
     cost_tier: free_quota
     note: "通义千问turbo，100万token免费"
 
@@ -76,6 +86,7 @@ pool:
     model: qwen-plus
     weight: 10
     api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+    context_window: 128000
     cost_tier: free_quota
     note: "通义千问plus，100万token免费"
 
@@ -84,6 +95,7 @@ pool:
     model: claude-haiku-4-5-20250315
     weight: 5
     api_base: https://api.kirors.com/v1
+    context_window: 200000
     cost_tier: baseline
     note: "Claude Haiku 4.5，Kiro RS代理"
 
@@ -91,5 +103,6 @@ pool:
     model: kimi-k2-0905-preview
     weight: 5
     api_base: https://api.moonshot.cn/v1
+    context_window: 128000
     cost_tier: baseline
     note: "Kimi K2，月之暗面"

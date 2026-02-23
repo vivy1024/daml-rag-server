@@ -5,6 +5,17 @@
 
 ---
 
+## #29 (feat) 多模型Token预算适配 — 先选模型再压缩 — 2026-02-23
+
+对应产品版本：v1.2.0
+
+- `multi_model_pool.yaml` / `vision_model_pool.yaml`: 每个模型增加 `context_window` 字段
+- `PoolEntry` dataclass 增加 `context_window: int = 32000` 字段
+- `stream_executor.py` 步骤10: 蓝绿池模型选择提前到 TokenBudgetManager 之前
+- 动态预算: `input_budget = context_window × 0.6`（32K→19200, 128K→76800, 200K→120000）
+
+---
+
 ## #28 (fix) 流式对话可靠性修复 — Token预算+降级策略+接口兼容 — 2026-02-23
 
 对应产品版本：v1.2.0

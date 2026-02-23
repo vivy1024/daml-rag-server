@@ -899,12 +899,57 @@ class StreamWorkflowExecutor(WorkflowExecutor):
             except (ImportError, ConnectionError, TimeoutError, httpx.HTTPError) as ws_err:
                 logger.debug(f"[{request_id}] WebSearch跳过: {ws_err}")
 
+            # ========== 蓝绿池模型选择（提前到预算控制之前） ==========
+            from .singletons import get_llm_degradation_manager
+            from ....framework.clients.llm_fallback_manager import LLMRequest
+            from ...fitness.config.model_routing import get_backend_for_template, PoolEntry
+
+            routed = get_backend_for_template(selected_template_id)
+            model_override = None  # 蓝绿池模型覆盖
+            pool_meta = None  # 蓝绿池元数据（用于DAML-Eval）
+            routed_primary = None  # 路由覆盖的主后端
+            routed_fallbacks = None  # 路由覆盖的降级链
+            selected_context_window = None  # 选中模型的上下文窗口
+
+            if isinstance(routed, PoolEntry):
+                # YAML蓝绿池返回完整条目
+                pool_meta = {
+                    "model_id": routed.model,
+                    "cost_tier": routed.cost_tier,
+                    "backend": routed.backend,
+                }
+                model_override = routed.model
+                routed_primary = routed.backend
+                routed_fallbacks = ["anthropic", "deepseek", "template"]
+                selected_context_window = routed.context_window
+                logger.info(
+                    f"🔀 [{request_id}] 步骤10: 蓝绿池 {selected_template_id} → "
+                    f"{routed.backend}/{routed.model} (tier={routed.cost_tier}, "
+                    f"ctx={routed.context_window})"
+                )
+            elif routed:
+                # 固定覆盖或环境变量池（返回字符串）
+                routed_primary = routed
+                routed_fallbacks = ["anthropic", "deepseek", "template"]
+                logger.info(
+                    f"🔀 [{request_id}] 步骤10: 模板路由 {selected_template_id} → {routed}"
+                )
+
             # ========== TokenBudgetManager: 统一预算控制 ==========
             try:
                 from ...fitness.context.token_budget_manager import TokenBudgetManager, estimate_tokens
                 import json as _json
 
-                budget_mgr = TokenBudgetManager()
+                # 根据选中模型的 context_window 动态设定预算
+                if selected_context_window:
+                    dynamic_budget = int(selected_context_window * 0.6)
+                    budget_mgr = TokenBudgetManager(total_budget=dynamic_budget)
+                    logger.info(
+                        f"📊 [{request_id}] 动态Token预算: "
+                        f"context_window={selected_context_window} → budget={dynamic_budget}"
+                    )
+                else:
+                    budget_mgr = TokenBudgetManager()  # 使用默认预算
                 # 将各组件文本传入预算管理器
                 budget_components = {
                     "system_prompt": system_prompt,  # persona + task + rendering + memory + websearch
@@ -956,39 +1001,6 @@ class StreamWorkflowExecutor(WorkflowExecutor):
 
             except (ImportError, ValueError, KeyError) as budget_err:
                 logger.debug(f"[{request_id}] TokenBudgetManager跳过: {budget_err}")
-
-            # 初始化LLM降级管理器（根据模板路由选择后端）
-            from .singletons import get_llm_degradation_manager
-            from ....framework.clients.llm_fallback_manager import LLMRequest
-            from ...fitness.config.model_routing import get_backend_for_template, PoolEntry
-
-            routed = get_backend_for_template(selected_template_id)
-            model_override = None  # 蓝绿池模型覆盖
-            pool_meta = None  # 蓝绿池元数据（用于DAML-Eval）
-            routed_primary = None  # 路由覆盖的主后端
-            routed_fallbacks = None  # 路由覆盖的降级链
-
-            if isinstance(routed, PoolEntry):
-                # YAML蓝绿池返回完整条目
-                pool_meta = {
-                    "model_id": routed.model,
-                    "cost_tier": routed.cost_tier,
-                    "backend": routed.backend,
-                }
-                model_override = routed.model
-                routed_primary = routed.backend
-                routed_fallbacks = ["anthropic", "deepseek", "template"]
-                logger.info(
-                    f"🔀 [{request_id}] 步骤10: 蓝绿池 {selected_template_id} → "
-                    f"{routed.backend}/{routed.model} (tier={routed.cost_tier})"
-                )
-            elif routed:
-                # 固定覆盖或环境变量池（返回字符串）
-                routed_primary = routed
-                routed_fallbacks = ["anthropic", "deepseek", "template"]
-                logger.info(
-                    f"🔀 [{request_id}] 步骤10: 模板路由 {selected_template_id} → {routed}"
-                )
 
             fallback_manager = get_llm_degradation_manager()
             
