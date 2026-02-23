@@ -327,8 +327,23 @@ class AppContainer:
             if three_layer_engine is None:
                 try:
                     from .retrieval.true_three_layer_engine import TrueThreeLayerEngine
+                    # 获取 domain_adapter（Task 7）
+                    domain_adapter = None
+                    try:
+                        from src.applications.fitness.fitness_adapter import get_fitness_adapter
+                        domain_adapter = get_fitness_adapter()
+                    except Exception:
+                        pass
+                    # 获取 connection_pool_manager（Task 21）
+                    connection_pool_manager = None
+                    try:
+                        connection_pool_manager = self.connection_pool_manager
+                    except Exception:
+                        pass
                     three_layer_engine = TrueThreeLayerEngine(
                         enable_neo4j_direct=True, enable_parallel_execution=False,
+                        domain_adapter=domain_adapter,
+                        connection_pool_manager=connection_pool_manager,
                     )
                 except Exception as e:
                     logger.warning(f"⚠️ TrueThreeLayerEngine 创建失败: {e}")

@@ -34,12 +34,7 @@ class IntensityMetric(str, Enum):
     RIR = "rir"           # Reps in Reserve (0-5)
 
 
-class TrainingGoal(str, Enum):
-    """训练目标"""
-    STRENGTH = "strength"       # 力量训练
-    HYPERTROPHY = "hypertrophy" # 增肌训练
-    ENDURANCE = "endurance"     # 耐力训练
-    POWER = "power"             # 爆发力训练
+from ..types.enums import TrainingGoal
 
 
 @dataclass

@@ -166,7 +166,7 @@ class DAGTemplateManager:
                 "injury_risk_assessor": ["get_user_profile"],
                 "muscle_group_volume_calculator": ["get_user_profile"],
                 "movement_pattern_balancer": ["get_user_profile"],
-                "intelligent_exercise_selector": ["contraindications_checker", "injury_risk_assessor", "muscle_group_volume_calculator", "movement_pattern_balancer"],
+                "intelligent_exercise_selector": ["contraindications_checker", "injury_risk_assessor", "muscle_group_volume_calculator"],
                 "intelligent_weight_calculator": ["intelligent_exercise_selector"],
                 "professional_program_designer": ["intelligent_exercise_selector", "muscle_group_volume_calculator", "intelligent_weight_calculator"],
                 "periodized_program_designer": ["professional_program_designer"],
@@ -583,26 +583,25 @@ class DAGTemplateManager:
             ],
             required_tools=[
                 "get_user_profile",
-                "postural_assessor",
                 "contraindications_checker",
                 "intelligent_exercise_selector"
             ],
             optional_tools=[
+                "postural_assessor",
                 "movement_pattern_balancer",
                 "professional_program_designer"
             ],
             tool_dependencies={
                 "get_user_profile": [],
                 "postural_assessor": ["get_user_profile"],
-                "contraindications_checker": ["postural_assessor"],
+                "contraindications_checker": ["get_user_profile"],
                 "intelligent_exercise_selector": ["contraindications_checker"],
                 "movement_pattern_balancer": ["intelligent_exercise_selector"],
                 "professional_program_designer": ["movement_pattern_balancer"]
             },
             parallel_groups=[
                 ["get_user_profile"],
-                ["postural_assessor"],
-                ["contraindications_checker"],
+                ["postural_assessor", "contraindications_checker"],
                 ["intelligent_exercise_selector"],
                 ["movement_pattern_balancer", "professional_program_designer"]
             ],
@@ -654,17 +653,17 @@ class DAGTemplateManager:
                 "get_user_profile": [],
                 "contraindications_checker": ["get_user_profile"],
                 "muscle_group_volume_calculator": ["get_user_profile"],
-                "exercise_alternative_finder": ["get_user_profile"],
-                "intelligent_exercise_selector": ["exercise_alternative_finder", "contraindications_checker"],
+                "intelligent_exercise_selector": ["get_user_profile", "contraindications_checker"],
+                "exercise_alternative_finder": ["intelligent_exercise_selector"],
                 "movement_pattern_balancer": ["intelligent_exercise_selector"],
-                "professional_program_designer": ["movement_pattern_balancer", "muscle_group_volume_calculator"]
+                "professional_program_designer": ["movement_pattern_balancer", "muscle_group_volume_calculator", "exercise_alternative_finder"]
             },
             parallel_groups=[
                 ["get_user_profile"],
                 ["contraindications_checker", "muscle_group_volume_calculator"],
-                ["exercise_alternative_finder"],
                 ["intelligent_exercise_selector"],
-                ["movement_pattern_balancer", "professional_program_designer"]
+                ["exercise_alternative_finder", "movement_pattern_balancer"],
+                ["professional_program_designer"]
             ],
             expected_output={
                 "user_profile": "用户档案",

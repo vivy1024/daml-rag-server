@@ -1232,7 +1232,7 @@ class TrueThreeLayerEngine:
                     from .layer3_rule_engine import Layer3RuleEngine
                     
                     # 初始化增强规则引擎
-                    rule_engine = Layer3RuleEngine(neo4j_client=self.neo4j_manager)
+                    rule_engine = Layer3RuleEngine(neo4j_client=self.neo4j_manager, domain_adapter=self.domain_adapter)
                     
                     # 应用增强规则
                     validated_results, execution_log = await rule_engine.apply_all_rules(

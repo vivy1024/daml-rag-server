@@ -10,6 +10,14 @@ Fitness Application Types - 健身应用类型定义
 @created 2025-12-31
 """
 
+from .enums import (
+    TrainingGoal,
+    DifficultyLevel,
+    FitnessLevel,
+    NutritionGoal,
+    MembershipTier,
+)
+
 from .fewshot_types import (
     TrainingEffectLabel,
     TRAINING_EFFECT_CONFIG,
@@ -28,6 +36,12 @@ from .fewshot_types import (
 )
 
 __all__ = [
+    # 权威枚举
+    "TrainingGoal",
+    "DifficultyLevel",
+    "FitnessLevel",
+    "NutritionGoal",
+    "MembershipTier",
     # Few-Shot类型
     "TrainingEffectLabel",
     "TRAINING_EFFECT_CONFIG",

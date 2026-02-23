@@ -161,7 +161,7 @@ class ContraindicationsChecker(BaseMCPTool):
         
         try:
             # Step 1: 获取用户档案
-            user_profile = await self._get_user_profile(input_data.get("user_id"))
+            user_profile = input_data.get("user_profile") or await self._get_user_profile(input_data.get("user_id"))
             
             # Step 2: 构建健康状况列表
             health_conditions = self._build_health_conditions(input_data, user_profile)

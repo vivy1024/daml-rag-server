@@ -9,29 +9,11 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Literal
 from enum import Enum
 
+from ....types.enums import TrainingGoal, DifficultyLevel
 
 # =============================================================================
 # 枚举类型定义
 # =============================================================================
-
-class TrainingGoal(str, Enum):
-    """
-    训练目标枚举
-
-    包含基础训练目标和中国本地化扩展目标
-    Requirements: 3.1, 3.2, 3.3
-    """
-    # 基础训练目标
-    STRENGTH = "strength"
-    HYPERTROPHY = "hypertrophy"
-    ENDURANCE = "endurance"
-    GENERAL_FITNESS = "general_fitness"
-
-    # 中国本地化扩展目标
-    FAT_LOSS = "fat_loss"
-    POSTURE_CORRECTION = "posture_correction"
-    FUNCTIONAL = "functional"
-
 
 class TrainingSplit(str, Enum):
     """训练分化"""
@@ -39,13 +21,6 @@ class TrainingSplit(str, Enum):
     UPPER_LOWER = "upper_lower"
     PUSH_PULL_LEGS = "push_pull_legs"
     BRO_SPLIT = "bro_split"
-
-
-class DifficultyLevel(str, Enum):
-    """难度等级"""
-    BEGINNER = "beginner"
-    INTERMEDIATE = "intermediate"
-    ADVANCED = "advanced"
 
 
 # =============================================================================

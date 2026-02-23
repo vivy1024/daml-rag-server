@@ -34,34 +34,10 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# 枚举类型定义
+# 枚举类型定义（从权威来源导入）
 # =============================================================================
 
-class TrainingGoal(str, Enum):
-    """
-    训练目标枚举
-    
-    包含基础训练目标和中国本地化扩展目标
-    Requirements: 3.1, 3.2, 3.3
-    """
-    # 基础训练目标
-    STRENGTH = "strength"                    # 力量提升
-    HYPERTROPHY = "hypertrophy"              # 增肌
-    ENDURANCE = "endurance"                  # 耐力
-    GENERAL_FITNESS = "general_fitness"      # 综合健身
-    
-    # 中国本地化扩展目标 - Requirements 3.1, 3.2, 3.3
-    FAT_LOSS = "fat_loss"                    # 减脂塑形 - Requirements 3.1
-    POSTURE_CORRECTION = "posture_correction"  # 体态矫正 - Requirements 3.2
-    FUNCTIONAL = "functional"                # 功能性训练 - Requirements 3.3
-
-
-class DifficultyLevel(str, Enum):
-    """难度等级（与Neo4j TrainingLevel节点对应）"""
-    NOVICE = "novice"          # 零基础
-    BEGINNER = "beginner"      # 初级
-    INTERMEDIATE = "intermediate"  # 中级
-    ADVANCED = "advanced"      # 高级
+from ...types.enums import TrainingGoal, DifficultyLevel
 
 
 class MechanicType(str, Enum):
@@ -269,8 +245,8 @@ class IntelligentExerciseSelector(BaseMCPTool):
         start_time = time.time()
         
         try:
-            # Step 1: 获取用户档案（可选）
-            user_profile = await self._get_user_profile(input_data.get("user_id"))
+            # Step 1: 获取用户档案（优先从DAG注入的input_data获取）
+            user_profile = input_data.get("user_profile") or await self._get_user_profile(input_data.get("user_id"))
             
             # Step 2: 构建查询文本
             query_text = self._build_query_text(input_data, user_profile)

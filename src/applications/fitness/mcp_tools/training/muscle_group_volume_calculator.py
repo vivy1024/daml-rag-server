@@ -35,7 +35,7 @@ class MuscleGroupVolumeCalculatorInput(BaseModel):
     muscle_group: str = Field(..., description="目标肌群（中文名称，如：胸大肌、背阔肌）")
     training_goal: Literal[
         # 基础训练目标
-        "strength", "hypertrophy", "endurance", "general",
+        "strength", "hypertrophy", "endurance", "general_fitness",
         # 中国本地化扩展目标 - Requirements 3.1, 3.2, 3.3
         "fat_loss",              # 减脂塑形 - Requirements 3.1
         "posture_correction",    # 体态矫正 - Requirements 3.2
@@ -166,8 +166,8 @@ class MuscleGroupVolumeCalculator(BaseMCPTool):
         start_time = time.time()
         
         try:
-            # Step 1: 获取用户档案
-            user_profile = await self._get_user_profile(input_data.get("user_id"))
+            # Step 1: 获取用户档案（优先从DAG注入的input_data获取）
+            user_profile = input_data.get("user_profile") or await self._get_user_profile(input_data.get("user_id"))
             
             # Step 2: 使用MuscleGroupMatcher匹配肌群名称
             matcher = get_muscle_group_matcher()
@@ -411,7 +411,7 @@ class MuscleGroupVolumeCalculator(BaseMCPTool):
             # 功能性训练：中等次数、适中休息 - Requirements 3.3
             reps_range = (8, 15)
             rest_seconds = 60   # 1分钟
-        else:  # general
+        else:  # general_fitness
             reps_range = (8, 15)
             rest_seconds = 90
         

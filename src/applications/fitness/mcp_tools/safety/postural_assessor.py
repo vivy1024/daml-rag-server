@@ -146,8 +146,8 @@ class PosturalAssessor(BaseMCPTool):
         # 获取用户体态问题
         postural_issues = input_data.postural_issues
         if not postural_issues:
-            # 从用户档案读取
-            user_profile = await self._get_user_profile(input_data.user_id)
+            # 从用户档案读取（优先使用DAG注入的user_profile）
+            user_profile = params.get("user_profile") or await self._get_user_profile(input_data.user_id)
             postural_issues = user_profile.get("health_status", {}).get("postural_issues", [])
         
         if not postural_issues or postural_issues == ["无"]:

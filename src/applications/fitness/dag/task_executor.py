@@ -63,37 +63,6 @@ class TaskParamBuilder:
         
         return default
 
-    def _map_goal_to_english(self, goal: str, goal_type: str = "training") -> str:
-        """
-        将中文目标映射到英文枚举值
-        
-        Args:
-            goal: 目标值（可能是中文或英文）
-            goal_type: 目标类型 ("training" 或 "nutrition")
-        """
-        # 训练目标映射
-        training_goal_mapping = {
-            "增肌": "hypertrophy", "力量": "strength", "耐力": "endurance",
-            "减脂": "general_fitness", "爆发力": "power", "维持": "maintenance",
-            "重组": "recomp", "综合": "general_fitness", "体态矫正": "posture_correction",
-            "功能性": "functional"
-        }
-        
-        # 营养目标映射
-        nutrition_goal_mapping = {
-            "增肌": "muscle_gain", "减脂": "weight_loss", "维持": "maintenance",
-            "重组": "recomp", "力量": "muscle_gain", "耐力": "maintenance"
-        }
-        
-        mapping = nutrition_goal_mapping if goal_type == "nutrition" else training_goal_mapping
-        
-        # 如果已经是英文枚举值，直接返回
-        if goal in mapping.values():
-            return goal
-        
-        # 尝试映射中文
-        return mapping.get(goal, "hypertrophy" if goal_type == "training" else "muscle_gain")
-
     def build_params(self, tool_name: str) -> Dict[str, Any]:
         """构建工具参数"""
         base_params = {
@@ -126,17 +95,16 @@ class TaskParamBuilder:
 
     def _build_exercise_selector_params(self) -> Dict[str, Any]:
         """构建动作选择器参数"""
-        target_muscles = self.user_profile.get("target_muscle_groups", ["胸部"])
-        muscle_group = target_muscles[0] if isinstance(target_muscles, list) and target_muscles else "胸部"
+        target_muscles = self.user_profile.get("target_muscle_groups", [])
+        muscle_group = target_muscles[0] if isinstance(target_muscles, list) and target_muscles else "chest"
         
         # 使用统一的目标获取方法
         training_goal = self._get_primary_goal("hypertrophy")
-        training_goal = self._map_goal_to_english(training_goal, "training")
         
         return {
             "muscle_group": muscle_group,
             "training_goal": training_goal,
-            "available_equipment": self.user_profile.get("available_equipment", ["哑铃"]),
+            "available_equipment": self.user_profile.get("available_equipment", []),
             "difficulty_level": self.user_profile.get("fitness_level", "beginner"),
             "safety_priority": True
         }
@@ -145,7 +113,6 @@ class TaskParamBuilder:
         """构建程序设计师参数"""
         # 使用统一的目标获取方法
         training_goal = self._get_primary_goal("hypertrophy")
-        mapped_goal = self._map_goal_to_english(training_goal, "training")
         
         training_days = self.user_profile.get("preferred_training_days", 3)
         
@@ -165,11 +132,11 @@ class TaskParamBuilder:
             training_split = split_mapping.get(training_days, "push_pull_legs")
         
         return {
-            "training_goal": mapped_goal,
+            "training_goal": training_goal,
             "training_split": training_split,
             "training_days_per_week": training_days,
             "difficulty_level": self.user_profile.get("fitness_level", "beginner"),
-            "available_equipment": self.user_profile.get("available_equipment", ["哑铃", "杠铃"]),
+            "available_equipment": self.user_profile.get("available_equipment", []),
             "injury_history": self.user_profile.get("injury_history", []),
             "target_muscle_groups": self.user_profile.get("target_muscle_groups", []),
             "session_duration_minutes": self.user_profile.get("session_duration", 60),
@@ -180,14 +147,13 @@ class TaskParamBuilder:
         """构建周期化训练计划参数"""
         # 使用统一的目标获取方法
         training_goal = self._get_primary_goal("hypertrophy")
-        mapped_goal = self._map_goal_to_english(training_goal, "training")
         
         return {
-            "training_goal": mapped_goal,
+            "training_goal": training_goal,
             "difficulty_level": self.user_profile.get("fitness_level", "beginner"),
             "program_duration_weeks": 12,
             "training_days_per_week": self.user_profile.get("preferred_training_days", 3),
-            "available_equipment": self.user_profile.get("available_equipment", ["哑铃", "杠铃"]),
+            "available_equipment": self.user_profile.get("available_equipment", []),
             "injury_history": self.user_profile.get("injury_history", []),
             "target_muscle_groups": self.user_profile.get("target_muscle_groups", []),
             "include_deload_weeks": True,
@@ -198,14 +164,13 @@ class TaskParamBuilder:
         """构建训练分化参数"""
         # 使用统一的目标获取方法
         training_goal = self._get_primary_goal("hypertrophy")
-        primary_goal = self._map_goal_to_english(training_goal, "training")
         
         return {
             "training_level": self.user_profile.get("fitness_level", "beginner"),
-            "primary_goal": primary_goal,
+            "primary_goal": training_goal,
             "training_days_per_week": self.user_profile.get("preferred_training_days", 3),
             "session_duration_minutes": self.user_profile.get("session_duration", 60),
-            "available_equipment": self.user_profile.get("available_equipment", ["哑铃", "杠铃"]),
+            "available_equipment": self.user_profile.get("available_equipment", []),
             "muscle_group_focus": self.user_profile.get("target_muscle_groups", []),
             "injury_history": self.user_profile.get("injury_history", []),
             "include_cardio": self.user_profile.get("include_cardio", True),
@@ -239,82 +204,48 @@ class TaskParamBuilder:
         """构建动作模式平衡参数"""
         return {
             "current_program": [],
-            "target_muscle_groups": self.user_profile.get("target_muscle_groups", ["胸部", "背部"])
+            "target_muscle_groups": self.user_profile.get("target_muscle_groups", ["chest", "back"])
         }
 
     def _build_tdee_params(self) -> Dict[str, Any]:
         """构建TDEE计算参数"""
-        # 使用统一的目标获取方法
         training_goal = self._get_primary_goal("muscle_gain")
-        mapped_goal = self._map_goal_to_english(training_goal, "nutrition")
-        
-        activity_level = self.user_profile.get("activity_level", "moderate")
-        activity_mapping = {
-            "sedentary": "sedentary", "light": "lightly_active", "moderate": "moderately_active",
-            "active": "very_active", "very_active": "extremely_active",
-            "久坐": "sedentary", "轻度活动": "lightly_active", "中度活动": "moderately_active",
-            "高度活动": "very_active", "极高活动": "extremely_active"
-        }
-        mapped_activity = activity_mapping.get(activity_level, "moderately_active")
-        
-        training_intensity = self.user_profile.get("training_intensity", "moderate")
-        intensity_mapping = {
-            "low": "low", "moderate": "moderate", "high": "high",
-            "低": "low", "中": "moderate", "高": "high"
-        }
-        mapped_intensity = intensity_mapping.get(training_intensity, "moderate")
-        
+
         return {
             "training_frequency_per_week": self.user_profile.get("preferred_training_days", 3),
-            "training_intensity": mapped_intensity,
-            "daily_activity_level": mapped_activity,
-            "fitness_goal": mapped_goal
+            "training_intensity": self.user_profile.get("training_intensity", "moderate"),
+            "daily_activity_level": self.user_profile.get("activity_level", "moderately_active"),
+            "fitness_goal": training_goal
         }
 
     def _build_meal_plan_params(self) -> Dict[str, Any]:
         """构建膳食计划参数"""
-        # 使用统一的目标获取方法
         training_goal = self._get_primary_goal("muscle_gain")
-        mapped_goal = self._map_goal_to_english(training_goal, "nutrition")
-        
+
         dietary_prefs = self.user_profile.get("dietary_preferences", [])
         dietary_pref = dietary_prefs[0] if isinstance(dietary_prefs, list) and dietary_prefs else "balanced"
-        pref_mapping = {
-            "均衡": "balanced", "高蛋白": "high_protein", "低碳水": "low_carb",
-            "生酮": "keto", "素食": "vegetarian", "纯素": "vegan"
-        }
-        mapped_pref = pref_mapping.get(dietary_pref, dietary_pref if dietary_pref in pref_mapping.values() else "balanced")
-        
+
         target_calories = self.user_profile.get("target_calories", 2000)
-        
+
         return {
             "target_calories": target_calories,
             "target_protein_grams": self.user_profile.get("target_protein_grams", target_calories * 0.3 / 4),
             "target_carbs_grams": self.user_profile.get("target_carbs_grams", target_calories * 0.4 / 4),
             "target_fat_grams": self.user_profile.get("target_fat_grams", target_calories * 0.3 / 9),
-            "dietary_preference": mapped_pref,
+            "dietary_preference": dietary_pref,
             "meals_per_day": self.user_profile.get("meals_per_day", 4),
             "training_days_per_week": self.user_profile.get("preferred_training_days", 3),
-            "fitness_goal": mapped_goal
+            "fitness_goal": training_goal
         }
 
     def _build_volume_calculator_params(self) -> Dict[str, Any]:
         """构建训练量计算器参数"""
-        target_muscles = self.user_profile.get("target_muscle_groups", ["胸部"])
-        muscle_group = target_muscles[0] if isinstance(target_muscles, list) and target_muscles else "胸部"
+        target_muscles = self.user_profile.get("target_muscle_groups", [])
+        muscle_group = target_muscles[0] if isinstance(target_muscles, list) and target_muscles else "chest"
         
         # 使用统一的目标获取方法
         training_goal = self._get_primary_goal("hypertrophy")
-        
-        # 训练量计算器使用不同的目标映射
-        goal_mapping = {
-            "增肌": "hypertrophy", "力量": "strength", "耐力": "endurance",
-            "减脂": "general", "综合": "general",
-            "hypertrophy": "hypertrophy", "strength": "strength", 
-            "endurance": "endurance", "general_fitness": "general"
-        }
-        mapped_goal = goal_mapping.get(training_goal, "hypertrophy")
-        
+
         recovery_value = self.user_profile.get("recovery_capacity", 0.7)
         if isinstance(recovery_value, (int, float)):
             if recovery_value < 0.4:
@@ -325,10 +256,10 @@ class TaskParamBuilder:
                 recovery_capacity = "high"
         else:
             recovery_capacity = recovery_value if recovery_value in ["low", "moderate", "high"] else "moderate"
-        
+
         return {
             "muscle_group": muscle_group,
-            "training_goal": mapped_goal,
+            "training_goal": training_goal,
             "training_frequency_per_week": self.user_profile.get("preferred_training_days", 3),
             "recovery_capacity": recovery_capacity
         }
@@ -338,7 +269,7 @@ class TaskParamBuilder:
         return {
             "user_id": self.user_profile.get("user_id"),
             "time_period": "month",
-            "focus_areas": self.user_profile.get("fitness_goals", ["增肌"]),
+            "focus_areas": self.user_profile.get("fitness_goals", []),
             "include_comparisons": True,
             "include_recommendations": True
         }
@@ -373,12 +304,10 @@ class TaskParamBuilder:
 
     def _build_nutrition_intake_params(self) -> Dict[str, Any]:
         """构建营养摄入分析器参数"""
-        # 使用统一的目标获取方法
         training_goal = self._get_primary_goal("muscle_gain")
-        mapped_goal = self._map_goal_to_english(training_goal, "nutrition")
-        
+
         target_calories = self.user_profile.get("target_calories", 2000)
-        
+
         return {
             "daily_food_intake": [],
             "target_calories": target_calories,
@@ -386,42 +315,24 @@ class TaskParamBuilder:
             "target_carbs_grams": self.user_profile.get("target_carbs_grams", target_calories * 0.4 / 4),
             "target_fat_grams": self.user_profile.get("target_fat_grams", target_calories * 0.3 / 9),
             "include_micronutrients": False,
-            "fitness_goal": mapped_goal
+            "fitness_goal": training_goal
         }
 
     def _build_exercise_nutrition_params(self) -> Dict[str, Any]:
         """构建运动营养优化器参数"""
-        # 使用统一的目标获取方法
         training_goal = self._get_primary_goal("muscle_gain")
-        mapped_goal = self._map_goal_to_english(training_goal, "nutrition")
-        
-        # 训练类型映射
-        training_type_mapping = {
-            "增肌": "hypertrophy", "力量": "strength", "耐力": "endurance",
-            "减脂": "hiit", "综合": "mixed",
-            "hypertrophy": "hypertrophy", "strength": "strength",
-            "endurance": "endurance", "general_fitness": "mixed"
-        }
-        training_type = training_type_mapping.get(training_goal, "hypertrophy")
-        
-        intensity = self.user_profile.get("training_intensity", "moderate")
-        intensity_mapping = {
-            "low": "low", "moderate": "moderate", "high": "high", "very_high": "very_high",
-            "低": "low", "中": "moderate", "高": "high", "极高": "very_high"
-        }
-        mapped_intensity = intensity_mapping.get(intensity, "moderate")
-        
+
         weight_kg = self.user_profile.get("weight_kg", 65)
         daily_protein_target = weight_kg * 1.8
         daily_carbs_target = weight_kg * 4
-        
+
         return {
-            "training_type": training_type,
+            "training_type": training_goal,
             "training_duration_minutes": self.user_profile.get("session_duration", 60),
-            "training_intensity": mapped_intensity,
+            "training_intensity": self.user_profile.get("training_intensity", "moderate"),
             "training_time": "afternoon",
             "weight_kg": weight_kg,
-            "fitness_goal": mapped_goal,
+            "fitness_goal": training_goal,
             "daily_protein_target": daily_protein_target,
             "daily_carbs_target": daily_carbs_target
         }
@@ -731,8 +642,9 @@ class TaskExecutor:
             except Exception as e:
                 logger.error(f"参数提取失败: {e}")
         
-        # 步骤1.5: 确保user_id存在
-        self._ensure_user_id(task, previous_results)
+        # 步骤1.5: 确保user_id存在（跳过已由 _enhance_task_params 设置的情况）
+        if not task.params.get("user_id"):
+            self._ensure_user_id(task, previous_results)
         
         # 步骤2: 参数转换
         if self.parameter_converter:
@@ -879,6 +791,8 @@ class TaskExecutor:
         """
         增强任务参数（从上游结果中提取缺失参数）
 
+        注意：此方法仅补充缺失参数，不覆盖已由 _enhance_task_params 设置的参数。
+
         Args:
             task: 当前任务
             previous_results: 上游任务结果
@@ -888,7 +802,7 @@ class TaskExecutor:
         # 设置上游结果（用于 _try_extract_missing_param 方法）
         task._upstream_results = previous_results
 
-        # 为需要 exercise_id 的工具提取参数
+        # 为需要 exercise_id 的工具提取参数（仅在缺失时）
         if tool_name in ["exercise_alternative_finder", "safe_exercise_modifier", "intelligent_weight_calculator"]:
             param_name = "original_exercise_id" if tool_name == "exercise_alternative_finder" else "exercise_id"
 
@@ -943,7 +857,10 @@ class TaskExecutor:
         
         # 处理user_id
         self._ensure_user_id_in_params(enhanced_params, previous_results)
-        
+
+        # 处理user_profile（从get_user_profile结果补充）
+        self._ensure_user_profile_in_params(enhanced_params, previous_results)
+
         # 处理exercises参数
         if tool_name in ["injury_risk_assessor", "muscle_group_volume_calculator", "movement_pattern_balancer"]:
             self._enhance_exercises_param(enhanced_params, previous_results)
@@ -974,6 +891,22 @@ class TaskExecutor:
                 user_id = context.get("user_id")
                 if user_id:
                     params["user_id"] = user_id
+
+    def _ensure_user_profile_in_params(self, params: Dict[str, Any], previous_results: Dict[str, Any]):
+        """确保params中有user_profile（从get_user_profile结果补充）"""
+        if not params.get("user_profile"):
+            if "get_user_profile" in previous_results:
+                result = previous_results["get_user_profile"]
+                if isinstance(result, dict):
+                    profile = result.get("profile", {})
+                    if profile:
+                        params["user_profile"] = profile
+
+            if not params.get("user_profile"):
+                context = previous_results.get("_context", {})
+                user_profile = context.get("user_profile")
+                if user_profile:
+                    params["user_profile"] = user_profile
 
     def _enhance_exercises_param(self, params: Dict[str, Any], previous_results: Dict[str, Any]):
         """增强exercises参数"""

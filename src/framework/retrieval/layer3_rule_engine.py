@@ -52,17 +52,7 @@ class BodyType(Enum):
     UNKNOWN = "unknown"
 
 
-class TrainingGoal(Enum):
-    """训练目标"""
-    MUSCLE_GAIN = "muscle_gain"           # 增肌
-    FAT_LOSS = "fat_loss"                 # 减脂
-    STRENGTH = "strength"                  # 力量
-    ENDURANCE = "endurance"               # 耐力
-    BODY_SHAPING = "body_shaping"         # 塑形
-    FUNCTIONAL = "functional"              # 功能性
-    PERFORMANCE = "performance"            # 运动表现
-    REHABILITATION = "rehabilitation"      # 康复
-    GENERAL_FITNESS = "general_fitness"   # 综合健身
+from src.applications.fitness.types.enums import TrainingGoal
 
 
 # ============ 数据类定义 ============

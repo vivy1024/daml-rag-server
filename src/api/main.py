@@ -305,6 +305,14 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️ 追踪中间件加载失败: {e}")
 
+# ⚠️ 中间件执行顺序（LIFO：后添加先执行）：
+# 1. DualAuthMiddleware  → 设置 request.state.auth_mode（JWT/内部Token认证）
+# 2. SecurityMiddleware  → 检查 auth_mode 是否已设置，已认证则跳过
+# 3. TracingMiddleware   → 注入 trace_id
+# 4. GZipMiddleware      → 压缩响应
+# 5. CORSMiddleware      → 跨域处理
+# 注意：SecurityMiddleware 依赖 DualAuthMiddleware 先执行，不要调换添加顺序！
+
 # 添加安全中间件
 try:
     from .middleware.security import SecurityMiddleware
