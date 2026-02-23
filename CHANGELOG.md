@@ -5,6 +5,15 @@
 
 ---
 
+## #31 (test) 4xx快速失败 + 降级链耗时测试 — 2026-02-23
+
+对应产品版本：v1.2.0
+
+- `tests/unit/framework/test_llm_4xx_no_retry.py`: 12 个单元测试覆盖 4xx/5xx/ValueError 分类 + 400 不重试直接降级
+- `tests/integration/test_degradation_chain_timing.py`: 2 个集成测试验证降级链耗时（5xx链≈3s, 4xx链<0.1s, 均 ≤30s）
+
+---
+
 ## #30 (fix) TokenBudgetManager 动态预算组件限额缩放 — 2026-02-23
 
 对应产品版本：v1.2.0
