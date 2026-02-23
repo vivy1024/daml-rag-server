@@ -275,11 +275,11 @@ class TDEECalculator(BaseMCPTool):
             raise
     
     async def _get_user_profile(self, user_id: str) -> Dict[str, Any]:
-        """获取用户档案"""
-        # TODO: 如果有UserProfileClient，调用它
-        # 目前返回空字典，使用输入数据
+        """获取用户档案（从 input_data 中注入的 user_profile 或空字典）"""
+        # Agent 模式下 user_profile 由 tool_node 注入到 input_data
+        # DAG 模式下由工作流预加载
         return {}
-    
+
     def _merge_user_info(
         self,
         input_data: Dict[str, Any],
@@ -287,13 +287,16 @@ class TDEECalculator(BaseMCPTool):
     ) -> Dict[str, Any]:
         """合并用户档案和输入数据"""
         # 优先使用输入数据，其次使用用户档案
-        basic_info = user_profile.get("basic_info", {})
-        
+        # Agent 模式下 user_profile 可能在 input_data 中
+        profile = input_data.get("user_profile", user_profile) or {}
+        basic_info = profile.get("basic_info", {})
+
         return {
             "age": input_data.get("age") or basic_info.get("age"),
             "gender": input_data.get("gender") or basic_info.get("gender"),
-            "weight_kg": input_data.get("weight_kg") or basic_info.get("weight_kg"),
-            "height_cm": input_data.get("height_cm") or basic_info.get("height_cm")
+            # 兼容 weight/weight_kg 和 height/height_cm 两种字段名
+            "weight_kg": input_data.get("weight_kg") or basic_info.get("weight_kg") or basic_info.get("weight"),
+            "height_cm": input_data.get("height_cm") or basic_info.get("height_cm") or basic_info.get("height"),
         }
     
     def _validate_user_info(self, user_info: Dict[str, Any]) -> None:

@@ -152,6 +152,11 @@ async def tool_node(
         if "user_id" not in tool_args:
             tool_args["user_id"] = state.get("user_id", "")
 
+        # 注入用户档案到工具参数，让 MCP 工具能获取用户身体数据
+        user_profile = state.get("user_profile") or {}
+        if user_profile and "user_profile" not in tool_args:
+            tool_args["user_profile"] = user_profile
+
         try:
             t0 = time.time()
             result = await mcp_orchestrator.call_tool(
