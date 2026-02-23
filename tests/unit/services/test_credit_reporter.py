@@ -452,5 +452,98 @@ class TestConfiguration:
         assert reporter.enabled is False
 
 
+# ============================================================================
+# Unit Tests - Performance Fields (unified-observability-dashboard)
+# ============================================================================
+
+class TestPerformanceFields:
+    """性能字段上报测试 - unified-observability-dashboard"""
+
+    @pytest.mark.asyncio
+    async def test_report_includes_performance_fields(self, reporter):
+        """上报包含性能监控字段（ttfb_ms, duration_ms, tokens_per_sec, fallback_count, error_type）"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"code": 200, "data": {}}
+
+        with patch('httpx.AsyncClient') as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.post.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value = mock_instance
+
+            await reporter.report_consumption(
+                user_id=123,
+                tokens=2500,
+                mode='dag',
+                template_name='exercise_optimization',
+                conversation_id='conv_perf_001',
+                input_tokens=800,
+                output_tokens=1700,
+                ttfb_ms=350,
+                duration_ms=2800,
+                tokens_per_sec=42.5,
+                fallback_count=1,
+                error_type=None
+            )
+
+            call_args = mock_instance.post.call_args
+            payload = call_args.kwargs['json']
+
+            assert payload['ttfb_ms'] == 350
+            assert payload['duration_ms'] == 2800
+            assert payload['tokens_per_sec'] == 42.5
+            assert payload['fallback_count'] == 1
+            assert payload.get('error_type') is None
+
+    @pytest.mark.asyncio
+    async def test_report_with_error_type(self, reporter):
+        """上报包含错误类型"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"code": 200, "data": {}}
+
+        with patch('httpx.AsyncClient') as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.post.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value = mock_instance
+
+            await reporter.report_consumption(
+                user_id=456,
+                tokens=1000,
+                mode='agent',
+                ttfb_ms=0,
+                duration_ms=5000,
+                tokens_per_sec=0,
+                fallback_count=2,
+                error_type='rate_limit'
+            )
+
+            call_args = mock_instance.post.call_args
+            payload = call_args.kwargs['json']
+
+            assert payload['error_type'] == 'rate_limit'
+            assert payload['fallback_count'] == 2
+
+    @pytest.mark.asyncio
+    async def test_report_performance_fields_default_none(self, reporter):
+        """性能字段默认为None时不影响上报"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"code": 200, "data": {}}
+
+        with patch('httpx.AsyncClient') as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.post.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value = mock_instance
+
+            result = await reporter.report_consumption(
+                user_id=789,
+                tokens=1500,
+                mode='dag'
+            )
+
+            assert result['success'] is True
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
