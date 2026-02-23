@@ -6,7 +6,7 @@ MCPToolRegistry工具注册表
 
 from typing import Dict, List, Optional, Any
 from .base_tool import BaseMCPTool, ToolMetadata
-from .exceptions import ToolError, ToolValidationError
+from src.framework.exceptions import ToolExecutionError, ValidationError
 import logging
 
 logger = logging.getLogger(__name__)
