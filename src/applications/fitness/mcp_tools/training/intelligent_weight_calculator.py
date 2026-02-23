@@ -20,34 +20,13 @@ from enum import Enum
 import logging
 
 from ..base_tool import BaseMCPTool
+from ...types.enums import TrainingGoal, DifficultyLevel
 
 logger = logging.getLogger(__name__)
 
 
-class TrainingGoal(str, Enum):
-    """
-    训练目标枚举
-    
-    包含基础训练目标和中国本地化扩展目标
-    Requirements: 3.1, 3.2, 3.3
-    """
-    # 基础训练目标
-    STRENGTH = "strength"                    # 力量提升
-    HYPERTROPHY = "hypertrophy"              # 增肌
-    ENDURANCE = "endurance"                  # 耐力
-    GENERAL_FITNESS = "general_fitness"      # 综合健身
-    
-    # 中国本地化扩展目标 - Requirements 3.1, 3.2, 3.3
-    FAT_LOSS = "fat_loss"                    # 减脂塑形 - Requirements 3.1
-    POSTURE_CORRECTION = "posture_correction"  # 体态矫正 - Requirements 3.2
-    FUNCTIONAL = "functional"                # 功能性训练 - Requirements 3.3
-
-
-class UserLevel(str, Enum):
-    """用户水平枚举"""
-    BEGINNER = "beginner"
-    INTERMEDIATE = "intermediate"
-    ADVANCED = "advanced"
+# UserLevel（训练水平）→ 使用 DifficultyLevel（Task 4）
+UserLevel = DifficultyLevel
 
 
 class IntelligentWeightCalculatorInput(BaseModel):

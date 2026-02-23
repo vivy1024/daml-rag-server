@@ -195,8 +195,8 @@ tools:
       - source_task: get_user_profile
         source_path: user_id
         target_param: user_id
-      - source_task: intelligent_exercise_selector
-        source_path: recommendations[*].exercise_id
+      - source_task: context
+        source_path: planned_exercises
         target_param: planned_exercises
         default_value: []
       - source_task: get_user_profile
@@ -211,10 +211,10 @@ tools:
         default_value: 60
     required_params:
       - user_id
-      - planned_exercises
       - training_intensity
       - session_duration_minutes
     optional_params:
+      - planned_exercises
       - include_prevention_plan
       - risk_tolerance_level
       - previous_injuries

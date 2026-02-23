@@ -33,26 +33,10 @@ class BodyType(Enum):
     UNKNOWN = "unknown"
 
 
-class FitnessLevel(Enum):
-    """健身等级"""
-    BEGINNER = "beginner"
-    NOVICE = "novice"
-    INTERMEDIATE = "intermediate"
-    ADVANCED = "advanced"
-    ELITE = "elite"
+from ..types.enums import TrainingGoal, DifficultyLevel
 
-
-class TrainingGoal(Enum):
-    """训练目标"""
-    MUSCLE_GAIN = "muscle_gain"
-    FAT_LOSS = "fat_loss"
-    STRENGTH = "strength"
-    ENDURANCE = "endurance"
-    BODY_SHAPING = "body_shaping"
-    FUNCTIONAL = "functional"
-    PERFORMANCE = "performance"
-    REHABILITATION = "rehabilitation"
-    GENERAL_FITNESS = "general_fitness"
+# 向后兼容别名（FitnessLevel → DifficultyLevel）
+FitnessLevel = DifficultyLevel
 
 
 # ============ 数据类定义 ============

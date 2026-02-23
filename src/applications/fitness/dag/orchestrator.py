@@ -386,7 +386,7 @@ class EnhancedDAGOrchestrator:
     def _initialize_resource_pools(self) -> Dict[str, asyncio.Semaphore]:
         """初始化资源池"""
         return {
-            "user-profile-mcp": asyncio.Semaphore(3),
+            "user-profile-stdio": asyncio.Semaphore(3),
             "python_builtin": asyncio.Semaphore(5),
             "graphrag-mcp": asyncio.Semaphore(2),
         }

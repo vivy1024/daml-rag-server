@@ -30,12 +30,16 @@ class ConfigValidationError(Exception):
     pass
 
 
-class UserLevel(Enum):
-    """用户等级枚举"""
+class MembershipTier(Enum):
+    """会员等级枚举（原 UserLevel，重命名避免与训练水平枚举冲突）"""
     FREE = "free"
     PAID = "paid"
     VIP = "vip"
     SYSTEM = "system"
+
+
+# 向后兼容别名
+UserLevel = MembershipTier
 
 
 @dataclass

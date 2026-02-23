@@ -196,8 +196,8 @@ class SafeExerciseModifier(BaseMCPTool):
             # Step 1: 验证参数
             self._validate_params(input_data)
 
-            # Step 2: 获取用户档案（可选）
-            user_profile = await self._get_user_profile(input_data.get("user_id"))
+            # Step 2: 获取用户档案（优先从DAG注入的input_data获取）
+            user_profile = input_data.get("user_profile") or await self._get_user_profile(input_data.get("user_id"))
 
             # Step 3: 获取原动作信息
             original_exercise = await self._get_exercise_by_id(input_data["exercise_id"])

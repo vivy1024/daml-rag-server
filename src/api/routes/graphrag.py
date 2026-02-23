@@ -131,11 +131,13 @@ def _get_graphrag_tool():
                     logger.info("  → 使用框架已初始化的 TrueThreeLayerEngine")
                 else:
                     # 创建新的 TrueThreeLayerEngine
+                    domain_adapter = initializer.components.get("domain_adapter")
                     three_layer_engine = TrueThreeLayerEngine(
                         graphrag_api_port=os.getenv('API_PORT', '8001'),
                         neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
                         neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
-                        neo4j_password=os.getenv('NEO4J_PASSWORD', '')
+                        neo4j_password=os.getenv('NEO4J_PASSWORD', ''),
+                        domain_adapter=domain_adapter,
                     )
                     logger.info("  → 创建新的 TrueThreeLayerEngine")
                 
@@ -157,11 +159,18 @@ def _get_graphrag_tool():
                 )
                 
                 # 创建 TrueThreeLayerEngine
+                domain_adapter = None
+                try:
+                    from ...applications.fitness.fitness_adapter import get_fitness_adapter
+                    domain_adapter = get_fitness_adapter()
+                except Exception:
+                    pass
                 three_layer_engine = TrueThreeLayerEngine(
                     graphrag_api_port=os.getenv('API_PORT', '8001'),
                     neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
                     neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
-                    neo4j_password=os.getenv('NEO4J_PASSWORD', '')
+                    neo4j_password=os.getenv('NEO4J_PASSWORD', ''),
+                    domain_adapter=domain_adapter,
                 )
                 
                 _graphrag_query_tool = GraphRAGQueryTool(
