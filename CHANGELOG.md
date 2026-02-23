@@ -5,6 +5,16 @@
 
 ---
 
+## #30 (fix) TokenBudgetManager 动态预算组件限额缩放 — 2026-02-23
+
+对应产品版本：v1.2.0
+
+- `token_budget_manager.py`: 动态预算时按 `total_budget / DEFAULT_BUDGET` 比例缩放可压缩组件限额
+- 修复：128K模型(budget=76800)下 `mcp_tools_result` 限额从硬编码3000→19200，摘要不再被二次截断
+- 不可压缩组件（persona_prefix/task_instruction/rendering_constraint/current_message）限额保持不变
+
+---
+
 ## #29 (feat) 多模型Token预算适配 — 先选模型再压缩 — 2026-02-23
 
 对应产品版本：v1.2.0

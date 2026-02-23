@@ -32,7 +32,7 @@ AVG_CHARS_PER_TOKEN = 1.8
 
 
 def estimate_tokens(text: str) -> int:
-    """估算文本 token 数（字符数 / 2.5）"""
+    """估算文本 token 数（字符数 / AVG_CHARS_PER_TOKEN）"""
     if not text:
         return 0
     return int(len(text) / AVG_CHARS_PER_TOKEN)
@@ -66,7 +66,8 @@ class TokenBudgetManager:
     """
     统一管理所有上下文组件的 token 预算。
 
-    总预算 8000 tokens，各组件有默认分配上限。
+    默认总预算 12000 tokens，各组件有默认分配上限。
+    动态预算模式下（由模型 context_window 决定），组件限额按比例缩放。
     超预算时按 COMPRESSION_PRIORITY 顺序压缩。
     """
 
@@ -101,6 +102,15 @@ class TokenBudgetManager:
 
     def __init__(self, total_budget: Optional[int] = None):
         self.total_budget = total_budget or self.DEFAULT_BUDGET
+        # 动态预算时按比例放大可压缩组件的限额
+        if self.total_budget != self.DEFAULT_BUDGET:
+            scale = self.total_budget / self.DEFAULT_BUDGET
+            self._scaled_limits = {
+                name: (int(limit * scale) if name not in self.INCOMPRESSIBLE else limit)
+                for name, limit in self.COMPONENT_LIMITS.items()
+            }
+        else:
+            self._scaled_limits = self.COMPONENT_LIMITS
 
     def allocate(self, components: Dict[str, str]) -> BudgetResult:
         """
@@ -119,7 +129,7 @@ class TokenBudgetManager:
         for name, text in components.items():
             tokens = estimate_tokens(text)
             # 先按组件上限裁剪（即使未超总预算，单组件也不应超限）
-            limit = self.COMPONENT_LIMITS.get(name, 500)
+            limit = self._scaled_limits.get(name, 500)
             if tokens > limit and name not in self.INCOMPRESSIBLE:
                 text = self._truncate_text(text, limit)
                 tokens = limit
