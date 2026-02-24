@@ -320,20 +320,15 @@ class IntelligentExerciseSelector(BaseMCPTool):
         """
         parts = []
         
-        # 难度等级映射（枚举值 -> 中文描述）
+        # 难度等级映射（枚举值 -> 中文描述，用于向量检索）
         difficulty_map = {
             "novice": "零基础",
             "beginner": "初级",
             "intermediate": "中级",
             "advanced": "高级",
-            # 兼容枚举对象的字符串表示
-            "DifficultyLevel.NOVICE": "零基础",
-            "DifficultyLevel.BEGINNER": "初级",
-            "DifficultyLevel.INTERMEDIATE": "中级",
-            "DifficultyLevel.ADVANCED": "高级",
         }
-        
-        # 训练目标映射（枚举值 -> 中文描述）
+
+        # 训练目标映射（枚举值 -> 中文描述，用于向量检索）
         goal_map = {
             "strength": "力量",
             "hypertrophy": "增肌",
@@ -342,14 +337,6 @@ class IntelligentExerciseSelector(BaseMCPTool):
             "fat_loss": "减脂塑形",
             "posture_correction": "体态矫正",
             "functional": "功能性",
-            # 兼容枚举对象的字符串表示
-            "TrainingGoal.STRENGTH": "力量",
-            "TrainingGoal.HYPERTROPHY": "增肌",
-            "TrainingGoal.ENDURANCE": "耐力",
-            "TrainingGoal.GENERAL_FITNESS": "综合健身",
-            "TrainingGoal.FAT_LOSS": "减脂塑形",
-            "TrainingGoal.POSTURE_CORRECTION": "体态矫正",
-            "TrainingGoal.FUNCTIONAL": "功能性",
         }
         
         # 获取难度等级的中文描述

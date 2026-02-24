@@ -177,8 +177,8 @@ class InjuryRiskAssessor(BaseMCPTool):
         start_time = time.time()
         
         try:
-            # Step 1: 获取用户档案
-            user_profile = await self._get_user_profile(input_data.get("user_id"))
+            # Step 1: 获取用户档案（优先从 input_data 获取，DAG 编排器注入）
+            user_profile = input_data.get("user_profile") or await self._get_user_profile(input_data.get("user_id"))
             
             # Step 2: 分析个人风险因素
             personal_risk_factors = await self._analyze_personal_risk_factors(

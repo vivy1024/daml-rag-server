@@ -470,12 +470,12 @@ class GraphRAGQueryTool:
                 return candidates[:top_k]
 
             # Step 3: Neo4j图过滤
-            cypher_filter = self._build_graph_filter_query(
+            cypher_filter, cypher_params = self._build_graph_filter_query(
                 candidate_ids, domain, filters
             )
 
             # execute_query 是同步方法，用 to_thread 避免阻塞事件循环
-            graph_results = await asyncio.to_thread(self.neo4j.execute_query, cypher_filter)
+            graph_results = await asyncio.to_thread(self.neo4j.execute_query, cypher_filter, cypher_params)
             graph_id_set = {r.get("id") or r.get("node_id") for r in graph_results}
 
             # Step 4: 保留通过图过滤的候选
@@ -655,8 +655,8 @@ class GraphRAGQueryTool:
                 cypher = cypher.replace("$limit", str(top_k))
                 return cypher
         
-        # 降级：使用通用查询（不指定标签）
-        cypher = "MATCH (n)"
+        # 降级：使用通用查询
+        cypher = "MATCH (n:Exercise)"
         
         # 添加属性过滤
         where_clauses = []
@@ -686,21 +686,21 @@ class GraphRAGQueryTool:
         
         对候选节点进行图关系约束
         """
-        # 构建ID列表
-        id_list = "', '".join(str(id) for id in candidate_ids)
-        
-        # 基础查询：匹配候选节点
-        cypher = f"MATCH (n) WHERE n.id IN ['{id_list}']"
-        
+        # 构建ID列表（参数化查询防注入）
+        id_list = [str(id) for id in candidate_ids]
+
+        # 基础查询：匹配候选 Exercise 节点
+        cypher = "MATCH (n:Exercise) WHERE n.id IN $ids"
+
         # 添加关系约束（如果有）
         if filters.get("requires_relationship"):
             rel_type = filters["requires_relationship"]
             cypher += f" MATCH (n)-[:{rel_type}]->(m)"
-        
+
         # 返回节点ID
         cypher += " RETURN n.id AS id, n"
-        
-        return cypher
+
+        return cypher, {"ids": id_list}
     
     def _generate_reasoning(
         self,

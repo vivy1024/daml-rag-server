@@ -1101,22 +1101,18 @@ class Layer3RuleEngine:
         fitness_goals = user_profile.get("fitness_goals", {})
         primary_goal = fitness_goals.get("primary_goal", "general_fitness").lower()
         
-        # 目标映射（通用映射，不依赖领域）
+        # 目标映射（英文 primary_goal → _goal_preferences 键）
         goal_mapping = {
-            "增肌": "muscle_gain",
             "muscle_gain": "muscle_gain",
-            "减脂": "fat_loss",
+            "hypertrophy": "muscle_gain",
             "fat_loss": "fat_loss",
-            "力量": "strength",
             "strength": "strength",
-            "耐力": "endurance",
             "endurance": "endurance",
-            "塑形": "body_shaping",
             "body_shaping": "body_shaping",
-            "康复": "rehabilitation",
             "rehabilitation": "rehabilitation",
+            "general_fitness": "general_fitness",
         }
-        
+
         goal_key = goal_mapping.get(primary_goal, "general_fitness")
         
         # 使用实例变量（从domain_adapter加载）
