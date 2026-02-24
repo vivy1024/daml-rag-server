@@ -225,7 +225,7 @@ class LLMDecisionEngine:
         user_profile = request.user_profile
         basic_info = user_profile.get('basic_info', {})
         fitness_config = user_profile.get('fitness_config', {})
-        health_profile = user_profile.get('health_profile', {})
+        health_profile = user_profile.get('health_status', {})
         fitness_goals = user_profile.get('fitness_goals', {})
         
         # 构建用户信息摘要
@@ -768,7 +768,7 @@ if __name__ == "__main__":
             "fitness_goals": {
                 "primary_goals": ["增肌", "力量提升"]
             },
-            "health_profile": {
+            "health_status": {
                 "chronic_diseases": [],
                 "injury_history": []
             }

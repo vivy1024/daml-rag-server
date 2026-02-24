@@ -53,7 +53,7 @@ async def test_decision_engine():
         "fitness_goals": {
             "primary_goals": ["增肌", "力量提升"]
         },
-        "health_profile": {
+        "health_status": {
             "chronic_diseases": [],
             "injury_history": []
         }

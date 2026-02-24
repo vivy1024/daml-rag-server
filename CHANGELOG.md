@@ -5,6 +5,19 @@
 
 ---
 
+## #36 (feat) 三端枚举统一 — AI 服务枚举修复 + 字段名对齐 — 2026-02-24
+
+对应产品版本：v1.4.0
+
+- types/enums.py: MembershipTier 修复 PAID→WARMHEART, VIP→ENERGY
+- concurrency_limiter.py: UserTier 同步修改 + DEFAULT_TIER_CONFIGS
+- clients/models.py: UserProfile 字段名 strength_levels→strength_data, health_profile→health_status（from_api_response 含 fallback 兼容）
+- 全局替换 10+ 文件中的 health_profile→health_status, strength_levels→strength_data dict key 引用
+- 测试文件同步更新，pytest 全量通过（跳过1个已存在的 async 配置问题）
+- 12-枚举映射说明.md 更新反映统一后状态
+
+---
+
 ## #35 (feat) 统一可观测性仪表盘 — 性能字段上报 — 2026-02-24
 
 对应产品版本：v1.3.0

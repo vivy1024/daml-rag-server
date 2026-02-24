@@ -112,7 +112,7 @@ class ProfileInjector:
         
         # 伤病信息
         if self.config.include_injuries:
-            health_profile = user_profile.get("health_profile", {})
+            health_profile = user_profile.get("health_status", {})
             injuries = health_profile.get("injuries", [])
             conditions = health_profile.get("medical_conditions", [])
             

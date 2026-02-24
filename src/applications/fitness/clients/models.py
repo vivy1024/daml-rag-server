@@ -36,8 +36,8 @@ class UserProfile:
     nutrition_profile: Dict[str, Any]
     fitness_config: Dict[str, Any]
     fitness_goals: Dict[str, Any]
-    strength_levels: Dict[str, Any]
-    health_profile: Dict[str, Any]
+    strength_data: Dict[str, Any]
+    health_status: Dict[str, Any]
     training_system: Dict[str, Any] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
@@ -54,8 +54,8 @@ class UserProfile:
             nutrition_profile=data.get('nutrition_profile', {}),
             fitness_config=data.get('fitness_config', {}),
             fitness_goals=data.get('fitness_goals', {}),
-            strength_levels=data.get('strength_levels', {}),
-            health_profile=data.get('health_profile', {}),
+            strength_data=data.get('strength_data', data.get('strength_levels', {})),
+            health_status=data.get('health_status', data.get('health_profile', {})),
             training_system=data.get('training_system', {}),
             created_at=data.get('created_at'),
             updated_at=data.get('updated_at'),
@@ -68,8 +68,8 @@ class UserProfile:
             'nutrition_profile': self.nutrition_profile,
             'fitness_config': self.fitness_config,
             'fitness_goals': self.fitness_goals,
-            'strength_levels': self.strength_levels,
-            'health_profile': self.health_profile,
+            'strength_data': self.strength_data,
+            'health_status': self.health_status,
             'training_system': self.training_system,
             'created_at': self.created_at,
             'updated_at': self.updated_at,

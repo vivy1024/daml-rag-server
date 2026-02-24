@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 class UserTier(Enum):
     """用户等级"""
     FREE = "free"
-    PAID = "paid"
-    VIP = "vip"
+    WARMHEART = "warmheart"
+    ENERGY = "energy"
     SYSTEM = "system"
 
 
@@ -55,8 +55,8 @@ class ConcurrencyLimiter:
     # 默认等级配置
     DEFAULT_TIER_CONFIGS = {
         UserTier.FREE: TierConfig(max_concurrent=10, max_queue_size=20, timeout=30),
-        UserTier.PAID: TierConfig(max_concurrent=50, max_queue_size=100, timeout=60),
-        UserTier.VIP: TierConfig(max_concurrent=100, max_queue_size=200, timeout=120),
+        UserTier.WARMHEART: TierConfig(max_concurrent=50, max_queue_size=100, timeout=60),
+        UserTier.ENERGY: TierConfig(max_concurrent=100, max_queue_size=200, timeout=120),
         UserTier.SYSTEM: TierConfig(max_concurrent=999999, max_queue_size=999999, timeout=999999),
     }
     

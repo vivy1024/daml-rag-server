@@ -82,6 +82,6 @@ class MembershipTier(str, Enum):
     重命名避免与训练水平枚举冲突。
     """
     FREE = "free"
-    PAID = "paid"
-    VIP = "vip"
+    WARMHEART = "warmheart"
+    ENERGY = "energy"
     SYSTEM = "system"
