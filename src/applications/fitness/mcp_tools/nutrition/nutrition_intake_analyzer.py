@@ -55,7 +55,7 @@ class NutritionIntakeAnalyzerInput(BaseModel):
     include_micronutrients: bool = Field(
         default=False, description="是否包含微量营养素分析"
     )
-    fitness_goal: Optional[Literal["weight_loss", "maintenance", "muscle_gain", "recomp"]] = Field(
+    fitness_goal: Optional[Literal["fat_loss", "maintenance", "hypertrophy", "recomp"]] = Field(
         None, description="健身目标（用于生成建议）"
     )
 
@@ -799,7 +799,7 @@ class NutritionIntakeAnalyzer(BaseMCPTool):
             ))
         
         # 3. 基于健身目标的建议
-        if fitness_goal == "muscle_gain":
+        if fitness_goal == "hypertrophy":
             if nutrient_gap.overall_status == "deficit":
                 suggestions.append(ImprovementSuggestion(
                     category="increase",
@@ -808,7 +808,7 @@ class NutritionIntakeAnalyzer(BaseMCPTool):
                     reasoning="增肌需要热量盈余",
                     example_foods=["增加餐次", "添加健康零食", "增加碳水和蛋白质"]
                 ))
-        elif fitness_goal == "weight_loss":
+        elif fitness_goal == "fat_loss":
             if nutrient_gap.overall_status == "surplus":
                 suggestions.append(ImprovementSuggestion(
                     category="decrease",
