@@ -136,3 +136,4 @@ scripts/neo4j_migrations/    # Neo4j 同步 + Migration 工具
 | LLM 客户端源码 | `src/framework/clients/llm_client.py` |
 | LLM 降级管理器 | `src/framework/clients/llm_fallback_manager.py` |
 | Zeabur 环境变量 | `.kiro/steering/zeabur-env-vars.md` |
+| 跨端枚举/字段变更 | `.kiro/steering/cross-stack-data-contract.md` |

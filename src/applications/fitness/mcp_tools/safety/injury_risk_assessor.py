@@ -285,10 +285,10 @@ class InjuryRiskAssessor(BaseMCPTool):
                 ))
         
         # 基于损伤历史的风险
-        if user_profile.get("health_profile", {}).get("injury_history"):
+        if user_profile.get("health_status", {}).get("injury_history"):
             six_months_ago = datetime.now() - timedelta(days=180)
             recent_injuries = [
-                injury for injury in user_profile["health_profile"]["injury_history"]
+                injury for injury in user_profile["health_status"]["injury_history"]
                 if datetime.fromisoformat(injury.get("date", "2000-01-01")) > six_months_ago
             ]
             
@@ -304,7 +304,7 @@ class InjuryRiskAssessor(BaseMCPTool):
         
         # 基于当前症状的风险
         current_pain_areas = input_data.get("current_pain_areas") or \
-                           user_profile.get("health_profile", {}).get("current_symptoms", [])
+                           user_profile.get("health_status", {}).get("current_symptoms", [])
         if current_pain_areas:
             risk_factors.append(RiskFactor(
                 category="当前状态",
@@ -569,7 +569,7 @@ class InjuryRiskAssessor(BaseMCPTool):
         risk = 2.0  # 基础风险
         
         # 基于损伤历史
-        injury_history = user_profile.get("health_profile", {}).get("injury_history", [])
+        injury_history = user_profile.get("health_status", {}).get("injury_history", [])
         if injury_history:
             injury_risk_factors = exercise_info.get("injury_risk_factors", [])
             relevant_injuries = [
@@ -617,7 +617,7 @@ class InjuryRiskAssessor(BaseMCPTool):
             ))
         
         # 查询CONTRAINDICATED_FOR关系（基于用户损伤历史）
-        injury_history = user_profile.get("health_profile", {}).get("injury_history", [])
+        injury_history = user_profile.get("health_status", {}).get("injury_history", [])
         current_pain = input_data.get("current_pain_areas", [])
         previous_injuries = input_data.get("previous_injuries", [])
         

@@ -344,13 +344,13 @@ class SafeExerciseModifier(BaseMCPTool):
                 injury_types.add(injury)
 
         # 从用户档案获取
-        if user_profile.get("health_profile", {}).get("injury_history"):
-            for injury in user_profile["health_profile"]["injury_history"]:
+        if user_profile.get("health_status", {}).get("injury_history"):
+            for injury in user_profile["health_status"]["injury_history"]:
                 if injury.get("body_part"):
                     injury_types.add(f"{injury.get('type', '')}_{injury['body_part']}")
 
-        if user_profile.get("health_profile", {}).get("chronic_conditions"):
-            for condition in user_profile["health_profile"]["chronic_conditions"]:
+        if user_profile.get("health_status", {}).get("chronic_conditions"):
+            for condition in user_profile["health_status"]["chronic_conditions"]:
                 injury_types.add(condition.get("name", ""))
 
         if not injury_types:

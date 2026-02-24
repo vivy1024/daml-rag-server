@@ -837,8 +837,8 @@ class MCPOrchestrator:
                             "nutrition_profile": getattr(preloaded_profile, 'nutrition_profile', {}),
                             "fitness_config": getattr(preloaded_profile, 'fitness_config', {}),
                             "fitness_goals": getattr(preloaded_profile, 'fitness_goals', {}),
-                            "strength_levels": getattr(preloaded_profile, 'strength_levels', {}),
-                            "health_profile": getattr(preloaded_profile, 'health_profile', {}),
+                            "strength_data": getattr(preloaded_profile, 'strength_data', {}),
+                            "health_status": getattr(preloaded_profile, 'health_status', {}),
                             "created_at": getattr(preloaded_profile, 'created_at', None),
                             "updated_at": getattr(preloaded_profile, 'updated_at', None),
                         }

@@ -1420,7 +1420,7 @@ class TrueThreeLayerEngine:
         exercise_name = exercise.get("exercise_name_zh", "") or exercise.get("name", "Unknown")
 
         # 获取健康档案
-        health_profile = user_profile.get("health_profile", {})
+        health_profile = user_profile.get("health_status", {})
         user_conditions = user_profile.get("medical_conditions", [])
 
         # 整合所有健康状况

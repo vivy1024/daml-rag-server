@@ -137,8 +137,8 @@ class TestConcurrencyLimiter:
         # 创建自定义等级配置
         tier_configs = {
             UserTier.FREE: TierConfig(max_concurrent=2, max_queue_size=5, timeout=30),
-            UserTier.PAID: TierConfig(max_concurrent=5, max_queue_size=10, timeout=60),
-            UserTier.VIP: TierConfig(max_concurrent=10, max_queue_size=20, timeout=120),
+            UserTier.WARMHEART: TierConfig(max_concurrent=5, max_queue_size=10, timeout=60),
+            UserTier.ENERGY: TierConfig(max_concurrent=10, max_queue_size=20, timeout=120),
             UserTier.SYSTEM: TierConfig(max_concurrent=999999, max_queue_size=999999, timeout=999999),
         }
         

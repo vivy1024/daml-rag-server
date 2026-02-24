@@ -116,12 +116,12 @@ class PerformanceConfigLoader:
                         "max_queue_size": 20,
                         "timeout": 30
                     },
-                    "paid": {
+                    "warmheart": {
                         "max_concurrent": 50,
                         "max_queue_size": 100,
                         "timeout": 60
                     },
-                    "vip": {
+                    "energy": {
                         "max_concurrent": 100,
                         "max_queue_size": 200,
                         "timeout": 120

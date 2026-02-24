@@ -429,7 +429,7 @@ class Layer3RuleEngine:
         - 康复阶段用户优先推荐闭链动作（closed_chain）
         - 闭链动作更安全，关节负荷更可控
         """
-        health_profile = user_profile.get("health_profile", {})
+        health_profile = user_profile.get("health_status", {})
         rehabilitation_phase = health_profile.get("rehabilitation_phase")
         injuries = health_profile.get("injuries", [])
         
@@ -552,7 +552,7 @@ class Layer3RuleEngine:
         框架层领域无关 - Requirements 6.1, 6.2:
         - 关节关键词配置通过domain_adapter获取
         """
-        health_profile = user_profile.get("health_profile", {})
+        health_profile = user_profile.get("health_status", {})
         injuries = health_profile.get("injuries", [])
         injury_history = health_profile.get("injury_history", [])
         
@@ -684,7 +684,7 @@ class Layer3RuleEngine:
         - 体态问题配置通过domain_adapter获取
         - Neo4j关系数据作为优先数据源
         """
-        health_profile = user_profile.get("health_profile", {})
+        health_profile = user_profile.get("health_status", {})
         postural_issues = health_profile.get("postural_issues", [])
 
         if not postural_issues:

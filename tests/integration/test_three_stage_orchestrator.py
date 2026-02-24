@@ -45,7 +45,7 @@ def sample_user_profile():
             "primary_goal": "增肌",
             "secondary_goals": ["力量提升"]
         },
-        "health_profile": {
+        "health_status": {
             "injuries": [],
             "medical_conditions": []
         }
@@ -215,7 +215,7 @@ async def run_all_tests():
             "primary_goal": "增肌",
             "secondary_goals": ["力量提升"]
         },
-        "health_profile": {
+        "health_status": {
             "injuries": [],
             "medical_conditions": []
         }

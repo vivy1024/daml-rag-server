@@ -228,8 +228,8 @@ class UserProfileIntegrator:
         
         # 确保其他必要字段存在
         profile.setdefault('nutrition_profile', {})
-        profile.setdefault('strength_levels', {})
-        profile.setdefault('health_profile', {'injuries': [], 'medical_conditions': []})
+        profile.setdefault('strength_data', {})
+        profile.setdefault('health_status', {'injuries': [], 'medical_conditions': []})
         
         return profile
     
@@ -270,8 +270,8 @@ class UserProfileIntegrator:
                 'primary_goal': self.defaults.DEFAULT_PRIMARY_GOAL,
                 'target_weight': self.defaults.DEFAULT_WEIGHT
             },
-            'strength_levels': {},
-            'health_profile': {
+            'strength_data': {},
+            'health_status': {
                 'injuries': [],
                 'medical_conditions': []
             },
@@ -445,7 +445,7 @@ class UserProfileIntegrator:
         fitness_goals = profile.get('fitness_goals', {})
         training_system = profile.get('training_system', {})
         nutrition_profile = profile.get('nutrition_profile', {})
-        health_profile = profile.get('health_profile', {})
+        health_profile = profile.get('health_status', {})
         
         # 计算训练阶段
         consecutive_weeks = training_system.get('consecutive_training_weeks', 0)
@@ -719,7 +719,7 @@ class UserProfileIntegrator:
         Returns:
             Dict: 体态问题约束配置
         """
-        health_profile = profile.get('health_profile', {})
+        health_profile = profile.get('health_status', {})
         postural_issues = health_profile.get('postural_issues', [])
         
         if not postural_issues:

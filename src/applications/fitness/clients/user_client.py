@@ -126,8 +126,8 @@ class UserMixin:
             'fitness_goals': {
                 'primary_goal': 'general_fitness', 'target_weight': 65
             },
-            'strength_levels': {},
-            'health_profile': {
+            'strength_data': {},
+            'health_status': {
                 'injuries': [], 'medical_conditions': []
             },
             'training_system': {

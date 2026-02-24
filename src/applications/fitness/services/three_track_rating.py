@@ -188,9 +188,9 @@ class ThreeTrackRatingService:
         profile_fields = {
             'basic_info': 5,        # 基本信息
             'fitness_goals': 10,    # 健身目标
-            'health_profile': 10,   # 健康档案
+            'health_status': 10,   # 健康档案
             'fitness_config': 10,   # 健身配置
-            'strength_levels': 5,   # 力量水平
+            'strength_data': 5,   # 力量水平
             'training_system': 5,   # 训练系统
             'available_equipment': 5,  # 可用器械
             'injuries': 10,         # 伤病信息
