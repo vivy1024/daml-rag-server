@@ -49,7 +49,7 @@ class MealPlanDesignerInput(BaseModel):
     training_days_per_week: int = Field(default=0, ge=0, le=7, description="每周训练天数")
     
     # 健身目标
-    fitness_goal: Literal["weight_loss", "maintenance", "muscle_gain", "recomp"] = Field(
+    fitness_goal: Literal["fat_loss", "maintenance", "hypertrophy", "recomp"] = Field(
         default="maintenance", description="健身目标"
     )
 
@@ -416,7 +416,7 @@ class MealPlanDesigner(BaseMCPTool):
         ))
         
         # 2. 碳水化合物来源
-        if fitness_goal == "weight_loss":
+        if fitness_goal == "fat_loss":
             carb_foods = ["燕麦", "糙米", "红薯", "全麦面包", "藜麦", "蔬菜"]
             carb_tips = ["优先低GI碳水，稳定血糖", "训练前后可以吃快速碳水"]
         else:

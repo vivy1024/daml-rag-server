@@ -46,7 +46,7 @@ class ExerciseNutritionOptimizationInput(BaseModel):
     
     # 用户基础信息
     weight_kg: float = Field(..., ge=30, le=300, description="体重（公斤）")
-    fitness_goal: Literal["weight_loss", "maintenance", "muscle_gain", "recomp"] = Field(
+    fitness_goal: Literal["fat_loss", "maintenance", "hypertrophy", "recomp"] = Field(
         ..., description="健身目标"
     )
     
@@ -460,7 +460,7 @@ class ExerciseNutritionOptimization(BaseMCPTool):
             carbs_30min = weight_kg * 1.0
         
         # 减脂目标：适当减少碳水
-        if fitness_goal == "weight_loss":
+        if fitness_goal == "fat_loss":
             carbs_30min *= 0.7
         
         calories_30min = protein_30min * 4 + carbs_30min * 4
@@ -490,7 +490,7 @@ class ExerciseNutritionOptimization(BaseMCPTool):
         carbs_2h = weight_kg * 1.0
         fat_2h = weight_kg * 0.3
         
-        if fitness_goal == "weight_loss":
+        if fitness_goal == "fat_loss":
             carbs_2h *= 0.8
         
         calories_2h = protein_2h * 4 + carbs_2h * 4 + fat_2h * 9
@@ -856,12 +856,12 @@ class ExerciseNutritionOptimization(BaseMCPTool):
             ])
         
         # 基于健身目标的建议
-        if fitness_goal == "weight_loss":
+        if fitness_goal == "fat_loss":
             tips.extend([
                 "🔥 减脂期：保持高蛋白，保护肌肉量",
                 "⚖️ 训练后碳水可以适当减少，但不要完全不吃"
             ])
-        elif fitness_goal == "muscle_gain":
+        elif fitness_goal == "hypertrophy":
             tips.extend([
                 "💪 增肌期：训练后碳水要充足，促进胰岛素分泌",
                 "🍽️ 每天5-6餐，保持持续的营养供应"

@@ -50,7 +50,7 @@ class TDEECalculatorInput(BaseModel):
     )
     
     # 目标
-    fitness_goal: Literal["weight_loss", "maintenance", "muscle_gain", "recomp"] = Field(
+    fitness_goal: Literal["fat_loss", "maintenance", "hypertrophy", "recomp"] = Field(
         ..., description="健身目标"
     )
     
@@ -407,19 +407,19 @@ class TDEECalculator(BaseMCPTool):
         - 重组成: TDEE（或略低）
         """
         adjustments = {
-            "weight_loss": -400,      # 减脂：-400卡
+            "fat_loss": -400,         # 减脂：-400卡
             "maintenance": 0,         # 维持：0卡
-            "muscle_gain": 400,       # 增肌：+400卡
+            "hypertrophy": 400,       # 增肌：+400卡
             "recomp": -100            # 重组成：-100卡（轻微赤字）
         }
-        
+
         adjustment = adjustments.get(fitness_goal, 0)
         target_calories = tdee + adjustment
-        
+
         goal_descriptions = {
-            "weight_loss": "减脂目标，创造热量赤字",
+            "fat_loss": "减脂目标，创造热量赤字",
             "maintenance": "维持体重，保持热量平衡",
-            "muscle_gain": "增肌目标，创造热量盈余",
+            "hypertrophy": "增肌目标，创造热量盈余",
             "recomp": "身体重组成，轻微热量赤字配合力量训练"
         }
         
@@ -469,11 +469,11 @@ class TDEECalculator(BaseMCPTool):
             carbs_ratio = 0.50
             fat_ratio = 0.25
         else:  # balanced
-            if fitness_goal == "muscle_gain":
+            if fitness_goal == "hypertrophy":
                 protein_ratio = 0.30
                 carbs_ratio = 0.45
                 fat_ratio = 0.25
-            elif fitness_goal == "weight_loss":
+            elif fitness_goal == "fat_loss":
                 protein_ratio = 0.35
                 carbs_ratio = 0.35
                 fat_ratio = 0.30
@@ -582,13 +582,13 @@ class TDEECalculator(BaseMCPTool):
         
         # 基于目标的建议
         fitness_goal = input_data["fitness_goal"]
-        if fitness_goal == "weight_loss":
+        if fitness_goal == "fat_loss":
             recommendations.extend([
                 "减脂期间保持高蛋白摄入，保护肌肉量",
                 "优先选择高纤维、低GI碳水（燕麦、糙米、红薯）",
                 "每周称重1-2次，根据体重变化调整热量（目标：每周减重0.5-1kg）"
             ])
-        elif fitness_goal == "muscle_gain":
+        elif fitness_goal == "hypertrophy":
             recommendations.extend([
                 "增肌期间确保热量盈余，配合力量训练",
                 "训练后及时补充碳水和蛋白质，促进恢复",
