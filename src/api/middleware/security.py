@@ -324,6 +324,15 @@ class AuthenticationManager:
         """
         self.require_auth = require_auth
         self.valid_tokens: Dict[str, Dict[str, Any]] = {}
+
+        # 从环境变量加载 INTERNAL_API_TOKEN（Laravel 后端内部调用使用）
+        internal_token = os.getenv("INTERNAL_API_TOKEN")
+        if internal_token:
+            self.valid_tokens[internal_token] = {
+                "user_id": "internal_api",
+                "role": "system",
+                "source": "INTERNAL_API_TOKEN",
+            }
     
     def is_public_path(self, path: str) -> bool:
         """检查是否是公开路径"""

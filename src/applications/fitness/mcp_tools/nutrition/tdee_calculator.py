@@ -196,8 +196,8 @@ class TDEECalculator(BaseMCPTool):
         start_time = time.time()
         
         try:
-            # Step 1: 获取用户档案
-            user_profile = await self._get_user_profile(input_data.get("user_id"))
+            # Step 1: 获取用户档案（优先从 input_data 获取，DAG 编排器注入）
+            user_profile = input_data.get("user_profile") or await self._get_user_profile(input_data.get("user_id"))
             
             # 合并用户档案和输入数据
             user_info = self._merge_user_info(input_data, user_profile)

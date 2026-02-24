@@ -30,13 +30,7 @@ class ConfigValidationError(Exception):
     pass
 
 
-class MembershipTier(Enum):
-    """会员等级枚举（原 UserLevel，重命名避免与训练水平枚举冲突）"""
-    FREE = "free"
-    PAID = "paid"
-    VIP = "vip"
-    SYSTEM = "system"
-
+from ..types.enums import MembershipTier
 
 # 向后兼容别名
 UserLevel = MembershipTier
