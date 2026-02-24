@@ -44,7 +44,7 @@ class MuscleGroupVolumeCalculatorInput(BaseModel):
         ..., description="训练目标（支持基础目标和中国本地化扩展目标）"
     )
     training_frequency_per_week: int = Field(
-        ..., ge=1, le=7, description="每周训练频率"
+        ..., ge=1, le=7, description="每星期训练频率"
     )
     current_weekly_sets: Optional[int] = Field(
         None, ge=0, description="当前每周组数（用于分析是否过度训练）"
@@ -444,7 +444,7 @@ class MuscleGroupVolumeCalculator(BaseMCPTool):
         
         Args:
             weekly_sets: 周总训练量
-            training_frequency: 每周训练频率
+            training_frequency: 每星期训练频率
             reasoning: 推荐理由（会被更新）
         
         Returns:
@@ -562,7 +562,7 @@ class MuscleGroupVolumeCalculator(BaseMCPTool):
         
         if training_frequency > max_sessions_per_week:
             frequency_recommendation = (
-                f"建议每周训练{max_sessions_per_week}次，"
+                f"建议每星期训练{max_sessions_per_week}次，"
                 f"当前频率（{training_frequency}次/周）可能不足以恢复"
             )
         else:

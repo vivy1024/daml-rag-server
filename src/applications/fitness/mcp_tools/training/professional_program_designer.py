@@ -109,7 +109,7 @@ class ProfessionalProgramDesigner(
 
         流程：
         1. 确定适用训练标准 → 2. 计算训练周期 → 3. 确定目标肌群
-        4. 为每周生成训练计划 → 5. 平衡性分析 → 6. 安全评估
+        4. 为每星期生成训练计划 → 5. 平衡性分析 → 6. 安全评估
         7. 执行建议 → 8. 注意事项
         """
         import time
@@ -134,7 +134,7 @@ class ProfessionalProgramDesigner(
             # Step 4: 获取训练周数
             training_weeks = input_data.get("training_weeks", 4)
 
-            # Step 5: 为每周生成训练计划（应用周期化训练量）
+            # Step 5: 为每星期生成训练计划（应用周期化训练量）
             weekly_programs = []
 
             for week_num in range(1, training_weeks + 1):
@@ -303,7 +303,7 @@ class ProfessionalProgramDesigner(
                 training_pattern = "练六休一"
             else:
                 cycle_days = 7
-                training_pattern = f"每周{training_days_per_week}天"
+                training_pattern = f"每星期{training_days_per_week}天"
 
         elif training_split == "upper_lower":
             base_cycle = 2
@@ -312,7 +312,7 @@ class ProfessionalProgramDesigner(
                 training_pattern = "练二休一"
             else:
                 cycle_days = 7
-                training_pattern = f"每周{training_days_per_week}天"
+                training_pattern = f"每星期{training_days_per_week}天"
 
         elif training_split == "full_body":
             base_cycle = 1
@@ -321,24 +321,24 @@ class ProfessionalProgramDesigner(
                 training_pattern = "练一休一"
             else:
                 cycle_days = 7
-                training_pattern = f"每周{training_days_per_week}天"
+                training_pattern = f"每星期{training_days_per_week}天"
 
         elif training_split == "bro_split":
             base_cycle = 5
             cycle_days = 7
-            training_pattern = f"每周{training_days_per_week}天"
+            training_pattern = f"每星期{training_days_per_week}天"
 
         else:
             base_cycle = training_days_per_week
             cycle_days = 7
-            training_pattern = f"每周{training_days_per_week}天"
+            training_pattern = f"每星期{training_days_per_week}天"
 
         cycles_per_week = 7.0 / cycle_days
 
         self.logger.info(
             f"📊 训练周期计算: {training_split}, "
             f"周期={cycle_days}天, "
-            f"每周{cycles_per_week:.1f}个周期, "
+            f"每星期{cycles_per_week:.1f}个周期, "
             f"模式={training_pattern}"
         )
 

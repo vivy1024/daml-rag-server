@@ -116,7 +116,7 @@ class BestPracticesRetriever:
 【训练频率】：{frequency}次/周
 【训练周期】：{duration}周
 
-【每周安排】：
+【每星期安排】：
 {weekly_plan}
 
 【注意事项】：

@@ -33,7 +33,7 @@ class ProfessionalProgramDesignerInput(BaseModel):
     user_id: str = Field(..., description="用户ID")
     training_goal: TrainingGoal = Field(..., description="训练目标")
     training_split: TrainingSplit = Field(..., description="训练分化方式")
-    training_days_per_week: int = Field(..., ge=1, le=7, description="每周训练天数")
+    training_days_per_week: int = Field(..., ge=1, le=7, description="每星期训练天数")
     difficulty_level: DifficultyLevel = Field(..., description="难度等级")
     available_equipment: List[str] = Field(..., description="可用器械列表")
     injury_history: Optional[List[str]] = Field(None, description="损伤历史（可选）")

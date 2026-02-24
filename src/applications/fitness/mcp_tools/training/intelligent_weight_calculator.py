@@ -416,7 +416,7 @@ class IntelligentWeightCalculator(BaseMCPTool):
             ])
 
         guidelines.extend([
-            "每周评估一次，根据表现调整",
+            "每星期评估一次，根据表现调整",
             "记录训练日志，追踪进展"
         ])
 

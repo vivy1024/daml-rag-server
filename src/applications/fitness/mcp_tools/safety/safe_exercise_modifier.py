@@ -763,7 +763,7 @@ class SafeExerciseModifier(BaseMCPTool):
             modifications.extend([
                 "仅在无痛范围内活动",
                 "使用弹力带或辅助器械",
-                "减少训练频率至每周2次",
+                "减少训练频率至每星期2次",
                 "严格控制动作速度"
             ])
             safety_enhancements.extend([

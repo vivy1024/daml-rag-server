@@ -142,9 +142,9 @@ class ParameterMapper:
     def map_training_split(self, training_days: int) -> str:
         """
         根据训练天数映射训练分化
-        
+
         Args:
-            training_days: 每周训练天数
+            training_days: 每星期训练天数
             
         Returns:
             str: 训练分化类型

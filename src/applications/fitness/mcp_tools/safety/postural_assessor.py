@@ -355,7 +355,7 @@ class PosturalAssessor(BaseMCPTool):
         
         if corrective_count > 0:
             recommendations.append(
-                f"建议每周进行2-3次矫正训练，每次选择2-3个矫正动作"
+                f"建议每星期进行2-3次矫正训练，每次选择2-3个矫正动作"
             )
             recommendations.append(
                 f"矫正动作应使用轻负重，注重动作质量和肌肉感受"
