@@ -209,11 +209,12 @@ class ProfileInjector:
         goals = profile.get("goals", {})
         if goals.get("primary_goal"):
             goal_map = {
-                "muscle_gain": "增肌",
+                "hypertrophy": "增肌",
                 "fat_loss": "减脂",
                 "strength": "力量提升",
                 "endurance": "耐力提升",
                 "general_fitness": "综合健身",
+                "body_shaping": "塑形",
                 "flexibility": "柔韧性",
             }
             goal = goal_map.get(goals["primary_goal"], goals["primary_goal"])
@@ -275,11 +276,12 @@ class ProfileInjector:
             lines.append("\n健身目标:")
             if goals.get("primary_goal"):
                 goal_map = {
-                    "muscle_gain": "增肌",
+                    "hypertrophy": "增肌",
                     "fat_loss": "减脂",
                     "strength": "力量提升",
                     "endurance": "耐力提升",
                     "general_fitness": "综合健身",
+                    "body_shaping": "塑形",
                     "flexibility": "柔韧性提升",
                 }
                 lines.append(f"  - 主要目标: {goal_map.get(goals['primary_goal'], goals['primary_goal'])}")
@@ -388,7 +390,7 @@ class ProfileInjector:
         if goals.get("primary_goal"):
             total_count += 1
             goal_keywords = {
-                "muscle_gain": ["增肌", "肌肉"],
+                "hypertrophy": ["增肌", "肌肉"],
                 "fat_loss": ["减脂", "减肥", "燃脂"],
                 "strength": ["力量", "强壮"],
             }

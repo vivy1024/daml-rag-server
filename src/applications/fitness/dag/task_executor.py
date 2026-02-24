@@ -38,40 +38,18 @@ class TaskParamBuilder:
 
     def _get_primary_goal(self, default: str = "general_fitness") -> str:
         """
-        获取主要健身目标（统一处理字典和列表格式）
+        获取主要健身目标
 
-        v8.63.0: 修复fitness_goals数据结构不一致问题
-        - 新格式（字典）: {"primary_goal": "hypertrophy", "secondary_goals": [...]}
-        - 旧格式（列表）: ["增肌", "减脂"]
-
-        返回值会标准化为工具层枚举（fat_loss/hypertrophy），
-        兼容用户档案中的旧值（weight_loss/muscle_gain）。
+        从 fitness_goals.primary_goal 提取英文枚举值（hypertrophy/fat_loss 等）。
         """
-        # 旧枚举 → 新枚举 映射（用户档案 → MCP工具）
-        _GOAL_NORMALIZE = {
-            "weight_loss": "fat_loss",
-            "muscle_gain": "hypertrophy",
-        }
-
         fitness_goals = self.user_profile.get("fitness_goals", {})
 
-        raw_goal = default
-        # 处理字典格式（新格式）
         if isinstance(fitness_goals, dict):
-            # 优先从 primary_goal 获取
             primary_goal = fitness_goals.get("primary_goal", "")
             if primary_goal:
-                raw_goal = primary_goal
-            else:
-                # 尝试从 primary_goals 列表获取
-                primary_goals = fitness_goals.get("primary_goals", [])
-                if primary_goals and isinstance(primary_goals, list) and primary_goals[0]:
-                    raw_goal = primary_goals[0]
-        # 处理列表格式（旧格式）
-        elif isinstance(fitness_goals, list) and fitness_goals:
-            raw_goal = fitness_goals[0]
+                return primary_goal
 
-        return _GOAL_NORMALIZE.get(raw_goal, raw_goal)
+        return default
 
     def build_params(self, tool_name: str) -> Dict[str, Any]:
         """构建工具参数"""
