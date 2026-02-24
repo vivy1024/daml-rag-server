@@ -129,6 +129,7 @@ scripts/neo4j_migrations/    # Neo4j 同步 + Migration 工具
 
 | 场景 | 参考文件 |
 |------|---------|
+| ⭐ 枚举映射说明（三端数据流） | `docs/03-代码参考/12-枚举映射说明.md` |
 | 完整工作流程 | `docs/02-核心架构/03-完整工作流程.md` |
 | Neo4j 数据库结构 | `docs/02-核心架构/02-数据层/02-Neo4j数据库结构.md` |
 | MCP 工具架构详细版 | `docs/02-核心架构/06-MCP工具架构.md` |
@@ -137,3 +138,5 @@ scripts/neo4j_migrations/    # Neo4j 同步 + Migration 工具
 | LLM 降级管理器 | `src/framework/clients/llm_fallback_manager.py` |
 | Zeabur 环境变量 | `.kiro/steering/zeabur-env-vars.md` |
 | 跨端枚举/字段变更 | `.kiro/steering/cross-stack-data-contract.md` |
+
+> ⚠️ 涉及枚举值、字段名映射、三端数据契约时，必须先读 `12-枚举映射说明.md`。变更枚举后同步更新该文档。
