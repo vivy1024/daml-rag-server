@@ -201,7 +201,7 @@ class ProfileInjector:
             level = level_map.get(fitness["level"], fitness["level"])
             days = fitness.get("training_days", "")
             if days:
-                parts.append(f"健身水平: {level}, 每周{days}天")
+                parts.append(f"健身水平: {level}, 每星期{days}天")
             else:
                 parts.append(f"健身水平: {level}")
         
@@ -266,7 +266,7 @@ class ProfileInjector:
                 }
                 lines.append(f"  - 等级: {level_map.get(fitness['level'], fitness['level'])}")
             if fitness.get("training_days"):
-                lines.append(f"  - 训练频率: 每周{fitness['training_days']}天")
+                lines.append(f"  - 训练频率: 每星期{fitness['training_days']}天")
             if fitness.get("session_duration"):
                 lines.append(f"  - 单次时长: {fitness['session_duration']}分钟")
         

@@ -187,7 +187,7 @@ class TrainingPlanParams(BaseModel):
         default="beginner", description="健身水平"
     )
     days_per_week: Optional[int] = Field(
-        default=3, ge=1, le=7, description="每周训练天数"
+        default=3, ge=1, le=7, description="每星期训练天数"
     )
     session_duration: Optional[int] = Field(
         default=60, ge=15, le=180, description="每次训练时长(分钟)"
@@ -468,7 +468,7 @@ class MovementPatternBalancerParams(BaseModel):
         default=None, description="训练目标"
     )
     days_per_week: Optional[int] = Field(
-        default=None, ge=1, le=7, description="每周训练天数"
+        default=None, ge=1, le=7, description="每星期训练天数"
     )
 
     @field_validator("user_id", mode="before")

@@ -73,8 +73,8 @@ class RestPattern(str, Enum):
     TRAIN_1_REST_1 = "train_1_rest_1"       # 练一休一（隔日训练）
     
     # 大学生推荐模式 - Requirements 2.4
-    MON_WED_FRI = "mon_wed_fri"             # 周一三五
-    TUE_THU_SAT = "tue_thu_sat"             # 周二四六
+    MON_WED_FRI = "mon_wed_fri"             # 星期一三五
+    TUE_THU_SAT = "tue_thu_sat"             # 星期二四六
     
     # 自定义
     CUSTOM = "custom"                        # 自定义模式
@@ -100,7 +100,7 @@ class TrainingSplitDesignerInput(BaseModel):
     # 训练参数
     training_level: TrainingLevel = Field(..., description="训练水平")
     primary_goal: TrainingGoal = Field(..., description="主要训练目标")
-    training_days_per_week: int = Field(..., ge=2, le=6, description="每周训练天数")
+    training_days_per_week: int = Field(..., ge=2, le=6, description="每星期训练天数")
     session_duration_minutes: int = Field(..., ge=30, le=120, description="每次训练时长（分钟）")
     
     # 器械和限制
@@ -424,7 +424,7 @@ class TrainingSplitDesigner(BaseMCPTool):
         Returns:
             Dict包含：
             - cycle_days: 实际周期天数
-            - cycles_per_week: 每周完整周期数
+            - cycles_per_week: 每星期完整周期数
             - training_pattern: 训练模式描述
             - split_sessions: 分化中的训练日数量
             - rest_pattern: 休息模式
@@ -445,11 +445,11 @@ class TrainingSplitDesigner(BaseMCPTool):
         
         # 大学生用户推荐隔日训练 - Requirements 2.4
         if user_type == "student" and training_days_per_week <= 3:
-            self.logger.info("🎓 大学生用户，推荐隔日训练模式（周一三五或周二四六）")
+            self.logger.info("🎓 大学生用户，推荐隔日训练模式（星期一三五或星期二四六）")
             return {
                 "cycle_days": 7,
                 "cycles_per_week": 1.0,
-                "training_pattern": "隔日训练（周一三五）",
+                "training_pattern": "隔日训练（星期一三五）",
                 "split_sessions": training_days_per_week,
                 "rest_pattern": "mon_wed_fri",
                 "recommended_for_student": True
@@ -473,7 +473,7 @@ class TrainingSplitDesigner(BaseMCPTool):
             else:
                 # 其他情况：按7天计算
                 cycle_days = 7
-                training_pattern = f"每周{training_days_per_week}天"
+                training_pattern = f"每星期{training_days_per_week}天"
                 rest_pattern = "custom"
         
         elif preferred_split == "chest_back":
@@ -490,7 +490,7 @@ class TrainingSplitDesigner(BaseMCPTool):
                 rest_pattern = "train_6_rest_1"
             else:
                 cycle_days = 7
-                training_pattern = f"每周{training_days_per_week}天"
+                training_pattern = f"每星期{training_days_per_week}天"
                 rest_pattern = "custom"
         
         elif preferred_split == "antagonist":
@@ -503,7 +503,7 @@ class TrainingSplitDesigner(BaseMCPTool):
                 rest_pattern = "train_4_rest_1"
             else:
                 cycle_days = 7
-                training_pattern = f"每周{training_days_per_week}天"
+                training_pattern = f"每星期{training_days_per_week}天"
                 rest_pattern = "custom"
         
         elif preferred_split == "arnold_split":
@@ -525,7 +525,7 @@ class TrainingSplitDesigner(BaseMCPTool):
             else:
                 # 其他情况：按7天计算
                 cycle_days = 7
-                training_pattern = f"每周{training_days_per_week}天"
+                training_pattern = f"每星期{training_days_per_week}天"
                 rest_pattern = "custom"
         
         elif preferred_split == "full_body" or training_days_per_week <= 3:
@@ -540,7 +540,7 @@ class TrainingSplitDesigner(BaseMCPTool):
             else:
                 # 其他情况：按7天计算
                 cycle_days = 7
-                training_pattern = f"每周{training_days_per_week}天"
+                training_pattern = f"每星期{training_days_per_week}天"
                 rest_pattern = "custom"
         
         elif preferred_split == "bro_split" or training_days_per_week >= 5:
@@ -554,23 +554,23 @@ class TrainingSplitDesigner(BaseMCPTool):
                 rest_pattern = "train_5_rest_2"
             else:
                 cycle_days = 7
-                training_pattern = f"每周{training_days_per_week}天"
+                training_pattern = f"每星期{training_days_per_week}天"
                 rest_pattern = "custom"
         
         else:
             # 默认：按7天计算
             split_sessions = training_days_per_week
             cycle_days = 7
-            training_pattern = f"每周{training_days_per_week}天"
+            training_pattern = f"每星期{training_days_per_week}天"
             rest_pattern = "custom"
         
-        # 计算每周完整周期数
+        # 计算每星期完整周期数
         cycles_per_week = round(7.0 / cycle_days, 2)
         
         self.logger.info(
             f"📊 训练周期计算: "
             f"周期={cycle_days}天, "
-            f"每周{cycles_per_week}个周期, "
+            f"每星期{cycles_per_week}个周期, "
             f"模式={training_pattern}, "
             f"分化训练日={split_sessions}, "
             f"休息模式={rest_pattern}"
@@ -595,7 +595,7 @@ class TrainingSplitDesigner(BaseMCPTool):
         
         Args:
             rest_pattern: 休息模式
-            training_days_per_week: 每周训练天数
+            training_days_per_week: 每星期训练天数
             preferred_split: 偏好的分化类型
             
         Returns:
@@ -607,7 +607,7 @@ class TrainingSplitDesigner(BaseMCPTool):
                 "cycle_days": 7,
                 "training_pattern": "练五休二（周末休息）",
                 "split_sessions": 5,
-                "description": "周一至周五训练，周末休息"
+                "description": "星期一至星期五训练，周末休息"
             },
             "train_4_rest_1": {
                 "cycle_days": 5,
@@ -641,21 +641,21 @@ class TrainingSplitDesigner(BaseMCPTool):
             },
             "mon_wed_fri": {
                 "cycle_days": 7,
-                "training_pattern": "周一三五",
+                "training_pattern": "星期一三五",
                 "split_sessions": 3,
-                "description": "周一、周三、周五训练"
+                "description": "星期一、星期三、星期五训练"
             },
             "tue_thu_sat": {
                 "cycle_days": 7,
-                "training_pattern": "周二四六",
+                "training_pattern": "星期二四六",
                 "split_sessions": 3,
-                "description": "周二、周四、周六训练"
+                "description": "星期二、星期四、星期六训练"
             }
         }
         
         config = pattern_config.get(rest_pattern, {
             "cycle_days": 7,
-            "training_pattern": f"每周{training_days_per_week}天",
+            "training_pattern": f"每星期{training_days_per_week}天",
             "split_sessions": training_days_per_week,
             "description": "自定义休息模式"
         })
@@ -667,7 +667,7 @@ class TrainingSplitDesigner(BaseMCPTool):
             f"📊 根据休息模式计算周期: "
             f"模式={rest_pattern}, "
             f"周期={cycle_days}天, "
-            f"每周{cycles_per_week}个周期"
+            f"每星期{cycles_per_week}个周期"
         )
         
         return {
@@ -704,7 +704,7 @@ class TrainingSplitDesigner(BaseMCPTool):
                 ],
                 "split_sessions": 2,  # 分化中的训练日数量
                 "recommended_cycle_days": 7,  # 推荐周期天数
-                "recommended_pattern": "每周2天"
+                "recommended_pattern": "每星期2天"
             })
         
         elif training_days == 3:
@@ -742,7 +742,7 @@ class TrainingSplitDesigner(BaseMCPTool):
             options.append({
                 "type": "full_body",
                 "name": "全身训练分化",
-                "description": "每周3次全身训练，平衡发展各肌群",
+                "description": "每星期3次全身训练，平衡发展各肌群",
                 "sessions": ["全身训练A", "全身训练B", "全身训练C"],
                 "muscle_groups": [
                     ["胸大肌", "背阔肌", "股四头肌"],
@@ -751,7 +751,7 @@ class TrainingSplitDesigner(BaseMCPTool):
                 ],
                 "split_sessions": 3,
                 "recommended_cycle_days": 7,
-                "recommended_pattern": "每周3天"
+                "recommended_pattern": "每星期3天"
             })
         
         elif training_days == 4:
@@ -791,7 +791,7 @@ class TrainingSplitDesigner(BaseMCPTool):
             options.append({
                 "type": "push_pull_legs",
                 "name": "推拉腿分化（高频）",
-                "description": "推拉腿三分化，每周5天训练，适合中高级训练者",
+                "description": "推拉腿三分化，每星期5天训练，适合中高级训练者",
                 "sessions": ["推日（胸肩三头）", "拉日（背二头）", "腿日"],
                 "muscle_groups": [
                     ["胸大肌", "三角肌", "肱三头肌"],
@@ -853,7 +853,7 @@ class TrainingSplitDesigner(BaseMCPTool):
                 ],
                 "split_sessions": 6,
                 "recommended_cycle_days": 7,
-                "recommended_pattern": "每周6天"
+                "recommended_pattern": "每星期6天"
             })
         
         return options
@@ -889,13 +889,13 @@ class TrainingSplitDesigner(BaseMCPTool):
         if user_type == "student":
             # 大学生时间有限，推荐全身训练或上下肢分化
             if training_days <= 3:
-                # 每周3天或更少，推荐全身训练
+                # 每星期3天或更少，推荐全身训练
                 full_body = next((opt for opt in options if opt["type"] == "full_body"), None)
                 if full_body:
                     self.logger.info("🎓 大学生用户，推荐全身训练分化（时间效率高）")
                     return full_body
             elif training_days == 4:
-                # 每周4天，推荐上下肢分化
+                # 每星期4天，推荐上下肢分化
                 upper_lower = next((opt for opt in options if opt["type"] == "upper_lower"), None)
                 if upper_lower:
                     self.logger.info("🎓 大学生用户，推荐上下肢分化（平衡效率与效果）")
@@ -922,7 +922,7 @@ class TrainingSplitDesigner(BaseMCPTool):
             "muscle_groups": [["胸大肌", "背阔肌", "股四头肌"]],
             "split_sessions": 1,
             "recommended_cycle_days": 7,
-            "recommended_pattern": "每周训练"
+            "recommended_pattern": "每星期训练"
         }
     
     def recommend_rest_pattern(
@@ -933,7 +933,7 @@ class TrainingSplitDesigner(BaseMCPTool):
         根据用户类型和分化类型智能推荐休息模式
         
         推荐逻辑 - Requirements 2.4, 2.5：
-        1. 大学生用户 → 推荐隔日训练（周一三五或周二四六）
+        1. 大学生用户 → 推荐隔日训练（星期一三五或星期二四六）
         2. 上班族用户 → 推荐练五休二（周末休息）
         3. 根据分化类型智能推荐：
            - 推拉腿/胸背分化 → 练三休一或练六休一
@@ -957,10 +957,10 @@ class TrainingSplitDesigner(BaseMCPTool):
                 self.logger.info("🎓 大学生用户，推荐隔日训练模式")
                 return {
                     "recommended_pattern": "mon_wed_fri",
-                    "pattern_name": "周一三五",
+                    "pattern_name": "星期一三五",
                     "description": "适合大学生课程安排，隔日训练有利于恢复",
                     "alternative": "tue_thu_sat",
-                    "alternative_name": "周二四六",
+                    "alternative_name": "星期二四六",
                     "reason": "大学生时间有限，隔日训练既能保证训练效果，又能兼顾学业"
                 }
         
@@ -971,7 +971,7 @@ class TrainingSplitDesigner(BaseMCPTool):
                 return {
                     "recommended_pattern": "train_5_rest_2",
                     "pattern_name": "练五休二（周末休息）",
-                    "description": "周一至周五训练，周末休息，适合上班族作息",
+                    "description": "星期一至星期五训练，周末休息，适合上班族作息",
                     "reason": "与工作日程同步，周末可以充分休息和恢复"
                 }
         
@@ -1011,7 +1011,7 @@ class TrainingSplitDesigner(BaseMCPTool):
                 return {
                     "recommended_pattern": pattern_info["pattern"],
                     "pattern_name": pattern_info["name"],
-                    "description": f"根据{preferred_split}分化类型和每周{training_days}天训练推荐",
+                    "description": f"根据{preferred_split}分化类型和每星期{training_days}天训练推荐",
                     "reason": f"该休息模式与{preferred_split}分化类型最为匹配"
                 }
         
@@ -1029,13 +1029,13 @@ class TrainingSplitDesigner(BaseMCPTool):
             return {
                 "recommended_pattern": pattern_info["pattern"],
                 "pattern_name": pattern_info["name"],
-                "description": f"根据每周{training_days}天训练推荐",
+                "description": f"根据每星期{training_days}天训练推荐",
                 "reason": "通用推荐，适合大多数用户"
             }
         
         return {
             "recommended_pattern": "custom",
-            "pattern_name": f"每周{training_days}天",
+            "pattern_name": f"每星期{training_days}天",
             "description": "自定义休息模式",
             "reason": "根据个人情况灵活安排"
         }
@@ -1503,7 +1503,7 @@ class TrainingSplitDesigner(BaseMCPTool):
             "cycles_per_week": cycle_info["cycles_per_week"],
             "schedule": schedule,
             "note": f"这是一个{cycle_days}天的训练周期（{training_pattern}），"
-                    f"每周可完成约{cycle_info['cycles_per_week']:.1f}个周期"
+                    f"每星期可完成约{cycle_info['cycles_per_week']:.1f}个周期"
         }
         
         return [cycle_schedule]  # 返回周期日程表
@@ -1558,7 +1558,7 @@ class TrainingSplitDesigner(BaseMCPTool):
     def _get_progression_strategy(self, goal: str) -> str:
         """获取渐进策略"""
         strategies = {
-            "strength": "线性加重：每周增加2.5-5kg负荷，直到达到重复次数上限",
+            "strength": "线性加重：每星期增加2.5-5kg负荷，直到达到重复次数上限",
             "hypertrophy": "双轨渐进：先增加重复次数，再增加负荷",
             "endurance": "密度训练：逐渐增加训练密度和持续时间",
             "general_fitness": "混合渐进：力量和耐力并重，逐步提升",
@@ -1740,7 +1740,7 @@ class TrainingSplitDesigner(BaseMCPTool):
         if goal == "hypertrophy":
             notes.extend([
                 "重点关注肌肉在张力下的时间",
-                "每个肌群每周训练2-3次"
+                "每个肌群每星期训练2-3次"
             ])
         elif goal == "strength":
             notes.extend([

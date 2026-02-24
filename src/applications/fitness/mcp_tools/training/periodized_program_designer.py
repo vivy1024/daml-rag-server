@@ -75,7 +75,7 @@ class PeriodizedProgramDesignerInput(BaseModel):
         le=16, 
         description="计划总周数（4-16周）"
     )
-    training_days_per_week: int = Field(..., ge=2, le=6, description="每周训练天数")
+    training_days_per_week: int = Field(..., ge=2, le=6, description="每星期训练天数")
     
     # 器械和限制
     available_equipment: List[str] = Field(..., description="可用器械列表")
@@ -706,7 +706,7 @@ class PeriodizedProgramDesigner(BaseMCPTool):
         """设计共轭周期化阶段"""
         phases = []
         
-        # Conjugate模型：整个周期作为一个阶段，每周包含不同训练日
+        # Conjugate模型：整个周期作为一个阶段，每星期包含不同训练日
         training_weeks = total_weeks - (1 if include_deload else 0)
         
         phases.append({
@@ -729,7 +729,7 @@ class PeriodizedProgramDesigner(BaseMCPTool):
                 "最大力量日：90-100% 1RM, 1-3次",
                 "动态力量日：60-75% 1RM, 快速爆发",
                 "每周轮换主要动作变式",
-                "高频率训练（每周2-3次/肌群）"
+                "高频率训练（每星期2-3次/肌群）"
             ]
         })
         

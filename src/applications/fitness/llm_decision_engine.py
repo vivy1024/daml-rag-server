@@ -233,7 +233,7 @@ class LLMDecisionEngine:
 - 年龄: {basic_info.get('age', '未知')}岁
 - 性别: {basic_info.get('gender', '未知')}
 - 训练水平: {fitness_config.get('fitness_level', '未知')}
-- 训练频率: 每周{fitness_config.get('training_days_per_week', '未知')}次
+- 训练频率: 每星期{fitness_config.get('training_days_per_week', '未知')}次
 - 健身目标: {', '.join(fitness_goals.get('primary_goals', ['未设置']))}
 - 健康状况: {', '.join(health_profile.get('chronic_diseases', ['无'])) if health_profile.get('chronic_diseases') else '无'}
 - 损伤史: {', '.join(health_profile.get('injury_history', ['无'])) if health_profile.get('injury_history') else '无'}

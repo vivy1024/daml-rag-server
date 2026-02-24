@@ -40,7 +40,7 @@ class TDEECalculatorInput(BaseModel):
     
     # 活动水平
     training_frequency_per_week: int = Field(
-        ..., ge=0, le=7, description="每周训练频率"
+        ..., ge=0, le=7, description="每星期训练频率"
     )
     training_intensity: Literal["low", "moderate", "high"] = Field(
         ..., description="训练强度"
@@ -357,9 +357,9 @@ class TDEECalculator(BaseMCPTool):
         # 日常活动系数（基础）
         daily_activity_multipliers = {
             "sedentary": 1.2,           # 久坐（办公室工作）
-            "lightly_active": 1.375,    # 轻度活动（每周1-3天轻度运动）
-            "moderately_active": 1.55,  # 中度活动（每周3-5天中度运动）
-            "very_active": 1.725,       # 高度活动（每周6-7天高强度运动）
+            "lightly_active": 1.375,    # 轻度活动（每星期1-3天轻度运动）
+            "moderately_active": 1.55,  # 中度活动（每星期3-5天中度运动）
+            "very_active": 1.725,       # 高度活动（每星期6-7天高强度运动）
             "extremely_active": 1.9     # 极度活动（每天多次高强度运动）
         }
         
@@ -586,13 +586,13 @@ class TDEECalculator(BaseMCPTool):
             recommendations.extend([
                 "减脂期间保持高蛋白摄入，保护肌肉量",
                 "优先选择高纤维、低GI碳水（燕麦、糙米、红薯）",
-                "每周称重1-2次，根据体重变化调整热量（目标：每周减重0.5-1kg）"
+                "每星期称重1-2次，根据体重变化调整热量（目标：每星期减重0.5-1kg）"
             ])
         elif fitness_goal == "hypertrophy":
             recommendations.extend([
                 "增肌期间确保热量盈余，配合力量训练",
                 "训练后及时补充碳水和蛋白质，促进恢复",
-                "每周称重，目标：每周增重0.25-0.5kg（避免过快增重导致脂肪堆积）"
+                "每星期称重，目标：每星期增重0.25-0.5kg（避免过快增重导致脂肪堆积）"
             ])
         elif fitness_goal == "recomp":
             recommendations.extend([

@@ -46,7 +46,7 @@ class MealPlanDesignerInput(BaseModel):
     meals_per_day: int = Field(default=4, ge=3, le=6, description="每天进餐次数")
     
     # 训练相关
-    training_days_per_week: int = Field(default=0, ge=0, le=7, description="每周训练天数")
+    training_days_per_week: int = Field(default=0, ge=0, le=7, description="每星期训练天数")
     
     # 健身目标
     fitness_goal: Literal["fat_loss", "maintenance", "hypertrophy", "recomp"] = Field(
@@ -448,7 +448,7 @@ class MealPlanDesigner(BaseMCPTool):
             selection_tips=[
                 "每天一小把坚果（30g）",
                 "烹饪用橄榄油或椰子油",
-                "每周2-3次深海鱼"
+                "每星期2-3次深海鱼"
             ]
         ))
         
@@ -560,7 +560,7 @@ class MealPlanDesigner(BaseMCPTool):
     def _generate_flexibility_tips(self, input_data: Dict[str, Any]) -> List[str]:
         """生成灵活调整建议"""
         return [
-            "📊 每周称重1-2次，根据体重变化调整热量（±200卡）",
+            "📊 每星期称重1-2次，根据体重变化调整热量（±200卡）",
             "🎯 如果体重不变：增肌加200卡，减脂减200卡",
             "🍕 偶尔聚餐没关系：第二天恢复正常饮食即可",
             "🏃 训练强度大时：适当增加碳水摄入",

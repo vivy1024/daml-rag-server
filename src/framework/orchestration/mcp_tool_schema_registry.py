@@ -324,7 +324,7 @@ TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
             "training_days_per_week": {
                 "type": ParamType.INTEGER,
                 "required": True,
-                "description": "每周训练天数"
+                "description": "每星期训练天数"
             },
             "difficulty_level": {
                 "type": ParamType.ENUM,
@@ -388,7 +388,7 @@ TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
             "training_days_per_week": {
                 "type": ParamType.INTEGER,
                 "required": True,
-                "description": "每周训练天数"
+                "description": "每星期训练天数"
             },
             "available_equipment": {
                 "type": ParamType.LIST,
@@ -453,7 +453,7 @@ TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
             "training_days_per_week": {
                 "type": ParamType.INTEGER,
                 "required": True,
-                "description": "每周训练天数"
+                "description": "每星期训练天数"
             },
             "session_duration_minutes": {
                 "type": ParamType.INTEGER,
@@ -516,7 +516,7 @@ TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
             "training_frequency_per_week": {
                 "type": ParamType.INTEGER,
                 "required": True,
-                "description": "每周训练频率"
+                "description": "每星期训练频率"
             },
             "current_weekly_sets": {
                 "type": ParamType.INTEGER,
@@ -622,7 +622,7 @@ TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
             "training_frequency_per_week": {
                 "type": ParamType.INTEGER,
                 "required": True,
-                "description": "每周训练频率"
+                "description": "每星期训练频率"
             },
             "training_intensity": {
                 "type": ParamType.ENUM,
@@ -714,7 +714,7 @@ TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
             "training_days_per_week": {
                 "type": ParamType.INTEGER,
                 "required": False,
-                "description": "每周训练天数",
+                "description": "每星期训练天数",
                 "default": 3
             },
             "fitness_goal": {

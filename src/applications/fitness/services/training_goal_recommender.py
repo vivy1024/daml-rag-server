@@ -234,7 +234,7 @@ class TrainingGoalRecommender:
         ],
         "cardio_recommendations": [
             "力量训练后进行20-30分钟低强度有氧",
-            "每周2-3次HIIT训练",
+            "每星期2-3次HIIT训练",
             "日常增加步行量（目标10000步/天）"
         ]
     }
