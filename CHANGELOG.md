@@ -5,6 +5,20 @@
 
 ---
 
+## #37 (fix) AI对话系统全面修复 — 安全+可靠性+健壮性 — 2026-02-25
+
+对应产品版本：v1.5.0
+
+- usage_reporter.py: 积分上报重试耗尽后写入 fallback JSONL 日志（/app/logs/credit_fallback.jsonl）
+- chat.py: Prompt Injection 检测异常改为 fail-closed（返回安全降级响应）
+- chat.py: Token 计数改进，新增 _estimate_tokens() 区分中英文比率（1.5/4.0 chars/token）
+- stream_executor.py: 权限检查异常改为 fail-closed（返回 allowed=False）
+- llm_client.py: LLM Fallback 捕获所有 httpx.TimeoutException，ConnectTimeout 快速失败
+- nodes.py: MCP 工具部分降级，hybrid 检索路径 try-except 保护
+- health.py: /health 端点新增 tools 字段返回18个工具的名称+中文名+数据来源
+
+---
+
 ## #36 (feat) 三端枚举统一 — AI 服务枚举修复 + 字段名对齐 — 2026-02-24
 
 对应产品版本：v1.4.0

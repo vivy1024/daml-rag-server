@@ -1282,13 +1282,12 @@ class StreamWorkflowExecutor(WorkflowExecutor):
                 }
                 
         except (ImportError, httpx.HTTPError, ConnectionError, TimeoutError, ValueError) as e:
-            logger.error(f"❌ [{request_id}] 权限检查异常: {e}")
-            # 权限检查异常时，允许执行（避免阻塞用户）
+            logger.error(f"❌ [{request_id}] 权限检查异常(fail-closed拒绝): {e}")
             return {
-                "allowed": True,
+                "allowed": False,
                 "tier": "unknown",
-                "remaining": -1,
-                "message": f"权限检查异常，暂时允许执行: {e}"
+                "remaining": 0,
+                "message": "系统繁忙，请稍后重试"
             }
     
     def _make_json_serializable(self, obj: Any) -> Any:

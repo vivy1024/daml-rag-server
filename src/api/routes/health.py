@@ -42,6 +42,53 @@ from ...framework.monitoring.prometheus_integration import (
 logger = logging.getLogger(__name__)
 structured_logger = get_logger("health_check")
 
+# ============================================================================
+# 工具列表：名称 → 中文显示名 + 数据来源
+# 供公开 /health 端点返回，前端缓存使用
+# ============================================================================
+
+TOOL_DISPLAY_NAMES = {
+    "intelligent_exercise_selector": "智能动作选择",
+    "contraindications_checker": "禁忌症检查",
+    "injury_risk_assessor": "损伤风险评估",
+    "muscle_group_volume_calculator": "肌群训练量计算",
+    "tdee_calculator": "TDEE计算",
+    "professional_program_designer": "专业训练计划设计",
+    "exercise_alternative_finder": "动作替代查找",
+    "movement_pattern_balancer": "动作模式平衡",
+    "intelligent_weight_calculator": "智能负重计算",
+    "safe_exercise_modifier": "安全动作修改",
+    "nutrition_intake_analyzer": "营养摄入分析",
+    "meal_plan_designer": "膳食计划设计",
+    "exercise_nutrition_optimization": "运动营养优化",
+    "record_training_feedback": "记录训练反馈",
+    "periodized_program_designer": "周期化训练设计",
+    "training_split_designer": "训练分化设计",
+    "find_similar_training_cases": "查找相似训练案例",
+    "get_user_profile": "获取用户档案",
+}
+
+TOOL_DATA_SOURCES = {
+    "intelligent_exercise_selector": "基于1790个专业动作数据库",
+    "contraindications_checker": "基于专业医学禁忌症知识库",
+    "injury_risk_assessor": "基于运动损伤风险评估模型",
+    "muscle_group_volume_calculator": "基于肌群训练量科学研究",
+    "tdee_calculator": "基于Mifflin-St Jeor公式",
+    "professional_program_designer": "基于专业训练计划设计系统",
+    "exercise_alternative_finder": "基于1790个专业动作数据库",
+    "movement_pattern_balancer": "基于动作模式平衡理论",
+    "intelligent_weight_calculator": "基于渐进式超负荷原则",
+    "safe_exercise_modifier": "基于运动安全修改指南",
+    "nutrition_intake_analyzer": "基于1880个食物营养数据库",
+    "meal_plan_designer": "基于营养学膳食设计原则",
+    "exercise_nutrition_optimization": "基于运动营养优化研究",
+    "record_training_feedback": "用户训练反馈系统",
+    "periodized_program_designer": "基于周期化训练理论",
+    "training_split_designer": "基于训练分化设计原则",
+    "find_similar_training_cases": "基于相似案例匹配算法",
+    "get_user_profile": "用户个人档案数据",
+}
+
 # 安全加固：HTTPBearer认证（auto_error=False允许公开端点不需要认证）
 security = HTTPBearer(auto_error=False)
 
@@ -206,10 +253,18 @@ async def public_health_check():
         except Exception:
             pass  # 指标收集失败不影响健康检查
 
-        # 安全加固：仅返回基本状态和时间戳
+        # 安全加固：仅返回基本状态和时间戳 + 工具列表（非敏感）
         return {
             "status": overall_status,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
+            "tools": [
+                {
+                    "name": name,
+                    "display_name": display_name,
+                    "data_source": TOOL_DATA_SOURCES.get(name, ""),
+                }
+                for name, display_name in TOOL_DISPLAY_NAMES.items()
+            ],
         }
 
     except Exception as e:

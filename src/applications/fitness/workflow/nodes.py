@@ -1036,51 +1036,56 @@ async def node_retrieve_context(
 
     # 路由2: hybrid → Neo4j + HybridSearch 融合
     if intent_result and intent_result.intent == QueryIntent.HYBRID:
-        neo4j_results = []
-        if intent_result.extracted_entity and cypher_executor:
-            try:
-                # 尝试用 exercise_details 作为通用结构化补充
-                from ....framework.retrieval.intent_classifier import StructuredQueryType
-                neo4j_results = cypher_executor.execute(
-                    query_type=StructuredQueryType.EXERCISE_DETAILS,
-                    entity=intent_result.extracted_entity,
-                    limit=5
+        try:
+            neo4j_results = []
+            if intent_result.extracted_entity and cypher_executor:
+                try:
+                    # 尝试用 exercise_details 作为通用结构化补充
+                    from ....framework.retrieval.intent_classifier import StructuredQueryType
+                    neo4j_results = cypher_executor.execute(
+                        query_type=StructuredQueryType.EXERCISE_DETAILS,
+                        entity=intent_result.extracted_entity,
+                        limit=5
+                    )
+                except Exception:
+                    pass
+
+            # 同时走混合检索
+            hybrid_results = []
+            if hybrid_search_engine:
+                try:
+                    hybrid_results = await hybrid_search_engine.hybrid_search(
+                        query=query_text, domain=domain, top_k=10,
+                        intent_type="HYBRID"
+                    )
+                except Exception as e:
+                    logger.warning(f"⚠️ [{request_id}] 步骤8: 混合检索失败: {e}")
+
+            # 融合：Neo4j 结果排前面，HybridSearch 结果排后面（去重）
+            merged = _merge_results(neo4j_results, hybrid_results, max_total=10)
+
+            if merged:
+                knowledge_refs = await _get_knowledge_refs()
+                logger.info(
+                    f"✅ [{request_id}] 步骤8完成: "
+                    f"Hybrid路由(Neo4j={len(neo4j_results)}+Search={len(hybrid_results)}) "
+                    f"→ 融合{len(merged)}个结果"
                 )
-            except Exception:
-                pass
-
-        # 同时走混合检索
-        hybrid_results = []
-        if hybrid_search_engine:
-            try:
-                hybrid_results = await hybrid_search_engine.hybrid_search(
-                    query=query_text, domain=domain, top_k=10,
-                    intent_type="HYBRID"
-                )
-            except Exception as e:
-                logger.warning(f"⚠️ [{request_id}] 步骤8: 混合检索失败: {e}")
-
-        # 融合：Neo4j 结果排前面，HybridSearch 结果排后面（去重）
-        merged = _merge_results(neo4j_results, hybrid_results, max_total=10)
-
-        if merged:
-            knowledge_refs = await _get_knowledge_refs()
-            logger.info(
-                f"✅ [{request_id}] 步骤8完成: "
-                f"Hybrid路由(Neo4j={len(neo4j_results)}+Search={len(hybrid_results)}) "
-                f"→ 融合{len(merged)}个结果"
+                return StateUpdate(updates={
+                    "retrieval_results": {
+                        "results": merged,
+                        "query_type": "intent_hybrid",
+                        "domain": domain,
+                        "count": len(merged),
+                        "intent": "hybrid",
+                        "entity": intent_result.extracted_entity,
+                        "knowledge_refs": knowledge_refs,
+                    }
+                })
+        except Exception as e:
+            logger.warning(
+                f"⚠️ [{request_id}] 步骤8: Hybrid路由整体失败，降级到语义检索: {e}"
             )
-            return StateUpdate(updates={
-                "retrieval_results": {
-                    "results": merged,
-                    "query_type": "intent_hybrid",
-                    "domain": domain,
-                    "count": len(merged),
-                    "intent": "hybrid",
-                    "entity": intent_result.extracted_entity,
-                    "knowledge_refs": knowledge_refs,
-                }
-            })
 
     # 路由3: semantic → HybridSearch（BM25 + 向量 + 加权RRF）
     if hybrid_search_engine:
