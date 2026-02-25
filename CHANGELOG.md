@@ -5,6 +5,20 @@
 
 ---
 
+## #39 (refactor) 计算器卡片迁移 — Python服务删除+MCP薄包装+孤立测试清理 — 2026-02-25
+
+对应产品版本：v1.5.0
+
+- 删除 `services/intensity_converter.py` 和 `services/progressive_overload.py`（计算逻辑已迁移到PHP）
+- `services/__init__.py` 移除已删除服务的导出
+- `mcp_tools/nutrition/tdee_calculator.py`: execute() 改为从 user_profile.nutrition_profile.auto_calculated 读取
+- `mcp_tools/training/intelligent_weight_calculator.py`: execute() 改为从 user_profile.strength_data 读取1RM
+- 清理孤立测试: 删除 `test_intensity_converter.py`、`test_progressive_overload.py`
+- 清理 `test_closed_loop_training_system.py` 中 TestProgressiveOverloadCalculator 类
+- 修复 `test_llm_decision_optimization.py` 缺少 @pytest.mark.asyncio 装饰器
+
+---
+
 ## #38 (refactor) 提示词-数据对齐 — ProfileInjector字段修复+数据丰富化+模板升级+工具清理 — 2026-02-25
 
 对应产品版本：v1.5.0（无变更）
