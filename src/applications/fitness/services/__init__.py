@@ -10,7 +10,6 @@ from .weekly_plan_generator import WeeklyPlanGenerator
 from .training_plan_summarizer import TrainingPlanSummarizer  # TODO: legacy，核心功能已被 tool_result_summarizer 替代
 from .safety_reminder_generator import SafetyReminderGenerator  # TODO: 待接入工作流（步骤10 LLM输出后处理）
 from .volume_adjuster import VolumeAdjuster  # TODO: 待接入工作流（periodized_program_designer）
-from .progressive_overload import ProgressiveOverloadCalculator
 from .exercise_stability_manager import ExerciseStabilityManager  # TODO: 待接入工作流（professional_program_designer）
 from .training_goal_recommender import (  # TODO: 待接入工作流（greeting模板）
     TrainingGoalRecommender,
@@ -30,16 +29,6 @@ from .three_track_rating import (
     PersonalizationGrade,
     create_three_track_rating_service
 )
-from .intensity_converter import (  # TODO: 待接入工作流（intelligent_weight_calculator RPE/1RM互转）
-    IntensityConverter,
-    IntensityMetric,
-    IntensityValue,
-    IntensityConversionResult,
-    IntensityRecommendation,
-    TrainingGoal,
-    get_intensity_converter,
-    reset_intensity_converter
-)
 from .credit_reporter import (
     CreditReporter,
     get_credit_reporter,
@@ -47,13 +36,16 @@ from .credit_reporter import (
     report_credit_consumption
 )
 
+# 已删除（计算逻辑统一到 PHP Calculator Service）:
+# - intensity_converter.py (834行) → PHP IntensityConverter
+# - progressive_overload.py (619行) → PHP WeightRecommender
+
 __all__ = [
-    'TrainingLogAnalyzer', 
-    'WeeklyPlanGenerator', 
+    'TrainingLogAnalyzer',
+    'WeeklyPlanGenerator',
     'TrainingPlanSummarizer',
     'SafetyReminderGenerator',
     'VolumeAdjuster',
-    'ProgressiveOverloadCalculator',
     'ExerciseStabilityManager',
     'TrainingGoalRecommender',
     'get_training_goal_recommender',
@@ -68,15 +60,6 @@ __all__ = [
     'PersonalizationScores',
     'PersonalizationGrade',
     'create_three_track_rating_service',
-    # 强度转换服务
-    'IntensityConverter',
-    'IntensityMetric',
-    'IntensityValue',
-    'IntensityConversionResult',
-    'IntensityRecommendation',
-    'TrainingGoal',
-    'get_intensity_converter',
-    'reset_intensity_converter',
     # 积分上报服务
     'CreditReporter',
     'get_credit_reporter',
