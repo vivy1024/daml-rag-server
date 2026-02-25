@@ -190,17 +190,23 @@ templates:
       - 用户档案: {user_profile}
       - MCP工具调用: {mcp_tools_count}个专业工具
       - 检索结果: {retrieval_count}个相关推荐
-      
+
+      ## 用户数据字段说明
+      用户档案中可能包含以下关键数据，请主动引用：
+      - 营养档案: TDEE、BMR、目标热量、宏量营养素分配、饮食偏好、过敏信息
+      - 体成分: 体脂率、BMI
+      - 健身目标: 主要目标、目标体重
+
       ## 响应要求
       {response_hint}
-      
+
       ## ⚠️ 约束条件
       - ✅ 必须考虑用户饮食偏好和过敏
       - ✅ 必须符合健康饮食原则
       - ✅ 数据不足时明确告知
-      
+
       请生成你的营养方案：
-  
+
   # 模板3: 安全评估
   safety_assessment:
     max_tokens: 6000  # 流式模式下可以输出更详细的评估
@@ -223,15 +229,20 @@ templates:
       - 用户档案: {user_profile}
       - MCP工具调用: {mcp_tools_count}个专业工具
       - 检索结果: {retrieval_count}个相关推荐
-      
+
+      ## 用户数据字段说明
+      用户档案中可能包含以下关键数据，请主动引用：
+      - 健康状况: 伤病史(injury_history)、慢性病(chronic_diseases)、用药(medications)、备注(other_notes)
+      - 基础信息: 年龄、性别、身高、体重、体脂率、BMI
+
       ## 响应要求
       {response_hint}
-      
+
       ## ⚠️ 约束条件
       - ❌ 必须严格识别所有禁忌症
       - ✅ 必须提供安全的替代方案
       - ✅ 安全第一，宁可保守
-      
+
       请生成你的安全评估报告：
   
   # 模板4: 动作优化
@@ -379,14 +390,21 @@ templates:
       - 用户档案: {user_profile}
       - MCP工具调用: {mcp_tools_count}个专业工具
       - 检索结果: {retrieval_count}个相关推荐
-      
+
+      ## 用户数据字段说明
+      用户档案中可能包含以下关键数据，请主动引用：
+      - 力量水平: 各动作估算1RM(strength_data)
+      - FFMI评估: FFMI值、标准化FFMI、评级、自然潜力
+      - 体成分: 体脂率、BMI
+      - 营养档案: TDEE、目标热量
+
       ## 响应要求
       {response_hint}
-      
+
       ## ⚠️ 约束条件
       - ✅ 必须基于真实数据进行分析
       - ✅ 必须提供可行的优化建议
-      
+
       请生成你的进展分析报告：
   
   # 模板8: 康复训练
@@ -412,16 +430,21 @@ templates:
       - 用户档案: {user_profile}
       - MCP工具调用: {mcp_tools_count}个专业工具
       - 检索结果: {retrieval_count}个相关推荐
-      
+
+      ## 用户数据字段说明
+      用户档案中可能包含以下关键数据，请主动引用：
+      - 健康状况: 伤病史(injury_history)、慢性病(chronic_diseases)、用药(medications)、备注(other_notes)
+      - 基础信息: 年龄、性别、身高、体重
+
       ## 响应要求
       {response_hint}
-      
+
       ## ⚠️ 约束条件
       - ❌ 绝对不能加重伤病
       - ✅ 必须循序渐进
       - ✅ 必须持续监控
       - ✅ 安全第一，宁可保守
-      
+
       请生成你的康复训练方案：
 
   # 模板10: 训练计划调整
@@ -475,6 +498,14 @@ templates:
       - 必须考虑营养均衡（不极端节食）
       - 必须提供可持续的生活方式建议
 
+      ## 用户数据字段说明
+      用户档案中可能包含以下关键数据，请主动引用：
+      - 营养档案(nutrition_profile): TDEE、BMR、目标热量、宏量素比例、饮食偏好、过敏原
+      - 体成分(basic_info): 体脂率(body_fat_percentage)、BMI、FFMI
+      - 健身目标(fitness_goals): 主要目标(primary_goal)、目标体重(target_weight)
+      - 基础信息: 年龄、性别、身高、体重、活动水平
+      - 训练配置(fitness_config): 每周训练频次、单次时长、训练场所
+
       ## 可用数据
       - 用户档案: {user_profile}
       - MCP工具调用: {mcp_tools_count}个专业工具
@@ -509,6 +540,14 @@ templates:
       - 必须充分热身和拉伸
       - 必须注意动作标准性
       - 必须保证充足恢复时间
+
+      ## 用户数据字段说明
+      用户档案中可能包含以下关键数据，请主动引用：
+      - 力量数据(strength_data): 各动作1RM估算值，用于评估当前力量水平和制定负重建议
+      - FFMI评估(ffmi_assessment): 去脂体重指数，反映肌肉发展潜力
+      - 训练配置(fitness_config): 训练分化、每周频次、单次时长、训练场所、可用器械
+      - 基础信息: 年龄、性别、身高、体重、健身水平(fitness_level)
+      - 健康状况(health_status): 伤病史、慢性病，影响动作选择和负重安全
 
       ## 可用数据
       - 用户档案: {user_profile}

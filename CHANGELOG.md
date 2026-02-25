@@ -5,6 +5,18 @@
 
 ---
 
+## #38 (refactor) 提示词-数据对齐 — ProfileInjector字段修复+数据丰富化+模板升级+工具清理 — 2026-02-25
+
+对应产品版本：v1.5.0（无变更）
+
+- P0修复: ProfileInjector health_status 字段名对齐数据库（injuries→injury_history, medical_conditions→chronic_diseases, 新增medications/other_notes）
+- P1丰富: ProfileInjectionConfig 新增5个开关（nutrition/strength/ffmi/training_prefs/body_composition），extract_key_profile 提取12+字段
+- P1格式: _format_concise/_format_detailed 新增营养/力量/FFMI/体成分/训练偏好输出
+- P1模板: 6个prompt template添加「用户数据字段说明」段（nutrition_planning/safety_assessment/progress_analysis/rehabilitation_training/strength_program/fat_loss_program）
+- P2工具: 注册PosturalAssessor（第18个工具），清理orchestrator孤儿元数据（chinese_food_analyzer/weight_calculator），标注未使用工具
+
+---
+
 ## #37 (fix) AI对话系统全面修复 — 安全+可靠性+健壮性 — 2026-02-25
 
 对应产品版本：v1.5.0
