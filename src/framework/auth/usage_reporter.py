@@ -11,7 +11,9 @@ Requirements: 4.3, 4.4
 """
 
 import asyncio
+import json
 import logging
+import os
 import time
 from collections import deque
 from dataclasses import dataclass, field
@@ -39,9 +41,12 @@ class UsageReportTask:
 class UsageReporter:
     """
     异步用量上报，带重试队列
-    
+
     上报失败时写入内存队列，后台任务定时重试。
+    重试耗尽后写入 fallback JSONL 日志，防止数据丢失。
     """
+
+    FALLBACK_LOG = "/app/logs/credit_fallback.jsonl"
 
     def __init__(
         self,
@@ -126,9 +131,10 @@ class UsageReporter:
         """将失败任务加入重试队列"""
         if task.retry_count >= task.max_retries:
             logger.error(
-                f"用量上报重试次数已达上限，丢弃: "
+                f"用量上报重试次数已达上限，写入fallback日志: "
                 f"user_id={task.user_id}, session_id={task.session_id}"
             )
+            self._write_fallback(task)
             return
 
         task.retry_count += 1
@@ -142,6 +148,32 @@ class UsageReporter:
             f"retry={task.retry_count}/{task.max_retries}, "
             f"next_retry_in={delay}s"
         )
+
+    def _write_fallback(self, task: UsageReportTask) -> None:
+        """重试耗尽后写入 fallback JSONL 日志（最后防线）"""
+        record = {
+            "user_id": task.user_id,
+            "mode": task.mode,
+            "session_id": task.session_id,
+            "timestamp": task.timestamp,
+            "execution_time_ms": task.execution_time_ms,
+            "failed_at": datetime.utcnow().isoformat() + "Z",
+            "retry_count": task.retry_count,
+        }
+        try:
+            os.makedirs(os.path.dirname(self.FALLBACK_LOG), exist_ok=True)
+            with open(self.FALLBACK_LOG, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+            logger.warning(
+                f"用量上报已写入fallback日志: user_id={task.user_id}, "
+                f"session_id={task.session_id}"
+            )
+        except Exception as e:
+            logger.critical(
+                f"fallback日志写入失败(数据可能丢失): "
+                f"user_id={task.user_id}, session_id={task.session_id}, "
+                f"error={e}"
+            )
 
     async def retry_failed(self) -> int:
         """

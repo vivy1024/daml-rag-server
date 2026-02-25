@@ -69,6 +69,19 @@ def _extract_user_id(request: Request, body_user_id=None) -> str:
 
     return ""
 
+def _estimate_tokens(text: str) -> int:
+    """估算文本的 token 数量，区分中英文"""
+    if not text:
+        return 0
+    chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+    total_chars = len(text)
+    chinese_ratio = chinese_chars / max(total_chars, 1)
+    if chinese_ratio > 0.5:
+        return max(1, int(total_chars / 1.5))  # 中文为主
+    else:
+        return max(1, int(total_chars / 4.0))  # 英文为主
+
+
 router = APIRouter()
 
 
@@ -157,7 +170,17 @@ async def chat(request: Request, chat_request: ChatRequest) -> ApiResponse[ChatR
         except ImportError:
             pass
         except Exception as e:
-            logger.warning(f"注入检测异常(降级放行): {e}")
+            logger.error(f"注入检测异常(fail-closed拒绝): {e}")
+            return ApiResponse.success(
+                data=ChatResponse(
+                    response="系统安全检查暂时不可用，请稍后重试。",
+                    interaction_id="safety_error",
+                    model_used="safety_filter",
+                    tools_used=[],
+                    execution_time=0.0,
+                    personalization_score=0.0,
+                )
+            )
 
         # 2. session_id处理：支持前端传入或自动生成
         session_id = chat_request.session_id or str(uuid.uuid4())
@@ -552,9 +575,8 @@ async def chat_stream(request: Request, body: Dict[str, Any]):
                     
                     # 统计令牌数（如果事件包含content）
                     if event.get("type") == "chunk" and "content" in event:
-                        # 简单估算：中文按字符数，英文按空格分词
                         content = event["content"]
-                        total_tokens += len(content)
+                        total_tokens += _estimate_tokens(content)
                     
                     # 发送SSE事件
                     yield {

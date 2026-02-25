@@ -563,9 +563,15 @@ async def call_anthropic(
                 )
                 return answer
 
-        except httpx.ReadTimeout as e:
+        except httpx.ConnectTimeout as e:
+            # 连接超时：快速失败，直接 fallback（不重试，因为服务可能不可达）
             last_error = e
-            logger.warning(f"Anthropic读取超时 (尝试{attempt + 1}/{LLMConfig.MAX_RETRIES + 1}): {e}")
+            logger.warning(f"Anthropic连接超时(快速fallback) (尝试{attempt + 1}): {e}")
+            break
+        except httpx.TimeoutException as e:
+            # 其他超时（ReadTimeout, WriteTimeout, PoolTimeout）：可重试
+            last_error = e
+            logger.warning(f"Anthropic超时 (尝试{attempt + 1}/{LLMConfig.MAX_RETRIES + 1}): {e}")
             if attempt >= LLMConfig.MAX_RETRIES:
                 break
             continue
