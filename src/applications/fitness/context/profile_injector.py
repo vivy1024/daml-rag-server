@@ -27,7 +27,12 @@ class ProfileInjectionConfig:
     include_injuries: bool = True        # 伤病信息
     include_preferences: bool = True     # 偏好设置
     include_training_history: bool = False  # 训练历史（较长，默认不包含）
-    
+    include_nutrition: bool = True       # 营养档案（TDEE/BMR/宏量）
+    include_strength: bool = True        # 力量数据（1RM等）
+    include_ffmi: bool = True            # FFMI评估
+    include_training_prefs: bool = True  # 训练偏好（器械/分化/位置）
+    include_body_composition: bool = True  # 体成分（体脂率/BMI）
+
     # 格式配置
     max_profile_tokens: int = 500        # 档案最大Token数
     format_style: str = "concise"        # 格式风格：concise/detailed
@@ -113,13 +118,17 @@ class ProfileInjector:
         # 伤病信息
         if self.config.include_injuries:
             health_profile = user_profile.get("health_status", {})
-            injuries = health_profile.get("injuries", [])
-            conditions = health_profile.get("medical_conditions", [])
-            
-            if injuries or conditions:
+            injury_history = health_profile.get("injury_history", [])
+            chronic_diseases = health_profile.get("chronic_diseases", [])
+            medications = health_profile.get("medications", [])
+            other_notes = health_profile.get("other_notes", "")
+
+            if injury_history or chronic_diseases or medications or other_notes:
                 extracted["health"] = {
-                    "injuries": injuries,
-                    "medical_conditions": conditions,
+                    "injury_history": injury_history,
+                    "chronic_diseases": chronic_diseases,
+                    "medications": medications,
+                    "other_notes": other_notes,
                 }
         
         # 偏好设置
@@ -137,6 +146,64 @@ class ProfileInjector:
                 "consecutive_weeks": training_system.get("consecutive_training_weeks"),
                 "volume_multiplier": training_system.get("personal_volume_multiplier"),
             }
+
+        # 营养档案
+        if self.config.include_nutrition:
+            nutrition = user_profile.get("nutrition_profile", {})
+            auto_calc = nutrition.get("auto_calculated", {})
+            user_settings = nutrition.get("user_settings", {})
+            if auto_calc or user_settings:
+                extracted["nutrition"] = {
+                    "tdee": auto_calc.get("tdee"),
+                    "bmr": auto_calc.get("bmr"),
+                    "target_calories": auto_calc.get("target_calories"),
+                    "macros": auto_calc.get("macros", {}),
+                    "dietary_preferences": user_settings.get("dietary_preferences", []),
+                    "allergies": user_settings.get("allergies", []),
+                }
+
+        # 力量数据
+        if self.config.include_strength:
+            strength = user_profile.get("strength_data", {})
+            exercises = strength.get("exercises", {})
+            if exercises:
+                extracted["strength"] = {
+                    "exercises": {k: {"estimated_1rm": v.get("estimated_1rm")} for k, v in exercises.items() if v.get("estimated_1rm")},
+                }
+
+        # FFMI评估
+        if self.config.include_ffmi:
+            ffmi = user_profile.get("ffmi_assessment", {})
+            if ffmi.get("ffmi"):
+                extracted["ffmi"] = {
+                    "ffmi": ffmi.get("ffmi"),
+                    "normalized_ffmi": ffmi.get("normalized_ffmi"),
+                    "assessment": ffmi.get("assessment"),
+                    "natural_potential": ffmi.get("natural_potential"),
+                }
+
+        # 训练偏好
+        if self.config.include_training_prefs:
+            training_prefs = user_profile.get("training_preferences", {})
+            if training_prefs:
+                extracted["training_prefs"] = {
+                    "training_split": training_prefs.get("training_split"),
+                    "training_location": training_prefs.get("training_location"),
+                    "available_equipment": training_prefs.get("available_equipment", []),
+                    "exercise_preferences": training_prefs.get("exercise_preferences", []),
+                    "disliked_exercises": training_prefs.get("disliked_exercises", []),
+                }
+
+        # 体成分
+        if self.config.include_body_composition:
+            basic_info = user_profile.get("basic_info", {})
+            body_fat = basic_info.get("body_fat_percentage")
+            bmi = basic_info.get("bmi")
+            if body_fat or bmi:
+                extracted["body_composition"] = {
+                    "body_fat_percentage": body_fat,
+                    "bmi": bmi,
+                }
         
         return extracted
     
@@ -220,17 +287,57 @@ class ProfileInjector:
             goal = goal_map.get(goals["primary_goal"], goals["primary_goal"])
             parts.append(f"目标: {goal}")
         
-        # 伤病信息
+        # 健康信息
         health = profile.get("health", {})
-        injuries = health.get("injuries", [])
-        if injuries:
-            parts.append(f"注意事项: {', '.join(injuries[:3])}")
-        
+        injury_history = health.get("injury_history", [])
+        chronic_diseases = health.get("chronic_diseases", [])
+        medications = health.get("medications", [])
+        health_notes = []
+        if injury_history:
+            health_notes.append(f"伤病: {', '.join(injury_history[:3])}")
+        if chronic_diseases:
+            health_notes.append(f"慢性病: {', '.join(chronic_diseases[:2])}")
+        if medications:
+            health_notes.append(f"用药: {', '.join(medications[:2])}")
+        if health_notes:
+            parts.append(f"注意事项: {'; '.join(health_notes)}")
+
         # 偏好
         prefs = profile.get("preferences", {})
         if prefs.get("user_type"):
             type_map = {"student": "学生", "worker": "上班族", "other": "其他"}
             parts.append(f"用户类型: {type_map.get(prefs['user_type'], prefs['user_type'])}")
+
+        # 营养摘要
+        nutrition = profile.get("nutrition", {})
+        if nutrition.get("tdee"):
+            parts.append(f"TDEE: {nutrition['tdee']}kcal")
+        if nutrition.get("target_calories"):
+            parts.append(f"目标热量: {nutrition['target_calories']}kcal")
+
+        # 体成分
+        body_comp = profile.get("body_composition", {})
+        if body_comp.get("body_fat_percentage"):
+            parts.append(f"体脂: {body_comp['body_fat_percentage']}%")
+
+        # FFMI
+        ffmi = profile.get("ffmi", {})
+        if ffmi.get("ffmi"):
+            parts.append(f"FFMI: {ffmi['ffmi']}")
+
+        # 力量摘要
+        strength = profile.get("strength", {})
+        exercises = strength.get("exercises", {})
+        if exercises:
+            top_lifts = [f"{k}: {v['estimated_1rm']}kg" for k, v in list(exercises.items())[:3]]
+            parts.append(f"1RM: {', '.join(top_lifts)}")
+
+        # 训练偏好摘要
+        tp = profile.get("training_prefs", {})
+        if tp.get("training_split"):
+            parts.append(f"分化: {tp['training_split']}")
+        if tp.get("available_equipment"):
+            parts.append(f"器械: {', '.join(tp['available_equipment'][:4])}")
         
         return "; ".join(parts) if parts else "用户档案未完善"
     
@@ -291,14 +398,20 @@ class ProfileInjector:
         # 健康信息
         health = profile.get("health", {})
         if health:
-            injuries = health.get("injuries", [])
-            conditions = health.get("medical_conditions", [])
-            if injuries or conditions:
+            injury_history = health.get("injury_history", [])
+            chronic_diseases = health.get("chronic_diseases", [])
+            medications = health.get("medications", [])
+            other_notes = health.get("other_notes", "")
+            if injury_history or chronic_diseases or medications or other_notes:
                 lines.append("\n健康注意事项:")
-                for injury in injuries[:5]:
-                    lines.append(f"  - ⚠️ {injury}")
-                for condition in conditions[:3]:
-                    lines.append(f"  - 🏥 {condition}")
+                for injury in injury_history[:5]:
+                    lines.append(f"  - ⚠️ 伤病: {injury}")
+                for disease in chronic_diseases[:3]:
+                    lines.append(f"  - 🏥 慢性病: {disease}")
+                for med in medications[:3]:
+                    lines.append(f"  - 💊 用药: {med}")
+                if other_notes:
+                    lines.append(f"  - 📝 备注: {other_notes}")
         
         # 偏好设置
         prefs = profile.get("preferences", {})
@@ -309,6 +422,74 @@ class ProfileInjector:
                 lines.append(f"  - 用户类型: {type_map.get(prefs['user_type'], prefs['user_type'])}")
             if prefs.get("preferred_time"):
                 lines.append(f"  - 偏好时间: {prefs['preferred_time']}")
+
+        # 体成分
+        body_comp = profile.get("body_composition", {})
+        if body_comp:
+            has_data = body_comp.get("body_fat_percentage") or body_comp.get("bmi")
+            if has_data:
+                lines.append("\n体成分:")
+                if body_comp.get("body_fat_percentage"):
+                    lines.append(f"  - 体脂率: {body_comp['body_fat_percentage']}%")
+                if body_comp.get("bmi"):
+                    lines.append(f"  - BMI: {body_comp['bmi']}")
+
+        # FFMI评估
+        ffmi = profile.get("ffmi", {})
+        if ffmi.get("ffmi"):
+            lines.append("\nFFMI评估:")
+            lines.append(f"  - FFMI: {ffmi['ffmi']}")
+            if ffmi.get("normalized_ffmi"):
+                lines.append(f"  - 标准化FFMI: {ffmi['normalized_ffmi']}")
+            if ffmi.get("assessment"):
+                lines.append(f"  - 评级: {ffmi['assessment']}")
+            if ffmi.get("natural_potential"):
+                lines.append(f"  - 自然潜力: {ffmi['natural_potential']}")
+
+        # 营养档案
+        nutrition = profile.get("nutrition", {})
+        if nutrition:
+            has_data = nutrition.get("tdee") or nutrition.get("dietary_preferences")
+            if has_data:
+                lines.append("\n营养档案:")
+                if nutrition.get("tdee"):
+                    lines.append(f"  - TDEE: {nutrition['tdee']}kcal")
+                if nutrition.get("bmr"):
+                    lines.append(f"  - BMR: {nutrition['bmr']}kcal")
+                if nutrition.get("target_calories"):
+                    lines.append(f"  - 目标热量: {nutrition['target_calories']}kcal")
+                macros = nutrition.get("macros", {})
+                if macros:
+                    lines.append(f"  - 宏量: 蛋白{macros.get('protein_g', '?')}g / 碳水{macros.get('carbs_g', '?')}g / 脂肪{macros.get('fat_g', '?')}g")
+                if nutrition.get("dietary_preferences"):
+                    lines.append(f"  - 饮食偏好: {', '.join(nutrition['dietary_preferences'])}")
+                if nutrition.get("allergies"):
+                    lines.append(f"  - 过敏: {', '.join(nutrition['allergies'])}")
+
+        # 力量数据
+        strength = profile.get("strength", {})
+        exercises = strength.get("exercises", {})
+        if exercises:
+            lines.append("\n力量水平 (估算1RM):")
+            for name, data in list(exercises.items())[:5]:
+                lines.append(f"  - {name}: {data['estimated_1rm']}kg")
+
+        # 训练偏好
+        tp = profile.get("training_prefs", {})
+        if tp:
+            has_data = tp.get("training_split") or tp.get("available_equipment")
+            if has_data:
+                lines.append("\n训练偏好:")
+                if tp.get("training_split"):
+                    lines.append(f"  - 训练分化: {tp['training_split']}")
+                if tp.get("training_location"):
+                    lines.append(f"  - 训练地点: {tp['training_location']}")
+                if tp.get("available_equipment"):
+                    lines.append(f"  - 可用器械: {', '.join(tp['available_equipment'][:6])}")
+                if tp.get("exercise_preferences"):
+                    lines.append(f"  - 偏好动作类型: {', '.join(tp['exercise_preferences'][:4])}")
+                if tp.get("disliked_exercises"):
+                    lines.append(f"  - 不喜欢的动作: {', '.join(tp['disliked_exercises'][:4])}")
         
         return "\n".join(lines)
     
@@ -400,10 +581,10 @@ class ProfileInjector:
         
         # 检查伤病
         health = extracted.get("health", {})
-        injuries = health.get("injuries", [])
-        if injuries:
+        injury_history = health.get("injury_history", [])
+        if injury_history:
             total_count += 1
-            if any(injury in response for injury in injuries):
+            if any(injury in response for injury in injury_history):
                 utilized_count += 1
         
         if total_count == 0:

@@ -43,6 +43,7 @@ from .nutrition.tdee_calculator import TDEECalculator
 from .nutrition.nutrition_intake_analyzer import NutritionIntakeAnalyzer
 from .nutrition.meal_plan_designer import MealPlanDesigner
 from .nutrition.exercise_nutrition_optimization import ExerciseNutritionOptimization
+from .safety.postural_assessor import PosturalAssessor
 from .find_similar_training_cases import FindSimilarTrainingCasesTool
 
 
@@ -55,8 +56,8 @@ def initialize_all_tools(
     vector_store=None
 ) -> None:
     """
-    初始化并注册所有17个Python MCP工具
-    
+    初始化并注册所有18个Python MCP工具
+
     Args:
         registry: MCPToolRegistry实例
         neo4j_client: Neo4j客户端实例
@@ -82,11 +83,14 @@ def initialize_all_tools(
     registry.register_tool(NutritionIntakeAnalyzer(neo4j_client, qdrant_client, three_layer_engine))
     registry.register_tool(MealPlanDesigner(neo4j_client, qdrant_client, three_layer_engine))
     registry.register_tool(ExerciseNutritionOptimization(neo4j_client, qdrant_client, three_layer_engine))
+    # TODO: RecordTrainingFeedback 当前未被DAG/Agent调用，保留注册以备后续训练反馈闭环功能
     registry.register_tool(RecordTrainingFeedback(neo4j_client, qdrant_client, three_layer_engine))
     
-    # P2扩展工具（3个）
+    # P2扩展工具（4个）
     registry.register_tool(PeriodizedProgramDesigner(neo4j_client, qdrant_client, three_layer_engine))
     registry.register_tool(TrainingSplitDesigner(neo4j_client, qdrant_client, three_layer_engine))
+    registry.register_tool(PosturalAssessor(neo4j_client, qdrant_client, three_layer_engine))
+    # TODO: FindSimilarTrainingCases 当前未被DAG/Agent调用，保留注册以备后续相似案例推荐功能
     registry.register_tool(FindSimilarTrainingCasesTool(backend_client, vector_store))
 
 
@@ -127,5 +131,6 @@ __all__ = [
     "MealPlanDesigner",
     "ExerciseNutritionOptimization",
     "FindSimilarTrainingCasesTool",
+    "PosturalAssessor",
     "initialize_all_tools"
 ]

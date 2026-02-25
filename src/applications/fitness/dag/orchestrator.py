@@ -129,24 +129,6 @@ class EnhancedDAGOrchestrator:
                 supports_concurrent=True,
                 priority=TaskPriority.HIGH
             ),
-            "chinese_food_analyzer": ToolMetadata(
-                name="chinese_food_analyzer",
-                mcp_server="python_builtin",
-                execution_time=1.5,
-                cacheable=True,
-                cache_ttl=7200,
-                parallel_safe=True,
-                priority=TaskPriority.NORMAL
-            ),
-            "weight_calculator": ToolMetadata(
-                name="weight_calculator",
-                mcp_server="python_builtin",
-                execution_time=0.8,
-                cacheable=True,
-                cache_ttl=3600,
-                parallel_safe=True,
-                priority=TaskPriority.NORMAL
-            ),
             "rpe_recommender": ToolMetadata(
                 name="rpe_recommender",
                 mcp_server="python_builtin",
@@ -336,7 +318,6 @@ class EnhancedDAGOrchestrator:
                 parallel_safe=False,
                 dependencies=[
                     "tdee_calculator",
-                    "chinese_food_analyzer",
                     "professional_program_designer"
                 ],
                 priority=TaskPriority.HIGH,
