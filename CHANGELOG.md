@@ -5,6 +5,17 @@
 
 ---
 
+## #40 (test) JWT验证器属性测试修复 — 无效类型测试用例校正 — 2026-02-26
+
+对应产品版本：v1.5.0
+
+- `test_internal_jwt_verifier_property.py`: 修复 `test_invalid_field_type_raises_claims_missing_error` 两个参数化用例
+  - `permissions: "not-an-array"` → `daily_dag_limit: "not-a-number"`（`list()` 对字符串不抛异常，`int()` 对非数字字符串抛 ValueError）
+  - `tier: 123` → `daily_agent_limit: "invalid"`（`str()` 对整数不抛异常，`int()` 对非数字字符串抛 ValueError）
+- 根因：`PermissionClaims.from_jwt_payload()` 使用 `str()/int()/list()` 防御性强转，原测试用例选择的类型可被正常强转
+
+---
+
 ## #39 (refactor) 计算器卡片迁移 — Python服务删除+MCP薄包装+孤立测试清理 — 2026-02-25
 
 对应产品版本：v1.5.0
