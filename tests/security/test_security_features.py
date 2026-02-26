@@ -89,25 +89,30 @@ class TestRateLimiter:
     
     def test_rate_limit_basic(self):
         """测试基本限流"""
-        limiter = RateLimiter(requests_per_minute=5, requests_per_hour=10)
-        
-        # 模拟请求对象
-        class MockRequest:
-            def __init__(self):
-                self.client = type('obj', (object,), {'host': '127.0.0.1'})()
-                self.headers = {}
-                self.state = type('obj', (object,), {})()
-        
-        request = MockRequest()
-        
-        # 前5次请求应该成功
-        for i in range(5):
-            assert limiter.check_rate_limit(request) == True
-        
-        # 第6次请求应该被限流
-        with pytest.raises(HTTPException) as exc_info:
-            limiter.check_rate_limit(request)
-        assert exc_info.value.status_code == 429
+        import os
+        from unittest.mock import patch
+
+        # 确保内部IP白名单不生效，否则 127.0.0.1 会跳过限流
+        with patch.dict(os.environ, {"BYPASS_RATE_LIMIT_FOR_INTERNAL": "false"}):
+            limiter = RateLimiter(requests_per_minute=5, requests_per_hour=10)
+
+            # 模拟请求对象
+            class MockRequest:
+                def __init__(self):
+                    self.client = type('obj', (object,), {'host': '127.0.0.1'})()
+                    self.headers = {}
+                    self.state = type('obj', (object,), {})()
+
+            request = MockRequest()
+
+            # 前5次请求应该成功
+            for i in range(5):
+                assert limiter.check_rate_limit(request) == True
+
+            # 第6次请求应该被限流
+            with pytest.raises(HTTPException) as exc_info:
+                limiter.check_rate_limit(request)
+            assert exc_info.value.status_code == 429
     
     def test_blacklist(self):
         """测试黑名单"""
