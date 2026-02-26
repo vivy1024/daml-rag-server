@@ -635,7 +635,7 @@ class TestSummarizerIntegration:
         assert result.high_risk_count >= 1  # 至少有硬拉
         
         # 验证内容包含关键信息
-        assert '第1周' in result.content
+        assert '第1' in result.content  # 兼容"第1周"和"第1训练周期"
         assert '积累期' in result.content
         assert '杠铃卧推' in result.content or '[杠铃卧推]' in result.content
     

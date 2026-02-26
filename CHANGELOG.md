@@ -5,6 +5,17 @@
 
 ---
 
+## #42 (chore) 测试清理+断言修复 — 1142 passed, 64 skipped, 0 failed — 2026-02-26
+
+对应产品版本：v1.5.0
+
+- 删除 10 个废弃模块测试文件（PerformanceMonitor/ParallelStepExecutor/three_stage_orchestrator/data_supplement/qdrant_importer/layer2_fix）
+- 容器安装 hypothesis，解锁 3 个属性测试（+107 个 hypothesis 生成用例）
+- `test_volume_adjuster.py`: 断言"连续2周"→"连续2...RPE过高/完成率过低"（兼容"训练周期"措辞）
+- `test_training_plan_summarizer.py`: 断言"第1周"→"第1"（兼容"第1训练周期"）
+
+---
+
 ## #41 (fix) 全部非e2e测试修复 — 1032 passed, 0 failed — 2026-02-26
 
 对应产品版本：v1.5.0
