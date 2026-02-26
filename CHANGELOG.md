@@ -5,6 +5,20 @@
 
 ---
 
+## #41 (fix) 全部非e2e测试修复 — 1032 passed, 0 failed — 2026-02-26
+
+对应产品版本：v1.5.0
+
+- `test_monitoring_api_endpoints.py`: 重写适配 v2.2.0 安全加固 API（JWT认证+权限校验）
+- `test_llm_fallback_manager.py`: `test_backend_health_check` pop 自动注册的 DeepSeek client
+- `test_task_10_1_quick_benchmark.py`: 添加 `@pytest.mark.asyncio` + server reachable skip
+- `test_security_features.py`: `test_rate_limit_basic` patch `BYPASS_RATE_LIMIT_FOR_INTERNAL` 环境变量
+- `test_task_23_standards.py`: 添加 `@pytest.mark.asyncio`（strict mode 要求）
+- `test_internal_jwt_verifier_property.py`: parametrize 中 `time.time()` 改为函数内动态生成，避免 collect→execute 间 JWT 过期
+- `tests/performance/conftest.py`: 新增 autouse fixture，默认跳过性能测试（`RUN_PERFORMANCE_TESTS=1` 启用）
+
+---
+
 ## #40 (test) JWT验证器属性测试修复 — 无效类型测试用例校正 — 2026-02-26
 
 对应产品版本：v1.5.0

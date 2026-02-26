@@ -12,8 +12,25 @@ import asyncio
 import time
 import httpx
 import json
+import pytest
 
 
+def _server_reachable() -> bool:
+    """检查 DAML-RAG 服务是否可达"""
+    try:
+        import socket
+        s = socket.create_connection(("localhost", 8001), timeout=1)
+        s.close()
+        return True
+    except OSError:
+        return False
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(
+    not _server_reachable(),
+    reason="性能基准测试需要 DAML-RAG 服务运行在 localhost:8001"
+)
 async def test_single_session():
     """测试单个流式会话"""
     url = "http://localhost:8001/api/v1/chat/stream"

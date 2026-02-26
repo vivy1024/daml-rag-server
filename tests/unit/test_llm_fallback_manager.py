@@ -192,7 +192,9 @@ class TestLLMFallbackManager:
         is_healthy = await manager.check_backend_health(BackendType.TEMPLATE)
         assert is_healthy is True
 
-        # 无客户端注册时，默认返回 True（假设健康）
+        # _init_backends() 会无条件注册 DeepSeek 客户端 + health_checker，
+        # 清除客户端后走缓存→无缓存→返回 True（假设健康）
+        manager._clients.pop(BackendType.DEEPSEEK, None)
         is_healthy = await manager.check_backend_health(BackendType.DEEPSEEK)
         assert is_healthy is True
 
