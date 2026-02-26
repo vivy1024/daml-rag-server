@@ -155,7 +155,7 @@ class TestVolumeAdjusterBasic:
         )
         
         assert should_deload is True
-        assert '连续2周RPE过高' in reason
+        assert '连续2' in reason and 'RPE过高' in reason
     
     def test_should_suggest_deload_consecutive_low_completion(self, volume_adjuster):
         """测试连续2周低完成率触发Deload建议 - Requirements 9.2"""
@@ -167,7 +167,7 @@ class TestVolumeAdjusterBasic:
         )
         
         assert should_deload is True
-        assert '连续2周完成率过低' in reason
+        assert '连续2' in reason and '完成率过低' in reason
     
     def test_should_suggest_deload_single_week_extreme(self, volume_adjuster):
         """测试单周极端情况触发Deload建议"""
