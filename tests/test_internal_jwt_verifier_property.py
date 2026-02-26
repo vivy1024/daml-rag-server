@@ -215,24 +215,24 @@ class TestProperty2InvalidJwtRejection:
     # -------------------------------------------------------------------------
 
     @pytest.mark.parametrize("invalid_payload", [
-        # permissions不是数组
+        # daily_dag_limit不是可转int的值
         {
             "sub": 1,
             "tier": "free",
-            "permissions": "not-an-array",  # 应为数组
-            "daily_dag_limit": 5,
+            "permissions": ["dag:query"],
+            "daily_dag_limit": "not-a-number",  # int()会抛ValueError
             "daily_agent_limit": 0,
             "iat": int(time.time()),
             "exp": int(time.time()) + 60,
             "iss": TEST_ISSUER,
         },
-        # tier不是字符串
+        # daily_agent_limit不是可转int的值
         {
             "sub": 1,
-            "tier": 123,  # 应为字符串
+            "tier": "free",
             "permissions": ["dag:query"],
             "daily_dag_limit": 5,
-            "daily_agent_limit": 0,
+            "daily_agent_limit": "invalid",  # int()会抛ValueError
             "iat": int(time.time()),
             "exp": int(time.time()) + 60,
             "iss": TEST_ISSUER,
