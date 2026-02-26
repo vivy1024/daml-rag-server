@@ -89,8 +89,8 @@ class TestMCPParamsFix:
         
         assert "daily_activity_level" in params
         assert "fitness_goal" in params
-        assert params["daily_activity_level"] == "moderately_active"
-        assert params["fitness_goal"] == "muscle_gain"
+        assert params["daily_activity_level"] == "moderate"
+        assert params["fitness_goal"] == "hypertrophy"
         print(f"✅ tdee_calculator 参数构建器正常")
     
     def test_program_designer_params_fixed(self, param_builder):

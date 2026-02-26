@@ -173,7 +173,7 @@ class TestRestPatternCycleCalculation:
         cycle_info = tool._calculate_training_cycle(input_data)
         
         assert cycle_info["cycle_days"] == 7, "周一三五应为7天周期"
-        assert cycle_info["training_pattern"] == "周一三五"
+        assert cycle_info["training_pattern"] == "星期一三五"
         assert cycle_info["rest_pattern"] == "mon_wed_fri"
 
 
@@ -192,7 +192,7 @@ class TestStudentRestPatternRecommendation:
         # 测试周期计算中的大学生推荐
         cycle_info = tool._calculate_training_cycle(input_data)
         
-        assert cycle_info["training_pattern"] == "隔日训练（周一三五）"
+        assert cycle_info["training_pattern"] == "隔日训练（星期一三五）"
         assert cycle_info["rest_pattern"] == "mon_wed_fri"
         assert cycle_info.get("recommended_for_student") is True
     
@@ -206,7 +206,7 @@ class TestStudentRestPatternRecommendation:
         recommendation = tool.recommend_rest_pattern(input_data)
         
         assert recommendation["recommended_pattern"] == "mon_wed_fri"
-        assert "周一三五" in recommendation["pattern_name"]
+        assert "星期一三五" in recommendation["pattern_name"]
         assert "大学生" in recommendation["reason"]
 
 
