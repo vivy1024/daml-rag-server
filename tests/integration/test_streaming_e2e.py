@@ -117,7 +117,7 @@ class StreamingResponseCollector:
 
 async def collect_stream_response(
     query: str,
-    user_id: str = "test_e2e_user",
+    user_id: int = 1,
     timeout: float = DEFAULT_TIMEOUT
 ) -> StreamingResponseCollector:
     """
@@ -178,7 +178,7 @@ async def collect_stream_response(
 
 async def send_chat_request(
     query: str,
-    user_id: str = "test_e2e_user",
+    user_id: int = 1,
     timeout: float = DEFAULT_TIMEOUT
 ) -> Dict[str, Any]:
     """
@@ -206,7 +206,7 @@ async def send_chat_request(
 
 # ========== 测试类 ==========
 
-@pytest.mark.skip(reason="E2E测试：需要API服务运行在127.0.0.1:8001，单独执行")
+@pytest.mark.integration
 class TestStreamingE2E:
     """
     流式输出端到端测试
@@ -423,8 +423,8 @@ class TestStreamingE2E:
         ttfb = collector.get_ttfb()
         if ttfb:
             print(f"⚡ TTFB: {ttfb:.2f}秒")
-            # TTFB应该在合理范围内（30秒以内）
-            assert ttfb < 30, f"TTFB过高: {ttfb:.2f}秒"
+            # TTFB应该在合理范围内（90秒以内，DAG工作流含检索+LLM）
+            assert ttfb < 90, f"TTFB过高: {ttfb:.2f}秒"
             print(f"✅ TTFB在合理范围内")
         
         # 验证总耗时

@@ -28,7 +28,7 @@ def _make_admin_token() -> str:
     """生成管理员JWT token用于认证端点测试"""
     now = int(time.time())
     payload = {
-        "sub": 1,
+        "sub": "1",
         "role": "admin",
         "iat": now,
         "exp": now + 300,
@@ -94,10 +94,6 @@ class TestHealthEndpoints:
 
         注意：需要容器配置 JWT_SECRET 环境变量才能通过
         """
-        if not os.getenv("JWT_SECRET"):
-            import pytest
-            pytest.skip("JWT_SECRET not configured — admin endpoints untestable")
-
         response = requests.get(
             f"{BASE_URL}/api/health/components",
             headers=_admin_headers(),
@@ -135,10 +131,6 @@ class TestMetricsEndpoints:
         Property 2: API返回有效数据
         Validates: Requirements 2.5, 5.4, 9.2
         """
-        if not os.getenv("JWT_SECRET"):
-            import pytest
-            pytest.skip("JWT_SECRET not configured — admin endpoints untestable")
-
         response = requests.get(
             f"{BASE_URL}/api/health/metrics",
             headers=_admin_headers(),
@@ -171,10 +163,6 @@ class TestMetricsEndpoints:
         Property 2: API返回有效数据
         Validates: Requirements 2.5, 5.5, 9.2
         """
-        if not os.getenv("JWT_SECRET"):
-            import pytest
-            pytest.skip("JWT_SECRET not configured — admin endpoints untestable")
-
         response = requests.get(
             f"{BASE_URL}/api/health/metrics/streaming",
             headers=_admin_headers(),
@@ -209,10 +197,6 @@ class TestMetricsEndpoints:
         Property 2: API返回有效数据
         Validates: Requirements 2.8, 4.2, 4.3, 4.4, 5.6, 9.2
         """
-        if not os.getenv("JWT_SECRET"):
-            import pytest
-            pytest.skip("JWT_SECRET not configured — admin endpoints untestable")
-
         response = requests.get(
             f"{BASE_URL}/api/health/metrics/prometheus",
             headers=_admin_headers(),
