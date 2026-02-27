@@ -80,7 +80,7 @@ class SSEEventCollector:
 
 async def collect_sse_events(
     query: str,
-    user_id: str = "test_user",
+    user_id: int = 1,
     api_url: str = "http://127.0.0.1:8001/api/v1/chat/stream",
     timeout: float = 60.0
 ) -> SSEEventCollector:
@@ -135,7 +135,7 @@ async def collect_sse_events(
     return collector
 
 
-@pytest.mark.skip(reason="E2E测试：需要API服务运行在127.0.0.1:8001，单独执行")
+@pytest.mark.integration
 class TestStreamingWorkflowFunctionality:
     """流式工作流功能测试"""
     
@@ -284,15 +284,16 @@ class TestStreamingWorkflowFunctionality:
             
             # 验证第一个结构化数据
             first_structured = collector.structured_data[0]
-            print(f"📦 结构化数据类型: {first_structured.get('data_type')}")
-            
-            # 验证data_type字段
-            assert "data_type" in first_structured, "结构化数据缺少data_type字段"
-            data_type = first_structured.get("data_type")
-            print(f"✅ data_type字段存在: {data_type}")
-            
+            # SSE structured_data 事件格式: {"type": "structured_data", "data": {...}}
+            data_type = first_structured.get("type") or first_structured.get("data_type")
+            print(f"📦 结构化数据类型: {data_type}")
+
+            # 验证type字段（兼容 type 和 data_type 两种格式）
+            assert data_type is not None, "结构化数据缺少type/data_type字段"
+            print(f"✅ 结构化数据类型字段存在: {data_type}")
+
             # 如果是训练计划，验证必需字段
-            if data_type == "training_plan":
+            if data_type in ("training_plan", "structured_data"):
                 assert "data" in first_structured, "训练计划缺少data字段"
                 plan_data = first_structured.get("data", {})
                 
@@ -374,8 +375,8 @@ class TestStreamingWorkflowFunctionality:
             ttfb_ms = ttfb * 1000
             print(f"⚡ TTFB: {ttfb_ms:.0f}ms")
             
-            # TTFB应该小于30秒（宽松的限制）
-            assert ttfb < 30, f"TTFB过高: {ttfb_ms:.0f}ms"
+            # TTFB应该小于90秒（DAG工作流含检索+LLM调用）
+            assert ttfb < 90, f"TTFB过高: {ttfb_ms:.0f}ms"
             print(f"✅ TTFB在合理范围内")
         
         # 获取总耗时
