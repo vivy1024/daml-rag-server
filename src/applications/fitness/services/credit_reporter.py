@@ -13,6 +13,9 @@ import os
 import math
 import asyncio
 import logging
+import json
+from pathlib import Path
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
 import httpx
@@ -45,6 +48,10 @@ class CreditReporter:
     
     # 默认超时时间（秒）
     DEFAULT_TIMEOUT = 5.0
+
+    # Fallback 日志目录
+    FALLBACK_LOG_DIR = "/app/logs"
+    FALLBACK_LOG_FILE = "credit_fallback.jsonl"
     
     def __init__(
         self,
@@ -121,6 +128,46 @@ class CreditReporter:
         
         # 最小消耗1积分
         return max(1, credits)
+
+    def _write_fallback(self, payload: Dict[str, Any], error_msg: str) -> bool:
+        """
+        写入失败的上报数据到本地文件
+
+        当后端不可达且重试耗尽时，将数据写入 fallback 日志，
+        后续可通过定时任务或手动方式重新上报。
+
+        Args:
+            payload: 原始请求数据
+            error_msg: 失败原因
+
+        Returns:
+            bool: 写入是否成功
+        """
+        try:
+            # 确保目录存在
+            log_dir = Path(self.FALLBACK_LOG_DIR)
+            log_dir.mkdir(parents=True, exist_ok=True)
+
+            log_path = log_dir / self.FALLBACK_LOG_FILE
+
+            # 构建 fallback 记录
+            fallback_record = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "payload": payload,
+                "error": error_msg,
+                "retry_count": 3,  # 已重试3次
+            }
+
+            # 追加写入 JSONL 文件
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(fallback_record, ensure_ascii=False) + "\n")
+
+            logger.info(f"积分上报降级写入: user_id={payload.get('user_id')}, file={log_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"写入 fallback 日志失败: {e}")
+            return False
     
     async def report_consumption(
         self,
@@ -233,9 +280,11 @@ class CreditReporter:
                             logger.warning(f"积分上报失败(重试{attempt+1}/{max_retries}): {error_msg}")
                             await asyncio.sleep(delay)
                             continue
-                        logger.error(f"积分上报最终失败: {error_msg}")
+                        # 重试耗尽，写入 fallback
+                        self._write_fallback(payload, error_msg)
+                        logger.error(f"积分上报最终失败(已降级): {error_msg}")
                         self._error_count += 1
-                        return {"success": False, "error": error_msg, "credits": credits}
+                        return {"success": False, "error": error_msg, "credits": credits, "fallback": True}
 
             except (httpx.TimeoutException, httpx.RequestError) as e:
                 if isinstance(e, httpx.TimeoutException):
@@ -247,9 +296,11 @@ class CreditReporter:
                     logger.warning(f"积分上报失败(重试{attempt+1}/{max_retries}): {error_msg}")
                     await asyncio.sleep(delay)
                     continue
-                logger.error(f"积分上报最终失败: {error_msg}")
+                # 重试耗尽，写入 fallback
+                self._write_fallback(payload, error_msg)
+                logger.error(f"积分上报最终失败(已降级): {error_msg}")
                 self._error_count += 1
-                return {"success": False, "error": error_msg, "credits": credits}
+                return {"success": False, "error": error_msg, "credits": credits, "fallback": True}
 
             except Exception as e:
                 error_msg = f"未知错误: {e}"
