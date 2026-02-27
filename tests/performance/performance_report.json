@@ -1,125 +1,103 @@
 {
-  "test_time": "2026-02-18T11:06:33.347303",
+  "test_time": "2026-02-27T14:46:08.125605",
   "test_results": {
     "sequential_test": {
-      "test_duration_seconds": 0.011019706726074219,
+      "test_duration_seconds": 150.02137184143066,
       "total_requests": 10,
-      "successful_requests": 0,
-      "failed_requests": 10,
-      "success_rate": 0.0,
-      "qps": 907.4651665945478,
+      "successful_requests": 10,
+      "failed_requests": 0,
+      "success_rate": 1.0,
+      "qps": 0.06665716942363241,
       "response_time": {
-        "min": 0.0,
-        "max": 0.0,
-        "avg": 0.0,
-        "median": 0.0,
-        "p95": 0.0,
-        "p99": 0.0
+        "min": 9.667425394058228,
+        "max": 32.39973473548889,
+        "avg": 15.002064275741578,
+        "median": 13.185497403144836,
+        "p95": 32.39973473548889,
+        "p99": 32.39973473548889
       },
       "ttfb": {
-        "min": 0.0,
-        "max": 0.0,
-        "avg": 0.0,
-        "median": 0.0,
-        "p95": 0.0
+        "min": 9.667378664016724,
+        "max": 32.39921522140503,
+        "avg": 15.001907229423523,
+        "median": 13.185405015945435,
+        "p95": 32.39921522140503
       },
       "cache": {
         "hits": 0,
-        "misses": 0,
+        "misses": 10,
         "hit_rate": 0.0
       },
-      "errors": [
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401"
-      ]
+      "errors": []
     },
     "concurrent_test": {
-      "test_duration_seconds": 0.07662701606750488,
+      "test_duration_seconds": 166.97318077087402,
       "total_requests": 100,
-      "successful_requests": 0,
-      "failed_requests": 100,
-      "success_rate": 0.0,
-      "qps": 1305.0227600133169,
+      "successful_requests": 78,
+      "failed_requests": 22,
+      "success_rate": 0.78,
+      "qps": 0.598898574838933,
       "response_time": {
-        "min": 0.0,
-        "max": 0.0,
-        "avg": 0.0,
-        "median": 0.0,
-        "p95": 0.0,
-        "p99": 0.0
+        "min": 5.834073066711426,
+        "max": 58.66337561607361,
+        "avg": 16.249219264739597,
+        "median": 8.689971089363098,
+        "p95": 28.445927619934082,
+        "p99": 58.66337561607361
       },
       "ttfb": {
-        "min": 0.0,
-        "max": 0.0,
-        "avg": 0.0,
-        "median": 0.0,
-        "p95": 0.0
+        "min": 5.833611011505127,
+        "max": 58.66326284408569,
+        "avg": 16.249007078317497,
+        "median": 8.689628720283508,
+        "p95": 28.445755004882812
       },
       "cache": {
         "hits": 0,
-        "misses": 0,
+        "misses": 78,
         "hit_rate": 0.0
       },
       "errors": [
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401"
+        "Timeout",
+        "Timeout",
+        "Timeout",
+        "Timeout",
+        "Timeout",
+        "Timeout",
+        "Timeout",
+        "Timeout",
+        "Timeout",
+        "Timeout"
       ]
     },
     "cache_test": {
-      "test_duration_seconds": 0.525005578994751,
+      "test_duration_seconds": 145.24192428588867,
       "total_requests": 20,
-      "successful_requests": 0,
-      "failed_requests": 20,
-      "success_rate": 0.0,
-      "qps": 38.09483327452404,
+      "successful_requests": 20,
+      "failed_requests": 0,
+      "success_rate": 1.0,
+      "qps": 0.1377012876849026,
       "response_time": {
-        "min": 0.0,
-        "max": 0.0,
-        "avg": 0.0,
-        "median": 0.0,
-        "p95": 0.0,
-        "p99": 0.0
+        "min": 4.361636638641357,
+        "max": 10.716588973999023,
+        "avg": 7.2370017766952515,
+        "median": 6.784427523612976,
+        "p95": 10.716588973999023,
+        "p99": 10.716588973999023
       },
       "ttfb": {
-        "min": 0.0,
-        "max": 0.0,
-        "avg": 0.0,
-        "median": 0.0,
-        "p95": 0.0
+        "min": 4.3614959716796875,
+        "max": 10.716465473175049,
+        "avg": 7.236884725093842,
+        "median": 6.784292459487915,
+        "p95": 10.716465473175049
       },
       "cache": {
         "hits": 0,
-        "misses": 0,
+        "misses": 20,
         "hit_rate": 0.0
       },
-      "errors": [
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401",
-        "HTTP 401"
-      ]
+      "errors": []
     }
   },
   "performance_targets": {
@@ -143,10 +121,10 @@
   "test_passed": false,
   "failures": [
     {
-      "test": "cache_test",
-      "metric": "cache_hit_rate",
-      "expected": ">= 80%",
-      "actual": "0.0%"
+      "test": "concurrent_test",
+      "metric": "qps",
+      "expected": ">= 1",
+      "actual": "0.60"
     }
   ]
 }
