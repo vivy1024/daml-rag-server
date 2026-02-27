@@ -1,11 +1,11 @@
 {
-  "test_time": "2025-12-21 10:20:55",
+  "test_time": "2026-02-27 01:04:37",
   "test_type": "监控系统修复验收测试",
   "version": "v2.62.0",
-  "pass_rate": 100.0,
+  "pass_rate": 41.66666666666667,
   "total_tests": 12,
-  "passed": 12,
-  "failed": 0,
+  "passed": 5,
+  "failed": 7,
   "warnings": 0,
   "acceptance_status": "✅ 通过",
   "results": [
@@ -21,41 +21,41 @@
       "category": "性能指标",
       "test_name": "Prometheus指标端点",
       "expected": "端点可用",
-      "actual": "可用",
-      "passed": true,
-      "message": "Prometheus端点正常"
+      "actual": "不可用",
+      "passed": false,
+      "message": "Prometheus端点不可用"
     },
     {
       "category": "性能指标",
       "test_name": "缓存统计API",
       "expected": "6个统计字段",
-      "actual": "6个字段",
-      "passed": true,
-      "message": "缓存统计API正常"
+      "actual": "错误: No module named 'src.framework.storage.intelligent_cache_manager'",
+      "passed": false,
+      "message": "缓存统计API异常"
     },
     {
       "category": "性能指标",
       "test_name": "性能监控API",
       "expected": "5个统计字段",
-      "actual": "5个字段",
-      "passed": true,
-      "message": "性能监控API正常"
+      "actual": "错误: No module named 'src.framework.monitoring.performance_monitor'",
+      "passed": false,
+      "message": "性能监控API异常"
     },
     {
       "category": "错误处理",
       "test_name": "缓存降级机制",
       "expected": "返回降级数据",
-      "actual": "成功",
-      "passed": true,
-      "message": "缓存降级正常"
+      "actual": "错误: No module named 'src.framework.storage.intelligent_cache_manager'",
+      "passed": false,
+      "message": "缓存降级异常"
     },
     {
       "category": "错误处理",
       "test_name": "监控故障隔离",
       "expected": "业务正常执行",
-      "actual": "成功",
-      "passed": true,
-      "message": "监控故障不影响业务"
+      "actual": "错误: No module named 'src.framework.monitoring.performance_monitor'",
+      "passed": false,
+      "message": "监控故障隔离异常"
     },
     {
       "category": "监控系统",
@@ -93,17 +93,17 @@
       "category": "集成验收",
       "test_name": "优化代码文件",
       "expected": "6个文件",
-      "actual": "6个文件",
-      "passed": true,
-      "message": "找到 6/6 个文件"
+      "actual": "4个文件",
+      "passed": false,
+      "message": "找到 4/6 个文件"
     },
     {
       "category": "集成验收",
       "test_name": "测试文件",
       "expected": "4个文件",
-      "actual": "4个文件",
-      "passed": true,
-      "message": "找到 4/4 个文件"
+      "actual": "3个文件",
+      "passed": false,
+      "message": "找到 3/4 个文件"
     }
   ]
 }
