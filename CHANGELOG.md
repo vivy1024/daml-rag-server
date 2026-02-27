@@ -5,6 +5,18 @@
 
 ---
 
+## #44 (fix) 上线前安全加固 — 2026-02-28
+
+对应产品版本：v1.6.4
+
+- `routes/chat.py`: 3处 `str(e)` 异常信息泄露 → 替换为通用错误消息
+- `main.py`: 生产环境禁用 `/docs`、`/redoc`、`/openapi.json` 路由
+- `main.py`: `DEBUG` 环境变量判断修复（`"false"` 字符串不再误判为 True）
+- `main.py`: CORS 白名单生产环境移除 localhost 源
+- `connection_pool_manager.py`: MySQL 连接池添加 `connect_timeout`/`read_timeout`/`write_timeout`
+
+---
+
 ## #43 (fix) 积分上报降级 + MCP工具部分降级 — 2026-02-27
 
 对应产品版本：v1.5.1
