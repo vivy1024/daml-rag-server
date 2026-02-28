@@ -5,6 +5,21 @@
 
 ---
 
+## #45 (fix) 生产环境审计修复 Batch 1 — 2026-02-28
+
+对应产品版本：v1.6.5
+
+- `llm_decision_engine.py`: DAGSelectionResult 新增 `method` 字段（"llm"/"fallback"），修复 fallback 路径缺少必填字段导致的运行时崩溃
+- `llm_decision_engine.py`: fallback 模板从不存在的 `general_qa` 改为 `quick_consultation`
+- `llm_decision_engine.py`: LLM 分类 prompt 补全 4 个缺失模板（posture_correction/plan_adjustment/fat_loss_program/strength_program），从 9 个扩展到 13 个
+- `llm_decision_engine.py`: `_keyword_matching()` 标记 `@deprecated`
+- `unified_cache.py`: `set()` 方法同时写 L1 进程内缓存，Redis 不可用时 L1 仍生效
+- `unified_cache.py`: `delete()`/`invalidate()` 同时清理 L1
+- 新增 `tests/unit/services/test_user_memory.py` — 记忆检索冒烟测试（8 个用例）
+- 新增 `tests/unit/framework/test_unified_cache_l1.py` — L1 缓存验证（8 个用例）
+
+---
+
 ## #44 (fix) 上线前安全加固 — 2026-02-28
 
 对应产品版本：v1.6.4

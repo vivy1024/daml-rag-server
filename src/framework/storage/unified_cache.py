@@ -61,14 +61,15 @@ class CacheStatistics:
 class UnifiedCache:
     """
     统一缓存系统
-    
-    提供统一的缓存接口，支持Redis后端存储
+
+    提供统一的缓存接口，支持 L1 进程内缓存 + Redis 后端存储。
+    Redis 不可用时自动降级到 L1 缓存。
     """
-    
+
     def __init__(self, redis_client, config: Optional[CacheConfig] = None):
         """
         初始化缓存
-        
+
         Args:
             redis_client: Redis客户端
             config: 缓存配置
@@ -77,48 +78,95 @@ class UnifiedCache:
         self.config = config or CacheConfig()
         self.statistics = CacheStatistics()
         self._response_times = []  # 用于计算平均响应时间
-        
-        logger.info(f"UnifiedCache initialized with config: {self.config}")
-    
+
+        # L1 进程内缓存: {key: (value, expire_time)}
+        self._l1_cache: Dict[str, tuple] = {}
+        self._l1_maxsize = 1000
+        self._l1_default_ttl = self.config.default_ttl
+        self._l1_warned_no_redis = False  # 只警告一次
+
+        logger.info(f"UnifiedCache initialized with config: {self.config}, L1 maxsize={self._l1_maxsize}")
+
+    def _l1_get(self, key: str) -> Optional[Any]:
+        """从 L1 进程内缓存获取"""
+        entry = self._l1_cache.get(key)
+        if entry is None:
+            return None
+        value, expire_time = entry
+        if time.time() > expire_time:
+            del self._l1_cache[key]
+            return None
+        return value
+
+    def _l1_set(self, key: str, value: Any, ttl: Optional[int] = None):
+        """写入 L1 进程内缓存"""
+        # 超过容量时清理过期条目
+        if len(self._l1_cache) >= self._l1_maxsize:
+            now = time.time()
+            expired_keys = [k for k, (_, exp) in self._l1_cache.items() if now > exp]
+            for k in expired_keys:
+                del self._l1_cache[k]
+            # 如果清理后仍然满，删除最早的 10%
+            if len(self._l1_cache) >= self._l1_maxsize:
+                to_remove = list(self._l1_cache.keys())[:self._l1_maxsize // 10]
+                for k in to_remove:
+                    del self._l1_cache[k]
+
+        expire_time = time.time() + (ttl or self._l1_default_ttl)
+        self._l1_cache[key] = (value, expire_time)
+
     async def get(self, key: str) -> Optional[Any]:
         """
-        获取缓存值
-        
+        获取缓存值（L1 → Redis → None）
+
         Args:
             key: 缓存键
-            
+
         Returns:
             缓存值，不存在返回None
         """
         start_time = time.time()
-        
+
         try:
             # 更新统计
             self.statistics.total_requests += 1
-            
-            # 从Redis获取
+
+            # 先查 L1 进程内缓存
+            l1_value = self._l1_get(key)
+            if l1_value is not None:
+                self.statistics.cache_hits += 1
+                self.statistics.update_hit_rate()
+                response_time = (time.time() - start_time) * 1000
+                self._update_response_time(response_time)
+                return l1_value
+
+            # L1 未命中，查 Redis
             if self.redis is None:
-                logger.warning("Redis client is None, cache disabled")
+                if not self._l1_warned_no_redis:
+                    logger.warning("Redis client is None, using L1 cache only")
+                    self._l1_warned_no_redis = True
                 self.statistics.cache_misses += 1
                 self.statistics.update_hit_rate()
                 return None
-            
+
             value = await self._get_from_redis(key)
-            
+
             # 更新统计
             if value is not None:
                 self.statistics.cache_hits += 1
+                # 回填 L1
+                self._l1_set(key, value)
                 logger.debug(f"Cache hit for key: {key}")
             else:
                 self.statistics.cache_misses += 1
                 logger.debug(f"Cache miss for key: {key}")
-            
+
             self.statistics.update_hit_rate()
-            
+
             # 记录响应时间
             response_time = (time.time() - start_time) * 1000  # 转换为毫秒
             self._update_response_time(response_time)
-            
+
             return value
             
         except Exception as e:
@@ -129,98 +177,108 @@ class UnifiedCache:
     
     async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """
-        设置缓存值
-        
+        设置缓存值（同时写 L1 + Redis）
+
         Args:
             key: 缓存键
             value: 缓存值
             ttl: 过期时间（秒），默认使用配置的default_ttl
-            
+
         Returns:
             是否成功
         """
         try:
-            if self.redis is None:
-                logger.warning("Redis client is None, cache disabled")
-                return False
-            
-            # 使用配置的TTL或传入的TTL
             cache_ttl = ttl if ttl is not None else self.config.default_ttl
-            
+
+            # 始终写 L1（即使 Redis 不可用也能缓存）
+            self._l1_set(key, value, cache_ttl)
+
+            if self.redis is None:
+                if not self._l1_warned_no_redis:
+                    logger.warning("Redis client is None, using L1 cache only")
+                    self._l1_warned_no_redis = True
+                return True  # L1 写入成功即可
+
             # 存储到Redis
             success = await self._set_to_redis(key, value, cache_ttl)
-            
+
             if success:
                 logger.debug(f"Cache set for key: {key}, ttl: {cache_ttl}s")
             else:
-                logger.warning(f"Failed to set cache for key: {key}")
-            
+                logger.warning(f"Failed to set cache for key: {key} (L1 still available)")
+
             return success
-            
+
         except Exception as e:
             logger.error(f"Error setting cache key {key}: {e}")
             return False
     
     async def delete(self, key: str) -> bool:
         """
-        删除缓存
-        
+        删除缓存（同时清理 L1 + Redis）
+
         Args:
             key: 缓存键
-            
+
         Returns:
             是否成功
         """
         try:
+            # 始终清理 L1
+            self._l1_cache.pop(key, None)
+
             if self.redis is None:
-                logger.warning("Redis client is None, cache disabled")
-                return False
-            
-            # 从Redis删除
+                return True
+
             result = await self._delete_from_redis(key)
-            
+
             if result:
                 logger.debug(f"Cache deleted for key: {key}")
             else:
                 logger.debug(f"Cache key not found: {key}")
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error deleting cache key {key}: {e}")
             return False
     
     async def invalidate(self, pattern: str) -> int:
         """
-        批量失效缓存
-        
+        批量失效缓存（同时清理 L1 + Redis）
+
         Args:
             pattern: 键模式（支持通配符，如 "user:*"）
-            
+
         Returns:
             失效的键数量
         """
         try:
+            # 清理 L1 中匹配的 key（简单前缀匹配）
+            prefix = pattern.rstrip("*")
+            l1_keys_to_remove = [k for k in self._l1_cache if k.startswith(prefix)]
+            for k in l1_keys_to_remove:
+                del self._l1_cache[k]
+
             if self.redis is None:
-                logger.warning("Redis client is None, cache disabled")
-                return 0
-            
+                return len(l1_keys_to_remove)
+
             # 查找匹配的键
             keys = await self._scan_keys(pattern)
-            
+
             if not keys:
                 logger.debug(f"No keys found for pattern: {pattern}")
-                return 0
-            
+                return len(l1_keys_to_remove)
+
             # 批量删除
             deleted_count = 0
             for key in keys:
                 if await self._delete_from_redis(key):
                     deleted_count += 1
-            
+
             logger.info(f"Invalidated {deleted_count} keys for pattern: {pattern}")
             return deleted_count
-            
+
         except Exception as e:
             logger.error(f"Error invalidating cache pattern {pattern}: {e}")
             return 0

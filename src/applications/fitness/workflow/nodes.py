@@ -796,7 +796,7 @@ async def node_select_dag_template(
             
             if template_manager is None:
                 template_manager = DAGTemplateManager()
-            selected_template_id = template_manager.match_template_by_keywords(query_text)
+            selected_template_id = "quick_consultation"  # LLM分类失败时统一fallback
             
             # 即使降级也要检查权限
             permission_result = check_template_permission(selected_template_id, membership_info)
