@@ -585,8 +585,76 @@ tools:
 # 如需验证枚举值，请参考 parameter_converter.py 中的 VALID_* 定义
 # ============================================================================
 converters:
-  # 已废弃 - 前端直接传递英文值
-  # 保留此节作为有效值参考
+  # 中文到枚举值的转换器
+  # 前端已直接传递英文值，此映射用于兼容中文输入和配置验证
+  chinese_to_enum:
+    training_goal:
+      增肌: hypertrophy
+      力量: strength
+      耐力: endurance
+      综合体能: general_fitness
+      减重: weight_loss
+      爆发力: power
+      维持: maintenance
+      重组: recomp
+      减脂: fat_loss
+      体态矫正: posture_correction
+      功能性: functional
+
+    fitness_level:
+      新手: novice
+      初学者: beginner
+      中级: intermediate
+      高级: advanced
+      专家: expert
+
+    activity_level:
+      久坐: sedentary
+      轻度活动: lightly_active
+      中度活动: moderately_active
+      重度活动: very_active
+      极重度活动: extremely_active
+
+    split_type:
+      全身: full_body
+      上下肢: upper_lower
+      推拉腿: push_pull_legs
+      兄弟分化: bro_split
+      单肌群: body_part_split
+
+    training_intensity:
+      低: low
+      中: moderate
+      高: high
+      极高: very_high
+
+    alternative_reason:
+      受伤: injury
+      设备不足: equipment_unavailable
+      难度过高: difficulty_too_high
+      偏好变更: preference_change
+      增加多样性: variety
+
+    modification_purpose:
+      预防伤病: injury_prevention
+      适合初学者: beginner_friendly
+      康复训练: rehabilitation
+      适龄调整: age_appropriate
+      设备受限: equipment_limited
+
+    fitness_goal:
+      减重: weight_loss
+      增肌: muscle_gain
+      维持: maintenance
+      体能提升: performance
+
+    training_type:
+      力量: strength
+      有氧: cardio
+      HIIT: hiit
+      柔韧性: flexibility
+
+  # 有效值参考（保留供文档查阅）
   valid_values_reference:
     training_goal:
       - hypertrophy
@@ -600,41 +668,41 @@ converters:
       - fat_loss
       - posture_correction
       - functional
-    
+
     fitness_level:
       - novice
       - beginner
       - intermediate
       - advanced
       - expert
-    
+
     activity_level:
       - sedentary
       - lightly_active
       - moderately_active
       - very_active
       - extremely_active
-    
+
     split_type:
       - full_body
       - upper_lower
       - push_pull_legs
       - bro_split
       - body_part_split
-    
+
     training_intensity:
       - low
       - moderate
       - high
       - very_high
-    
+
     alternative_reason:
       - injury
       - equipment_unavailable
       - difficulty_too_high
       - preference_change
       - variety
-    
+
     modification_purpose:
       - injury_prevention
       - beginner_friendly

@@ -1,5 +1,5 @@
 {
-  "test_date": "2026-02-27T19:56:39.909694",
+  "test_date": "2026-02-28T22:41:46.929553",
   "baseline_performance": {
     "training_plan": 81.3,
     "user_profile": 129.9,
@@ -16,57 +16,57 @@
       "scenario": "训练计划生成",
       "query": "我想制定一个增肌训练计划，每周训练4次",
       "baseline": 81.3,
-      "current": 13.097277879714966,
-      "improvement": 68.20272212028503,
-      "improvement_percent": 83.8901871098217,
+      "current": 10.203110933303833,
+      "improvement": 71.09688906669616,
+      "improvement_percent": 87.45004805251682,
       "status": "✅ 通过"
     },
     {
       "scenario": "用户档案查询",
       "query": "我的基本信息是什么？",
       "baseline": 129.9,
-      "current": 9.081425905227661,
-      "improvement": 120.81857409477234,
-      "improvement_percent": 93.00891000367386,
+      "current": 9.663419723510742,
+      "improvement": 120.23658027648926,
+      "improvement_percent": 92.5608778110002,
       "status": "✅ 通过"
     },
     {
       "scenario": "营养规划",
       "query": "帮我设计一份营养餐食计划",
       "baseline": 105.6,
-      "current": 12.005730390548706,
-      "improvement": 93.59426960945129,
-      "improvement_percent": 88.63093713016221,
+      "current": 9.20907974243164,
+      "improvement": 96.39092025756835,
+      "improvement_percent": 91.27928054693973,
       "status": "✅ 通过"
     },
     {
       "scenario": "动作推荐",
       "query": "推荐一些胸肌训练动作",
       "baseline": 105.6,
-      "current": 10.915674448013306,
-      "improvement": 94.68432555198669,
-      "improvement_percent": 89.66318707574497,
+      "current": 9.437352895736694,
+      "improvement": 96.1626471042633,
+      "improvement_percent": 91.06311278812814,
       "status": "✅ 通过"
     },
     {
       "scenario": "安全检查",
       "query": "我有腰椎间盘突出，哪些动作我不能做？",
       "baseline": 105.6,
-      "current": 10.178879976272583,
-      "improvement": 95.42112002372741,
-      "improvement_percent": 90.36090911337824,
+      "current": 10.457647323608398,
+      "improvement": 95.1423526763916,
+      "improvement_percent": 90.0969248829466,
       "status": "✅ 通过"
     }
   ],
   "statistics": {
     "avg_baseline": 105.6,
-    "avg_current": 11.055797719955445,
-    "avg_improvement": 94.54420228004456,
-    "avg_improvement_percent": 89.53049458337553,
+    "avg_current": 9.794122123718262,
+    "avg_improvement": 95.80587787628174,
+    "avg_improvement_percent": 90.72526314041832,
     "max_baseline": 129.9,
-    "max_current": 13.097277879714966,
+    "max_current": 10.457647323608398,
     "min_baseline": 81.3,
-    "min_current": 9.081425905227661,
+    "min_current": 9.20907974243164,
     "passed_count": 5,
     "total_count": 5
   }

@@ -186,6 +186,13 @@ def select_from_yaml_pool() -> Optional[PoolEntry]:
         logger.warning("YAML池所有后端均无API_KEY，回退到默认降级链")
         return None
 
+    if len(available) < 2:
+        logger.warning(
+            f"⚠️ 降级链不可用，仅剩 {len(available)} 个后端: "
+            f"{[f'{e.backend}/{e.model}' for e in available]}，"
+            f"建议配置更多 API_KEY"
+        )
+
     weights = [e.weight for e in available]
     chosen = random.choices(available, weights=weights, k=1)[0]
     logger.info(
@@ -257,3 +264,38 @@ def get_backend_for_template(template_id: str) -> Optional[Union[str, PoolEntry]
 
     # 4. 无配置，走默认降级链
     return None
+
+
+def get_model_pool_status() -> Dict[str, any]:
+    """获取模型池状态（供 /health 端点使用）"""
+    enabled, pool = _get_yaml_pool()
+    if not enabled or not pool:
+        return {"available": 0, "total": 0, "degraded": True}
+
+    available = []
+    for entry in pool:
+        api_key = os.getenv(f"{entry.backend.upper()}_API_KEY", "")
+        if api_key:
+            available.append(f"{entry.backend}/{entry.model}")
+
+    return {
+        "available": len(available),
+        "total": len(pool),
+        "degraded": len(available) < 2,
+        "backends": available,
+    }
+
+
+def reload_pool():
+    """
+    重新加载模型池配置（供运维热更新使用）
+
+    调用场景：在 Zeabur 控制台添加/删除 API_KEY 环境变量后，
+    调用此函数刷新缓存，无需重启服务。
+    """
+    global _YAML_POOL, _YAML_POOL_ENABLED, _MULTI_MODEL_POOL, _TEMPLATE_MODEL_MAP
+    _YAML_POOL_ENABLED = None
+    _YAML_POOL = None
+    _MULTI_MODEL_POOL = None
+    _TEMPLATE_MODEL_MAP = None
+    logger.info("🔄 模型池配置已重置，下次调用将重新加载")
