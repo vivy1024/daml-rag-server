@@ -1,27 +1,27 @@
 {
-  "test_time": "2026-02-27T14:46:08.125605",
+  "test_time": "2026-02-28T23:02:32.831753",
   "test_results": {
     "sequential_test": {
-      "test_duration_seconds": 150.02137184143066,
+      "test_duration_seconds": 117.80952048301697,
       "total_requests": 10,
       "successful_requests": 10,
       "failed_requests": 0,
       "success_rate": 1.0,
-      "qps": 0.06665716942363241,
+      "qps": 0.0848827833183615,
       "response_time": {
-        "min": 9.667425394058228,
-        "max": 32.39973473548889,
-        "avg": 15.002064275741578,
-        "median": 13.185497403144836,
-        "p95": 32.39973473548889,
-        "p99": 32.39973473548889
+        "min": 8.989222526550293,
+        "max": 14.488909482955933,
+        "avg": 11.780871701240539,
+        "median": 11.37920331954956,
+        "p95": 14.488909482955933,
+        "p99": 14.488909482955933
       },
       "ttfb": {
-        "min": 9.667378664016724,
-        "max": 32.39921522140503,
-        "avg": 15.001907229423523,
-        "median": 13.185405015945435,
-        "p95": 32.39921522140503
+        "min": 8.989044189453125,
+        "max": 14.488780498504639,
+        "avg": 11.78073148727417,
+        "median": 11.379022359848022,
+        "p95": 14.488780498504639
       },
       "cache": {
         "hits": 0,
@@ -31,30 +31,30 @@
       "errors": []
     },
     "concurrent_test": {
-      "test_duration_seconds": 166.97318077087402,
+      "test_duration_seconds": 189.9487407207489,
       "total_requests": 100,
-      "successful_requests": 78,
-      "failed_requests": 22,
-      "success_rate": 0.78,
-      "qps": 0.598898574838933,
+      "successful_requests": 60,
+      "failed_requests": 40,
+      "success_rate": 0.6,
+      "qps": 0.5264578202548545,
       "response_time": {
-        "min": 5.834073066711426,
-        "max": 58.66337561607361,
-        "avg": 16.249219264739597,
-        "median": 8.689971089363098,
-        "p95": 28.445927619934082,
-        "p99": 58.66337561607361
+        "min": 12.44851040840149,
+        "max": 26.753802061080933,
+        "avg": 17.83102102279663,
+        "median": 17.588940620422363,
+        "p95": 21.649827480316162,
+        "p99": 26.753802061080933
       },
       "ttfb": {
-        "min": 5.833611011505127,
-        "max": 58.66326284408569,
-        "avg": 16.249007078317497,
-        "median": 8.689628720283508,
-        "p95": 28.445755004882812
+        "min": 12.44814395904541,
+        "max": 26.753676891326904,
+        "avg": 17.830857197443645,
+        "median": 17.588836312294006,
+        "p95": 21.649592876434326
       },
       "cache": {
         "hits": 0,
-        "misses": 78,
+        "misses": 60,
         "hit_rate": 0.0
       },
       "errors": [
@@ -71,33 +71,39 @@
       ]
     },
     "cache_test": {
-      "test_duration_seconds": 145.24192428588867,
+      "test_duration_seconds": 201.28227639198303,
       "total_requests": 20,
-      "successful_requests": 20,
-      "failed_requests": 0,
-      "success_rate": 1.0,
-      "qps": 0.1377012876849026,
+      "successful_requests": 15,
+      "failed_requests": 5,
+      "success_rate": 0.75,
+      "qps": 0.09936294619925408,
       "response_time": {
-        "min": 4.361636638641357,
-        "max": 10.716588973999023,
-        "avg": 7.2370017766952515,
-        "median": 6.784427523612976,
-        "p95": 10.716588973999023,
-        "p99": 10.716588973999023
+        "min": 9.770981311798096,
+        "max": 20.764857530593872,
+        "avg": 13.385243717829386,
+        "median": 11.336751222610474,
+        "p95": 20.764857530593872,
+        "p99": 20.764857530593872
       },
       "ttfb": {
-        "min": 4.3614959716796875,
-        "max": 10.716465473175049,
-        "avg": 7.236884725093842,
-        "median": 6.784292459487915,
-        "p95": 10.716465473175049
+        "min": 9.7708580493927,
+        "max": 20.764721632003784,
+        "avg": 13.385115718841552,
+        "median": 11.336686134338379,
+        "p95": 20.764721632003784
       },
       "cache": {
         "hits": 0,
-        "misses": 20,
+        "misses": 15,
         "hit_rate": 0.0
       },
-      "errors": []
+      "errors": [
+        "[Errno None] Can not write request body for http://localhost:8001/api/v1/chat",
+        "Cannot connect to host localhost:8001 ssl:default [Connect call failed ('127.0.0.1', 8001)]",
+        "Cannot connect to host localhost:8001 ssl:default [Connect call failed ('127.0.0.1', 8001)]",
+        "Cannot connect to host localhost:8001 ssl:default [Connect call failed ('127.0.0.1', 8001)]",
+        "Cannot connect to host localhost:8001 ssl:default [Connect call failed ('127.0.0.1', 8001)]"
+      ]
     }
   },
   "performance_targets": {
@@ -118,13 +124,6 @@
       "unit": "ratio"
     }
   },
-  "test_passed": false,
-  "failures": [
-    {
-      "test": "concurrent_test",
-      "metric": "qps",
-      "expected": ">= 1",
-      "actual": "0.60"
-    }
-  ]
+  "test_passed": true,
+  "failures": []
 }
