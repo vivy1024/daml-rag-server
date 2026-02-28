@@ -4,9 +4,10 @@
 
 统一管理日志级别和输出格式
 
-版本: v1.2.0
+版本: v1.3.0
 创建日期: 2025-12-22
-更新日期: 2025-12-30
+更新日期: 2026-03-01
+更新说明: 日志保留天数从30/90天统一调整为180天（合规要求）
 """
 
 import logging
@@ -86,12 +87,12 @@ def configure_logging():
     
     # 2. 文件处理器（可选）- 使用TimedRotatingFileHandler按天轮转
     if ENABLE_FILE_LOGGING:
-        # 所有日志文件（INFO及以上）- 按天轮转，保留30天
+        # 所有日志文件（INFO及以上）- 按天轮转，保留180天（合规要求）
         file_handler = TimedRotatingFileHandler(
             LOG_FILE_BASE,
             when='midnight',  # 每天午夜轮转
             interval=1,
-            backupCount=30,  # 保留30天
+            backupCount=180,  # 保留180天（《生成式人工智能服务管理暂行办法》第十七条）
             encoding='utf-8'
         )
         # 设置日志文件名后缀格式为 YYYYMMDD
@@ -103,12 +104,12 @@ def configure_logging():
             file_handler.addFilter(trace_filter)
         root_logger.addHandler(file_handler)
         
-        # 错误日志文件（ERROR及以上）- 按天轮转，保留30天
+        # 错误日志文件（ERROR及以上）- 按天轮转，保留180天
         error_handler = TimedRotatingFileHandler(
             ERROR_LOG_FILE_BASE,
             when='midnight',  # 每天午夜轮转
             interval=1,
-            backupCount=30,  # 保留30天
+            backupCount=180,  # 保留180天
             encoding='utf-8'
         )
         error_handler.suffix = '-%Y%m%d.log'
@@ -125,7 +126,7 @@ def configure_logging():
         print(f"✅ 文件日志已启用（按天轮转）:")
         print(f"   - 所有日志: {current_log}")
         print(f"   - 错误日志: {current_error_log}")
-        print(f"   - 保留天数: 30天")
+        print(f"   - 保留天数: 180天（合规要求）")
     
     # 3. 审计日志处理器 - 独立文件，记录认证和权限相关事件
     if ENABLE_FILE_LOGGING:
@@ -134,7 +135,7 @@ def configure_logging():
             audit_log_base,
             when='midnight',
             interval=1,
-            backupCount=90,  # 审计日志保留90天
+            backupCount=180,  # 审计日志保留180天（合规要求）
             encoding='utf-8'
         )
         audit_handler.suffix = '-%Y%m%d.log'
@@ -151,7 +152,7 @@ def configure_logging():
             # 同时输出到控制台和主日志
             audit_logger.propagate = True
 
-        print(f"   - 审计日志: {LOG_DIR / 'audit-YYYYMMDD.log'} (保留90天)")
+        print(f"   - 审计日志: {LOG_DIR / 'audit-YYYYMMDD.log'} (保留180天)")
 
     # 设置uvicorn日志级别（减少访问日志）
     logging.getLogger('uvicorn.access').setLevel(logging.WARNING)

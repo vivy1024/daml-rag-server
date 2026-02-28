@@ -1,13 +1,16 @@
 # 参数映射配置文件
-# 定义MCP工具的参数映射规则、中英文转换映射表、重试策略和缓存配置
+# 定义MCP工具的参数映射规则、重试策略和缓存配置
 #
-# 版本: v2.2.0
-# 日期: 2025-12-29
+# 版本: v2.3.0
+# 日期: 2026-03-01
 # 作者: BUILD_BODY Team
-# 
+#
 # ⚠️ 重要：required_params必须与工具的Pydantic Input Schema完全匹配！
-# 
+#
 # 更新记录:
+# - v2.3.0 (2026-03-01): 移除已废弃的chinese_to_enum转换器和valid_values_reference
+#   - 前端已统一传递英文value，Neo4j也是英文name，无需中英文转换
+#   - 有效枚举值定义已在 parameter_converter.py 的 VALID_* 常量中维护
 # - v2.2.0 (2025-12-29): 添加_common_mappings配置
 #   - 添加context任务的通用映射（user_id, query, session_id, user_profile）
 #   - 添加query_analysis任务的通用映射（intent, entities, constraints, complexity, confidence）
@@ -109,14 +112,10 @@ tools:
       - source_task: get_user_profile
         source_path: fitness_goals.primary_goals[0]
         target_param: training_goal
-        converter: chinese_to_enum
-        converter_type: training_goal
         default_value: general_fitness
       - source_task: get_user_profile
         source_path: basic_info.fitness_level
         target_param: difficulty_level
-        converter: chinese_to_enum
-        converter_type: fitness_level
         default_value: beginner
       - source_task: get_user_profile
         source_path: target_muscle_groups[0]
@@ -146,8 +145,6 @@ tools:
       - source_task: query_analysis
         source_path: intent
         target_param: reason
-        converter: chinese_to_enum
-        converter_type: alternative_reason
         default_value: equipment_unavailable
     required_params:
       - user_id
@@ -176,8 +173,6 @@ tools:
       - source_task: query_analysis
         source_path: intent
         target_param: modification_purpose
-        converter: chinese_to_enum
-        converter_type: modification_purpose
         default_value: injury_prevention
     required_params:
       - user_id
@@ -202,8 +197,6 @@ tools:
       - source_task: get_user_profile
         source_path: training_config.training_intensity
         target_param: training_intensity
-        converter: chinese_to_enum
-        converter_type: training_intensity
         default_value: moderate
       - source_task: get_user_profile
         source_path: training_config.session_duration_minutes
@@ -229,14 +222,10 @@ tools:
       - source_task: get_user_profile
         source_path: fitness_goals.primary_goals[0]
         target_param: training_goal
-        converter: chinese_to_enum
-        converter_type: training_goal
         default_value: hypertrophy
       - source_task: get_user_profile
         source_path: basic_info.fitness_level
         target_param: difficulty_level
-        converter: chinese_to_enum
-        converter_type: fitness_level
         default_value: beginner
       - source_task: get_user_profile
         source_path: training_config.available_equipment
@@ -245,8 +234,6 @@ tools:
       - source_task: get_user_profile
         source_path: training_config.training_split
         target_param: training_split
-        converter: chinese_to_enum
-        converter_type: split_type
         default_value: push_pull_legs
       - source_task: get_user_profile
         source_path: training_config.preferred_training_days
@@ -272,14 +259,10 @@ tools:
       - source_task: get_user_profile
         source_path: fitness_goals.primary_goals[0]
         target_param: training_goal
-        converter: chinese_to_enum
-        converter_type: training_goal
         default_value: hypertrophy
       - source_task: get_user_profile
         source_path: basic_info.fitness_level
         target_param: difficulty_level
-        converter: chinese_to_enum
-        converter_type: fitness_level
         default_value: beginner
       - source_task: get_user_profile
         source_path: training_config.available_equipment
@@ -316,14 +299,10 @@ tools:
       - source_task: get_user_profile
         source_path: basic_info.fitness_level
         target_param: training_level
-        converter: chinese_to_enum
-        converter_type: fitness_level
         default_value: beginner
       - source_task: get_user_profile
         source_path: fitness_goals.primary_goals[0]
         target_param: primary_goal
-        converter: chinese_to_enum
-        converter_type: training_goal
         default_value: hypertrophy
       - source_task: get_user_profile
         source_path: training_config.available_equipment
@@ -365,20 +344,14 @@ tools:
       - source_task: get_user_profile
         source_path: training_config.activity_level
         target_param: daily_activity_level
-        converter: chinese_to_enum
-        converter_type: activity_level
         default_value: moderately_active
       - source_task: get_user_profile
         source_path: training_config.training_intensity
         target_param: training_intensity
-        converter: chinese_to_enum
-        converter_type: training_intensity
         default_value: moderate
       - source_task: get_user_profile
         source_path: fitness_goals.primary_goals[0]
         target_param: fitness_goal
-        converter: chinese_to_enum
-        converter_type: fitness_goal
         default_value: maintenance
     required_params:
       - user_id
@@ -440,8 +413,6 @@ tools:
       - source_task: get_user_profile
         source_path: fitness_goals.primary_goals[0]
         target_param: training_goal
-        converter: chinese_to_enum
-        converter_type: training_goal
         default_value: hypertrophy
       - source_task: get_user_profile
         source_path: training_config.preferred_training_days
@@ -532,8 +503,6 @@ tools:
       - source_task: query_analysis
         source_path: training_type
         target_param: training_type
-        converter: chinese_to_enum
-        converter_type: training_type
         default_value: strength
       - source_task: get_user_profile
         source_path: training_config.session_duration_minutes
@@ -542,8 +511,6 @@ tools:
       - source_task: get_user_profile
         source_path: training_config.training_intensity
         target_param: training_intensity
-        converter: chinese_to_enum
-        converter_type: training_intensity
         default_value: moderate
       - source_task: query_analysis
         source_path: training_time
@@ -552,8 +519,6 @@ tools:
       - source_task: get_user_profile
         source_path: fitness_goals.primary_goals[0]
         target_param: fitness_goal
-        converter: chinese_to_enum
-        converter_type: fitness_goal
         default_value: maintenance
       - source_task: tdee_calculator
         source_path: macronutrient_distribution.protein_grams
@@ -576,139 +541,6 @@ tools:
     optional_params:
       - current_supplements
 
-
-# ============================================================================
-# 中英文转换映射表（已废弃 - v8.62.0）
-# ============================================================================
-# ⚠️ 注意：前端已统一传递英文value，Neo4j也是英文name
-# 此映射表仅作为参考保留，不再用于实际转换
-# 如需验证枚举值，请参考 parameter_converter.py 中的 VALID_* 定义
-# ============================================================================
-converters:
-  # 中文到枚举值的转换器
-  # 前端已直接传递英文值，此映射用于兼容中文输入和配置验证
-  chinese_to_enum:
-    training_goal:
-      增肌: hypertrophy
-      力量: strength
-      耐力: endurance
-      综合体能: general_fitness
-      减重: weight_loss
-      爆发力: power
-      维持: maintenance
-      重组: recomp
-      减脂: fat_loss
-      体态矫正: posture_correction
-      功能性: functional
-
-    fitness_level:
-      新手: novice
-      初学者: beginner
-      中级: intermediate
-      高级: advanced
-      专家: expert
-
-    activity_level:
-      久坐: sedentary
-      轻度活动: lightly_active
-      中度活动: moderately_active
-      重度活动: very_active
-      极重度活动: extremely_active
-
-    split_type:
-      全身: full_body
-      上下肢: upper_lower
-      推拉腿: push_pull_legs
-      兄弟分化: bro_split
-      单肌群: body_part_split
-
-    training_intensity:
-      低: low
-      中: moderate
-      高: high
-      极高: very_high
-
-    alternative_reason:
-      受伤: injury
-      设备不足: equipment_unavailable
-      难度过高: difficulty_too_high
-      偏好变更: preference_change
-      增加多样性: variety
-
-    modification_purpose:
-      预防伤病: injury_prevention
-      适合初学者: beginner_friendly
-      康复训练: rehabilitation
-      适龄调整: age_appropriate
-      设备受限: equipment_limited
-
-    fitness_goal:
-      减重: weight_loss
-      增肌: muscle_gain
-      维持: maintenance
-      体能提升: performance
-
-    training_type:
-      力量: strength
-      有氧: cardio
-      HIIT: hiit
-      柔韧性: flexibility
-
-  # 有效值参考（保留供文档查阅）
-  valid_values_reference:
-    training_goal:
-      - hypertrophy
-      - strength
-      - endurance
-      - general_fitness
-      - weight_loss
-      - power
-      - maintenance
-      - recomp
-      - fat_loss
-      - posture_correction
-      - functional
-
-    fitness_level:
-      - novice
-      - beginner
-      - intermediate
-      - advanced
-      - expert
-
-    activity_level:
-      - sedentary
-      - lightly_active
-      - moderately_active
-      - very_active
-      - extremely_active
-
-    split_type:
-      - full_body
-      - upper_lower
-      - push_pull_legs
-      - bro_split
-      - body_part_split
-
-    training_intensity:
-      - low
-      - moderate
-      - high
-      - very_high
-
-    alternative_reason:
-      - injury
-      - equipment_unavailable
-      - difficulty_too_high
-      - preference_change
-      - variety
-
-    modification_purpose:
-      - injury_prevention
-      - beginner_friendly
-      - rehabilitation
-      - age_appropriate
-      - equipment_limited
 
 # ============================================================================
 # 重试策略配置

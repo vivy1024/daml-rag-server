@@ -1,11 +1,11 @@
 {
-  "test_time": "2026-02-26T23:39:57.644105",
+  "test_time": "2026-02-28T22:59:37.126896",
   "scenarios": [
     {
       "name": "训练计划",
       "status": "通过",
       "data": {
-        "elapsed_time": 18.717886924743652,
+        "elapsed_time": 22.816173315048218,
         "tools_called": [
           "user_profile_loader",
           "session_manager",
@@ -19,23 +19,23 @@
           "llm_generator",
           "interaction_logger"
         ],
-        "response_length": 1359
+        "response_length": 793
       }
     },
     {
       "name": "营养规划",
       "status": "通过",
       "data": {
-        "elapsed_time": 18.02786421775818,
-        "response_length": 506
+        "elapsed_time": 19.305208206176758,
+        "response_length": 617
       }
     },
     {
       "name": "安全检查",
       "status": "通过",
       "data": {
-        "elapsed_time": 12.714770793914795,
-        "response_length": 479
+        "elapsed_time": 8.766832113265991,
+        "response_length": 343
       }
     }
   ]

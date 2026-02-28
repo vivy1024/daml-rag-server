@@ -1,29 +1,29 @@
 {
-  "test_time": "2026-02-27 01:04:37",
+  "test_time": "2026-02-28 23:02:32",
   "test_type": "监控系统修复验收测试",
   "version": "v2.62.0",
-  "pass_rate": 41.66666666666667,
+  "pass_rate": 33.33333333333333,
   "total_tests": 12,
-  "passed": 5,
-  "failed": 7,
+  "passed": 4,
+  "failed": 8,
   "warnings": 0,
-  "acceptance_status": "✅ 通过",
+  "acceptance_status": "❌ 未通过",
   "results": [
     {
       "category": "性能指标",
       "test_name": "API端点可用性",
       "expected": "200 OK",
-      "actual": "200",
-      "passed": true,
-      "message": "API健康检查端点"
+      "actual": "错误: Cannot connect to host localhost:8001 ssl:default [Connect call failed ('127.0.0.1', 8001)]",
+      "passed": false,
+      "message": "无法连接到API"
     },
     {
       "category": "性能指标",
       "test_name": "Prometheus指标端点",
       "expected": "端点可用",
-      "actual": "不可用",
+      "actual": "错误: Cannot connect to host localhost:8001 ssl:default [Connect call failed ('127.0.0.1', 8001)]",
       "passed": false,
-      "message": "Prometheus端点不可用"
+      "message": "无法访问Prometheus端点"
     },
     {
       "category": "性能指标",
