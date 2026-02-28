@@ -13,7 +13,7 @@
 ### MCP工具架构
 
 **工具类型**
-- **Python内置工具**（17个）：直接在DAML-RAG进程内调用，性能最优
+- **Python内置工具**（18个）：直接在DAML-RAG进程内调用，性能最优
 - 所有工具继承自`BaseMCPTool`基类，使用统一接口
 
 **调用方式**
@@ -51,11 +51,12 @@
 - record_training_feedback - 训练反馈记录（P1）
 - safe_exercise_modifier - 安全动作修改器（P1）
 
-### 4. Safety工具（3个）
+### 4. Safety工具（4个）
 
 [05-Safety工具实现.md](./05-Safety工具实现.md) - 安全相关工具
 - contraindications_checker - 禁忌症检查器（P0）
 - injury_risk_assessor - 损伤风险评估器（P0）
+- postural_assessor - 体态评估工具（P1）
 - safe_exercise_modifier - 安全动作修改器（P1）
 
 ### 5. Nutrition与Learning工具（5个）
@@ -66,6 +67,14 @@
 - meal_plan_designer - 膳食计划设计器（P1）
 - exercise_nutrition_optimization - 运动营养优化（P1）
 - find_similar_training_cases - 相似案例查找（P2）
+
+### 6. FewShot工具
+
+[07-FewShot工具实现.md](./07-FewShot工具实现.md) - Few-Shot学习相关组件
+- FewShot类型定义
+- 增强版FewShot检索器
+- 最佳实践检索器
+- 质量过滤和准入检查
 
 ---
 
@@ -79,7 +88,7 @@
 4. **muscle_group_volume_calculator** - 肌群容量计算器
 5. **tdee_calculator** - TDEE计算器
 
-### P1建议工具（9个）
+### P1建议工具（10个）
 
 6. **professional_program_designer** - 专业计划设计器
 7. **exercise_alternative_finder** - 动作替代查找器
@@ -90,12 +99,13 @@
 12. **meal_plan_designer** - 膳食计划设计器
 13. **exercise_nutrition_optimization** - 运动营养优化
 14. **record_training_feedback** - 训练反馈记录
+15. **postural_assessor** - 体态评估工具
 
 ### P2扩展工具（3个）
 
-15. **periodized_program_designer** - 周期化计划设计器
-16. **training_split_designer** - 训练分化设计器
-17. **find_similar_training_cases** - 相似案例查找
+16. **periodized_program_designer** - 周期化计划设计器
+17. **training_split_designer** - 训练分化设计器
+18. **find_similar_training_cases** - 相似案例查找
 
 ---
 
@@ -121,9 +131,10 @@ daml-rag-server/src/applications/fitness/mcp_tools/
 │   ├── training_split_designer.py
 │   ├── record_training_feedback.py
 │   └── safe_exercise_modifier.py
-├── safety/                    # Safety工具（3个）
+├── safety/                    # Safety工具（4个）
 │   ├── contraindications_checker.py
 │   ├── injury_risk_assessor.py
+│   ├── postural_assessor.py
 │   └── safe_exercise_modifier.py
 ├── nutrition/                 # Nutrition工具（4个）
 │   ├── tdee_calculator.py
