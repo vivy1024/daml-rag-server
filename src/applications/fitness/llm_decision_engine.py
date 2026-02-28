@@ -250,14 +250,18 @@ class LLMDecisionEngine:
   - "我能做硬拉吗？"
 **置信度要求**: 明确提到安全/禁忌时置信度应>0.80
 
-### 5. 动作优化 (exercise_optimization)
+### 5. 动作优化 (exercise_optimization) ⭐⭐ 中高权重
 **定义**: 用户需要动作推荐、替代方案、动作调整
 **关键词**: 动作、替代、换、推荐、选择、哪些动作
+**强触发规则**: 当查询同时包含"推荐/建议/适合" + "动作/训练动作" + 肌群名（胸肌/背肌/腿/肩/手臂/腹肌/臀等）时，必须选择此模板，置信度≥0.85
 **示例查询**:
-  - "深蹲可以换成什么动作？"
-  - "推荐一些练胸的动作"
-  - "有什么动作可以练背？"
-**置信度要求**: 明确提到动作推荐/替代时置信度应>0.75
+  - "深蹲可以换成什么动作？" ✅
+  - "推荐一些练胸的动作" ✅
+  - "有什么动作可以练背？" ✅
+  - "帮我推荐几个适合新手的胸肌训练动作" ✅ 高置信度（0.90+）
+  - "有哪些练腿的好动作" ✅
+  - "推荐几个肩部训练动作" ✅
+**置信度要求**: 明确提到动作推荐/替代时置信度应>0.75；包含"推荐+动作+肌群"组合时置信度应>0.85
 
 ### 6. 综合健身方案 (comprehensive_fitness)
 **定义**: 用户需要训练+营养的完整解决方案
@@ -276,6 +280,12 @@ class LLMDecisionEngine:
   - "一般建议"
 **置信度要求**: 仅当查询非常简单且不涉及具体计划时选择（置信度0.6-0.8）
 **重要**: 如果用户明确要求"完整"、"详细"、"系统"的计划，绝对不要选择此模板！
+**排除条件（以下情况绝对不选quick_consultation）**:
+  - 用户要求推荐具体动作（→ exercise_optimization）
+  - 用户要求制定训练计划（→ complete_training_plan）
+  - 用户提到具体肌群+推荐/建议（→ exercise_optimization）
+  - 用户询问安全性/禁忌（→ safety_assessment）
+  - 用户要求减脂/增肌方案（→ 对应专项模板）
 
 ### 8. 进展分析 (progress_analysis)
 **定义**: 用户想查看训练效果、数据分析、进度评估
@@ -346,6 +356,11 @@ class LLMDecisionEngine:
 - "帮我调整一下现在的训练计划" → plan_adjustment（不是complete_training_plan）
 - "我有圆肩驼背，怎么改善" → posture_correction（不是safety_assessment）
 - "我想提高深蹲的最大力量" → strength_program（不是complete_training_plan）
+- "你好，帮我推荐几个适合新手的胸肌训练动作" → exercise_optimization（不是quick_consultation，包含"推荐+动作+肌群"）
+- "有什么好的背部训练动作推荐吗" → exercise_optimization（不是quick_consultation）
+- "推荐几个练腿的动作" → exercise_optimization（不是quick_consultation）
+- "新手适合做哪些肩部动作" → exercise_optimization（不是quick_consultation）
+- "帮我推荐适合在家做的腹肌训练" → exercise_optimization（不是quick_consultation）
 
 ## 决策流程
 1. 首先检查是否包含高权重关键词

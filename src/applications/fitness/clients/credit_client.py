@@ -178,7 +178,7 @@ class CreditMixin:
 
     async def check_usage(self, user_id: int, mode: str = "dag") -> Dict[str, Any]:
         """检查用户用量"""
-        endpoint = "/api/usage/check"
+        endpoint = "/api/internal/usage/check"
         try:
             data = await self._request("POST", endpoint, json={'user_id': user_id, 'mode': mode})
             result = {

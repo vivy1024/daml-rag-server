@@ -5,6 +5,17 @@
 
 ---
 
+## #47 (fix) 生产日志问题修复 R2 Batch 1 — 2026-03-01
+
+对应产品版本：v1.6.6
+
+- `credit_client.py`: `check_usage()` endpoint 从 `/api/usage/check`（jwt.auth）改为 `/api/internal/usage/check`（internal.api），修复 401 认证失败
+- `postural_assessor.py`: 实现 5 个抽象方法（get_name/get_description/get_category/get_input_schema/get_output_schema），删除旧类属性，修复 MCPToolRegistry 实例化失败
+- `llm_decision_engine.py`: exercise_optimization 增加强触发规则（"推荐+动作+肌群"→必选），新增 5 个复合意图示例，quick_consultation 增加排除条件
+- `chat_client.py`: 新增 `get_conversation_topic()` 方法，修复 conversation_memory 从后端加载话题时 AttributeError
+
+---
+
 ## #46 (fix) 生产环境审计修复 Batch 2 — 2026-02-28
 
 对应产品版本：v1.6.5
