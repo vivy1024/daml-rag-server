@@ -4,139 +4,74 @@
 
 ## 技术栈
 
-- **框架**: FastAPI + DAML-RAG 自研框架
-- **Python**: 3.11（容器内）
-- **向量库**: Qdrant (`fitness_qdrant`，端口 6333/6334，1024维 GTE-Large-zh)
-- **图数据库**: Neo4j (`fitness_neo4j`，端口 7474/7687，4,264节点/65,147关系)
+- **框架**: FastAPI + DAML-RAG 自研框架 | **Python**: 3.11（容器内）
+- **向量库**: Qdrant (1024维 GTE-Large-zh) | **图数据库**: Neo4j (4,264节点/65,147关系)
 - **运行环境**: `fitness_daml_rag` 容器（端口 8001）
 - **LLM**: Anthropic Claude haiku-4.5（主）→ DeepSeek（备）→ Template（兜底）
 
 ## 测试命令
 
 ```bash
-# 单元测试（必须在容器内运行）
 docker exec fitness_daml_rag python -m pytest tests/ -x -v
-
-# 指定测试文件
-docker exec fitness_daml_rag python -m pytest tests/test_specific.py -v
-
-# 输出重定向（Windows 后台模式）
+# Windows 后台模式
 docker exec fitness_daml_rag python -m pytest tests/ > /f/build_body/_output.txt 2>&1
 ```
 
 ## 执行模式
 
-- **DAG 模式**（默认）：固定编排，所有用户可用，三段式架构（LLM决策→程序执行→LLM综合）
-- **Agent 模式**：动态决策，energy+ 会员专属，DeepSeek function calling
+- **DAG 模式**（默认）：固定编排，所有用户，三段式（LLM决策→程序执行→LLM综合）
+- **Agent 模式**：动态决策，energy+ 会员，DeepSeek function calling
 
-## MCP 工具架构
+## MCP 工具
 
-18个 Python 内置工具（1-5ms）+ 1个 stdio MCP 服务（用户档案，5-10ms）
+18个 Python 内置工具(1-5ms) + 1个 stdio MCP(用户档案,5-10ms)
 
-**P0 核心（5个）**：intelligent_exercise_selector, contraindications_checker, injury_risk_assessor, muscle_group_volume_calculator, tdee_calculator
-
-**P1 建议（10个）**：professional_program_designer, exercise_alternative_finder, movement_pattern_balancer, intelligent_weight_calculator, safe_exercise_modifier, nutrition_intake_analyzer, meal_plan_designer, exercise_nutrition_optimization, record_training_feedback, postural_assessor
-
-**P2 扩展（3个）**：periodized_program_designer, training_split_designer, find_similar_training_cases
+- **P0 核心(5)**: intelligent_exercise_selector, contraindications_checker, injury_risk_assessor, muscle_group_volume_calculator, tdee_calculator
+- **P1 建议(10)**: professional_program_designer, exercise_alternative_finder, movement_pattern_balancer, intelligent_weight_calculator, safe_exercise_modifier, nutrition_intake_analyzer, meal_plan_designer, exercise_nutrition_optimization, record_training_feedback, postural_assessor
+- **P2 扩展(3)**: periodized_program_designer, training_split_designer, find_similar_training_cases
 
 ## 代码规范
 
-- 配置统一用环境变量 `os.getenv()`，禁止硬编码密码/密钥
-- 异常捕获必须指定具体类型，禁止裸 `except:` 或 `except Exception`
+- 配置统一用 `os.getenv()`，禁止硬编码密码/密钥
+- 异常捕获必须指定具体类型，禁止裸 `except:`
 - LLM 调用统一走 `llm_client.py` → `llm_fallback_manager.py` 降级链
-- 容器内连接：Qdrant 用 `qdrant`、Neo4j 用 `bolt://neo4j:7687`（不是 localhost）
-- 函数单一职责，≤50行，≤4参数，Python 必须完整类型注解
-
-## 环境变量（关键）
-
-- `ANTHROPIC_API_KEY` / `ANTHROPIC_BASE_URL` / `ANTHROPIC_MODEL` / `ANTHROPIC_ENABLED` — Kiro RS 代理
-- `BYPASS_RATE_LIMIT_FOR_INTERNAL=true` — 内部调用免限流
-- `INTERNAL_API_TOKEN=crewai-internal-secret-2025` — 内部服务认证
-- `LEGACY_AUTH_ENABLED=true` — 兼容旧认证
+- 容器内连接：Qdrant→`qdrant`、Neo4j→`bolt://neo4j:7687`（不是localhost）
+- 函数 ≤50行，≤4参数，完整类型注解
 
 ## 部署
 
-- **本地**: Docker 容器 `fitness_daml_rag`（端口 8001）
-- **生产**: Zeabur（阿里云北京），Git 推送自动部署
-- **域名**: ai.yuzhen-fitness.cn（仅内网，前端不直连）
-- **健康检查**: `/api/health`, `/health/components`, `/health/metrics`
+- **本地**: Docker `fitness_daml_rag`(8001) | **生产**: Zeabur(阿里云北京)
+- **域名**: ai.yuzhen-fitness.cn（仅内网）| **健康检查**: `/health`
 
-## 数据库同步（⚠️ 重要）
-
-Zeabur 命令行不可用（卡顿、无法粘贴、每字符数秒），所有数据库操作从本地发起。
-
-### 连接信息
-
-| 数据库 | 本地（容器内） | 生产（公网） | 认证 |
-|--------|--------------|-------------|------|
-| Neo4j | `bolt://neo4j:7687` | `bolt://182.92.78.183:32372` | neo4j / build_body_2024 |
-| MySQL | `mysql:3306` | `182.92.78.183:30932` | root / root_password_2025 |
-| Qdrant | `qdrant:6333` | `182.92.78.183:32091`（gRPC plain）或 `qdrant.yuzhen-fitness.cn` | API Key: yuzhen_qdrant_2025_secure_abc123xyz789 |
-| Redis | `redis:6379` | 内网 `${FITNESS_REDIS_HOST}:6379` ⚠️ 无公网 | 密码: NyVZkW8jOT1032suQ9XCo4wc56mIqK7J |
-
-⚠️ Qdrant 公网端口 32091 是 gRPC 映射（非 HTTP），必须用 `prefer_grpc=True, https=False`
-⚠️ Redis 无公网端口，只能通过 Zeabur 容器内网访问
-
-### 数据概况（2026-02-24）
-
-| 数据库 | 本地 | 生产 | 同步方式 |
-|--------|------|------|---------|
-| Neo4j | 4,264 节点 / 65,147 关系 | ✅ 已同步一致 | sync.py（公网 bolt） |
-| MySQL | 基本为空（开发用） | 24,685 行（exercises/foods/users等） | Laravel migration（代码部署自动执行） |
-| Qdrant | 7,708 points / 7 collections | 5 collections / 核心3个已同步 | gRPC 公网直连（`prefer_grpc=True, https=False`） |
-| Redis | 缓存数据（不需同步） | 缓存数据 | 无需同步，各环境独立 |
-
-### Neo4j 同步工具（`scripts/neo4j_migrations/`）
+## Neo4j 同步工具
 
 ```bash
-# 主方案：全量对比+同步（幂等，可重复执行）
-docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/sync.py --check"   # 只看差异
-docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/sync.py --sync"    # 执行同步
-
-# 辅助方案：Migration 版本管理
-docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --status --target prod"  # 查状态
-docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --all"                   # 本地+生产同时执行
-docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/runner.py --sync-status"           # 对比migration状态
+# 全量对比+同步（幂等）
+docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/sync.py --check"
+docker exec fitness_daml_rag bash -c "python scripts/neo4j_migrations/sync.py --sync"
 ```
 
-**开发流程**：修改本地 Neo4j 数据 → 写 migration 脚本 → sync.py --sync 同步生产 → 验证
-
-### 同步注意事项
-
-- Neo4j: Exercise 节点用 `id` 属性匹配（不是 exercise_id），InjuryType 用 `name`
-- Neo4j: `CONTRAINDICATED_FOR` 是禁忌症安全核心（6,371 条），必须保持同步
-- MySQL: 生产数据由 Laravel migration + 用户操作产生，本地不需要同步生产数据
-- MySQL: 结构变更通过 `php artisan migrate` 在部署时自动执行
-- Qdrant: 公网 gRPC 可连（`182.92.78.183:32091`，`prefer_grpc=True, https=False`），HTTP 不可用
-- Qdrant: 核心 collection: fitness_exercises_v2(1790), training_knowledge(4062), food_nutrition_vector(1851)
-- Qdrant: knowledge_articles(5) 和 user_memory(0) 需要同步到生产
+同步注意：Exercise 用 `id` 匹配，`CONTRAINDICATED_FOR` 是安全核心(6,371条)必须保持同步。
 
 ## 关键目录
 
 ```
-src/framework/               # 核心框架（clients, middleware, pipeline）
 src/framework/clients/       # LLM 客户端 + 降级管理器
 src/tools/                   # 18 个 MCP 工具
-src/applications/fitness/services/  # 16 个服务层组件
-src/dag/                     # DAG 编排定义
-src/agent/                   # Agent 模式逻辑
-config/                      # 配置文件
-tests/                       # 测试目录
-scripts/neo4j_migrations/    # Neo4j 同步 + Migration 工具
+src/applications/fitness/services/  # 16 个服务层
+src/dag/                     # DAG 编排
+src/agent/                   # Agent 模式
+scripts/neo4j_migrations/    # Neo4j 同步 + Migration
 ```
 
 ## 按需加载参考
 
 | 场景 | 参考文件 |
 |------|---------|
-| ⭐ 枚举映射说明（三端数据流） | `docs/03-代码参考/12-枚举映射说明.md` |
-| 完整工作流程 | `docs/02-核心架构/03-完整工作流程.md` |
-| Neo4j 数据库结构 | `docs/02-核心架构/02-数据层/02-Neo4j数据库结构.md` |
-| MCP 工具架构详细版 | `docs/02-核心架构/06-MCP工具架构.md` |
+| ⭐ 枚举映射（三端数据流） | `docs/03-代码参考/12-枚举映射说明.md` |
+| 数据库连接信息（含生产） | `.kiro/steering/db-connections.md` |
 | MCP 工具列表 | `.kiro/steering/mcp-tools-reference.md` |
-| LLM 客户端源码 | `src/framework/clients/llm_client.py` |
-| LLM 降级管理器 | `src/framework/clients/llm_fallback_manager.py` |
 | Zeabur 环境变量 | `.kiro/steering/zeabur-env-vars.md` |
-| 跨端枚举/字段变更 | `.kiro/steering/cross-stack-data-contract.md` |
+| 跨端枚举契约 | `.kiro/steering/cross-stack-data-contract.md` |
 
-> ⚠️ 涉及枚举值、字段名映射、三端数据契约时，必须先读 `12-枚举映射说明.md`。变更枚举后同步更新该文档。
+> ⚠️ 涉及枚举值、字段名映射时，必须先读 `12-枚举映射说明.md`。
