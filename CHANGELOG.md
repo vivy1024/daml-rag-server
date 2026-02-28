@@ -5,6 +5,18 @@
 
 ---
 
+## #46 (fix) 生产环境审计修复 Batch 2 — 2026-02-28
+
+对应产品版本：v1.6.5
+
+- `parameter_mapping_config.yaml`: 补全 `chinese_to_enum` 转换器（9 个类型：training_goal/fitness_level/activity_level/split_type/training_intensity/alternative_reason/modification_purpose/fitness_goal/training_type）
+- `model_routing.py`: 可用后端 < 2 时打 WARNING 告警
+- `model_routing.py`: 新增 `get_model_pool_status()` 供 health 端点调用
+- `health.py`: `/health` 端点增加 `model_pool` 字段（available/total/degraded/backends）
+- 配置验证通过：无 ⚠️ 和 ❌
+
+---
+
 ## #45 (fix) 生产环境审计修复 Batch 1 — 2026-02-28
 
 对应产品版本：v1.6.5

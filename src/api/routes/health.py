@@ -254,9 +254,17 @@ async def public_health_check():
             pass  # 指标收集失败不影响健康检查
 
         # 安全加固：仅返回基本状态和时间戳 + 工具列表（非敏感）
+        # 模型池状态（REQ-5: 降级链可观测性）
+        try:
+            from ...applications.fitness.config.model_routing import get_model_pool_status
+            model_pool = get_model_pool_status()
+        except Exception:
+            model_pool = {"available": 0, "total": 0, "degraded": True}
+
         return {
             "status": overall_status,
             "timestamp": datetime.now().isoformat(),
+            "model_pool": model_pool,
             "tools": [
                 {
                     "name": name,
@@ -1118,6 +1126,26 @@ async def _check_database_details() -> Dict[str, Any]:
         return {"database_details": "detailed_check_not_implemented"}
     except Exception:
         return {"database_details": {}}
+
+
+@router.post("/reload-pool")
+async def reload_model_pool(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    热重载模型池配置（需要管理员认证）
+
+    在 Zeabur 控制台添加/删除 API_KEY 后调用此端点，
+    无需重启服务即可刷新模型池。
+    """
+    if not _verify_admin_token(credentials):
+        raise HTTPException(status_code=401, detail="Admin access only")
+
+    try:
+        from ...applications.fitness.config.model_routing import reload_pool, get_model_pool_status
+        reload_pool()
+        status = get_model_pool_status()
+        return ApiResponse.success(data=status, msg="模型池已重载")
+    except Exception as e:
+        return ApiResponse.error(code=500, msg="重载失败")
 
 
 # 导出路由
