@@ -199,6 +199,20 @@ class ChatMixin:
             logger.warning(f"对话话题保存失败: user_id={user_id}, error={e}")
             return {'success': False, 'error': str(e)}
 
+    async def get_conversation_topic(self, user_id: str, topic_id: str) -> Optional[Dict[str, Any]]:
+        """从后端获取对话话题（含消息历史）"""
+        endpoint = f"/api/internal/chat/topic/{topic_id}"
+        try:
+            data = await self._request("GET", endpoint, params={'user_id': user_id})
+            logger.debug(
+                f"对话话题获取成功: user_id={user_id}, topic_id={topic_id}",
+                extra={'user_id': user_id, 'topic_id': topic_id}
+            )
+            return data
+        except Exception as e:
+            logger.warning(f"对话话题获取失败: user_id={user_id}, topic_id={topic_id}, error={e}")
+            return None
+
     async def clear_conversation_topic(self, user_id: str, topic_id: str) -> Dict[str, Any]:
         """从后端清除对话话题"""
         endpoint = f"/api/internal/chat/clear-topic/{topic_id}"

@@ -123,11 +123,22 @@ class PosturalAssessorOutput(BaseModel):
 
 class PosturalAssessor(BaseMCPTool):
     """体态评估工具"""
-    
-    name = "postural_assessor"
-    description = "评估用户体态问题，推荐矫正动作并警告加重动作"
-    input_schema = PosturalAssessorInput
-    
+
+    def get_name(self) -> str:
+        return "postural_assessor"
+
+    def get_description(self) -> str:
+        return "评估用户体态问题，推荐矫正动作并警告加重动作"
+
+    def get_category(self) -> str:
+        return "safety"
+
+    def get_input_schema(self):
+        return PosturalAssessorInput
+
+    def get_output_schema(self):
+        return PosturalAssessorOutput
+
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         执行体态评估
@@ -141,7 +152,7 @@ class PosturalAssessor(BaseMCPTool):
         start_time = time.time()
         
         # 验证输入
-        input_data = self.input_schema(**params)
+        input_data = self.get_input_schema()(**params)
         
         # 获取用户体态问题
         postural_issues = input_data.postural_issues
@@ -153,7 +164,7 @@ class PosturalAssessor(BaseMCPTool):
         if not postural_issues or postural_issues == ["无"]:
             return PosturalAssessorOutput(
                 success=True,
-                tool_name=self.name,
+                tool_name=self.get_name(),
                 user_id=input_data.user_id,
                 assessment_date=datetime.now().isoformat(),
                 total_issues=0,
@@ -187,7 +198,7 @@ class PosturalAssessor(BaseMCPTool):
         
         return PosturalAssessorOutput(
             success=True,
-            tool_name=self.name,
+            tool_name=self.get_name(),
             user_id=input_data.user_id,
             assessment_date=datetime.now().isoformat(),
             total_issues=len(issues_assessed),
