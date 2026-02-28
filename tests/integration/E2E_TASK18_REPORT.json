@@ -1,20 +1,42 @@
 {
-  "test_time": "2026-02-18T11:13:20.984354",
+  "test_time": "2026-02-26T23:39:57.644105",
   "scenarios": [
     {
       "name": "训练计划",
-      "status": "失败",
-      "error": "请求失败: 401\nassert 401 == 200\n +  where 401 = <Response [401 Unauthorized]>.status_code"
+      "status": "通过",
+      "data": {
+        "elapsed_time": 18.717886924743652,
+        "tools_called": [
+          "user_profile_loader",
+          "session_manager",
+          "membership_checker",
+          "bge_classifier",
+          "model_selector",
+          "few_shot_retriever",
+          "dag_orchestrator",
+          "three_layer_retrieval",
+          "tool_aggregator",
+          "llm_generator",
+          "interaction_logger"
+        ],
+        "response_length": 1359
+      }
     },
     {
       "name": "营养规划",
-      "status": "失败",
-      "error": "assert 401 == 200\n +  where 401 = <Response [401 Unauthorized]>.status_code"
+      "status": "通过",
+      "data": {
+        "elapsed_time": 18.02786421775818,
+        "response_length": 506
+      }
     },
     {
       "name": "安全检查",
-      "status": "失败",
-      "error": "assert 401 == 200\n +  where 401 = <Response [401 Unauthorized]>.status_code"
+      "status": "通过",
+      "data": {
+        "elapsed_time": 12.714770793914795,
+        "response_length": 479
+      }
     }
   ]
 }

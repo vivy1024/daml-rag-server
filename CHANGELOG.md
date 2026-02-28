@@ -5,6 +5,28 @@
 
 ---
 
+## #44 (fix) 上线前安全加固 — 2026-02-28
+
+对应产品版本：v1.6.4
+
+- `routes/chat.py`: 3处 `str(e)` 异常信息泄露 → 替换为通用错误消息
+- `main.py`: 生产环境禁用 `/docs`、`/redoc`、`/openapi.json` 路由
+- `main.py`: `DEBUG` 环境变量判断修复（`"false"` 字符串不再误判为 True）
+- `main.py`: CORS 白名单生产环境移除 localhost 源
+- `connection_pool_manager.py`: MySQL 连接池添加 `connect_timeout`/`read_timeout`/`write_timeout`
+
+---
+
+## #43 (fix) 积分上报降级 + MCP工具部分降级 — 2026-02-27
+
+对应产品版本：v1.5.1
+
+- `credit_reporter.py`: 新增 `_write_fallback()` 方法，重试耗尽后写入本地 JSONL 文件（`/app/logs/credit_fallback.jsonl`）
+- `credit_reporter.py`: 返回值增加 `fallback: True` 标识，便于监控降级情况
+- `agent/nodes.py`: MCP 工具调用失败时返回空结果而非错误信息，单个工具失败不阻断整体对话
+
+---
+
 ## #42 (chore) 测试清理+断言修复 — 1142 passed, 64 skipped, 0 failed — 2026-02-26
 
 对应产品版本：v1.5.0

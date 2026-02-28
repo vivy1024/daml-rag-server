@@ -63,6 +63,9 @@ class MySQLConnectionPool:
                 minsize=self.config.min_size,
                 maxsize=self.config.max_size,
                 pool_recycle=self.config.max_lifetime,
+                connect_timeout=self.db_config.get('connect_timeout', 5),
+                read_timeout=self.db_config.get('read_timeout', 30),
+                write_timeout=self.db_config.get('write_timeout', 30),
                 autocommit=True
             )
             logger.info(f"MySQL连接池初始化成功: min={self.config.min_size}, max={self.config.max_size}")

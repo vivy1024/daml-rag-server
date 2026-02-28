@@ -329,7 +329,7 @@ async def chat(request: Request, chat_request: ChatRequest) -> ApiResponse[ChatR
         logger.error(f"Chat处理异常: {e}", exc_info=True)
         return ApiResponse.error(
             code=500,
-            msg=f"服务器错误: {str(e)}"
+            msg="服务器内部错误，请稍后重试"
         )
 
 
@@ -419,7 +419,7 @@ async def stream_chat_response(
         logger.error(f"Stream error: {e}", exc_info=True)
         error_data = {
             "type": "error",
-            "message": str(e),
+            "message": "服务器内部错误，请稍后重试",
             "session_id": chat_result.get("session_id")
         }
         yield f"data: {json.dumps(error_data)}\n\n"
@@ -732,7 +732,7 @@ async def chat_stream(request: Request, body: Dict[str, Any]):
 
     except Exception as e:
         logger.error(f"Stream setup error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"服务器错误: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误，请稍后重试")
 
 
 def _calculate_personalization_score(

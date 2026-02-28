@@ -180,10 +180,19 @@ async def tool_node(
             cost += 0.05
 
         except Exception as e:
-            logger.error(f"Tool {tool_name} failed: {e}")
+            # 单个工具失败不影响整体对话，记录 WARNING 并返回空结果
+            logger.warning(f"Tool {tool_name} failed (降级): {e}")
             errors.append(f"{tool_name}: {e}")
+            # 返回空结果而非错误信息，让 LLM 可以继续处理其他工具结果
+            results.append({
+                "tool": tool_name,
+                "args": tool_args,
+                "result": {},  # 空结果，聚合时跳过
+                "error": str(e),
+                "duration_s": 0.0,
+            })
             new_messages.append(ToolMessage(
-                content=f"Error: {e}",
+                content="",  # 空内容，不干扰 LLM
                 tool_call_id=call_id,
                 name=tool_name,
             ))

@@ -326,11 +326,88 @@ def _check_balance(
 **功能**: 根据训练频率设计最优训练分化（全身/上下肢/推拉腿等）
 
 ### 7. record_training_feedback - 训练反馈记录
-**代码路径**: `training/record_training_feedback.py`  
-**优先级**: P1建议工具  
+**代码路径**: `training/record_training_feedback.py`
+**优先级**: P1建议工具
 **功能**: 记录训练反馈，用于Few-Shot学习和质量评分
 
-### 8. safe_exercise_modifier - 安全动作修改器
+### 输入Schema
+
+```python
+class TrainingRecord(BaseModel):
+    """单条训练记录"""
+    exercise_name: str = Field(..., description="动作名称")
+    sets: int = Field(..., ge=1, description="组数")
+    reps: int = Field(..., ge=1, description="次数")
+    weight: float = Field(..., ge=0, description="重量（kg）")
+    notes: Optional[str] = Field(None, description="备注")
+
+
+class RecordTrainingFeedbackInput(BaseModel):
+    """训练反馈记录输入"""
+    user_id: str = Field(..., description="用户ID")
+    session_id: str = Field(..., description="训练会话ID")
+    fatigue_level: int = Field(..., ge=1, le=10, description="疲劳程度（1-10分）")
+    subjective_feeling: str = Field(..., description="主观感受（文本描述）")
+    training_records: List[TrainingRecord] = Field(..., min_length=1, description="训练记录列表")
+    date: Optional[str] = Field(None, description="日期（ISO 8601格式，默认今天）")
+```
+
+### 输出Schema
+
+```python
+class RecordTrainingFeedbackOutput(BaseModel):
+    """训练反馈记录输出"""
+    success: bool = Field(..., description="是否成功")
+    tool_name: str = Field(..., description="工具名称")
+    data: Dict[str, Any] = Field(..., description="反馈记录数据")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="元数据")
+```
+
+### 功能特点
+
+1. **简单存储**: 只负责存储反馈数据，不进行自动评估
+2. **前端驱动**: 数据由前端训练记录界面收集
+3. **历史追踪**: 支持查询历史反馈记录
+
+### 数据流向
+
+```python
+async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    """执行训练反馈记录"""
+    user_id = input_data["user_id"]
+    session_id = input_data["session_id"]
+    fatigue_level = input_data["fatigue_level"]
+    subjective_feeling = input_data["subjective_feeling"]
+    training_records = input_data["training_records"]
+    date = input_data.get("date") or datetime.now().isoformat()
+
+    # 构建反馈记录
+    feedback_record = {
+        "session_id": session_id,
+        "date": date,
+        "fatigue_level": fatigue_level,
+        "subjective_feeling": subjective_feeling,
+        "training_records": training_records,
+        "created_at": datetime.now().isoformat()
+    }
+
+    # 注意：实际存储需要通过MCP客户端调用 update_user_profile
+    # 这里先返回成功，实际存储逻辑由MCPToolManager处理
+
+    return {
+        "success": True,
+        "tool_name": self.get_name(),
+        "data": {
+            "feedback_record": feedback_record,
+            "user_id": user_id,
+            "message": "训练反馈记录成功"
+        }
+    }
+```
+
+---
+
+## 8. safe_exercise_modifier - 安全动作修改器
 **代码路径**: `training/safe_exercise_modifier.py`  
 **优先级**: P1建议工具  
 **功能**: 根据用户限制修改动作参数（重量、幅度、速度）

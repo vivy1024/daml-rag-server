@@ -241,6 +241,7 @@ async def lifespan(app: FastAPI):
 
 
 # 创建FastAPI应用
+_is_prod = os.getenv("ENVIRONMENT", "production") == "production"
 app = FastAPI(
     title="DAML-RAG API Server",
     description="""
@@ -267,9 +268,9 @@ app = FastAPI(
     """,
     version=VERSION,
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
+    openapi_url=None if _is_prod else "/openapi.json",
     default_encoder=CustomJSONEncoder
 )
 
@@ -278,10 +279,13 @@ _DEFAULT_CORS_ORIGINS = [
     "https://yuzhen.fit",
     "https://www.yuzhen.fit",
     "https://api.yuzhen.fit",
-    "http://localhost:5173",   # Vite dev server
-    "http://localhost:3000",   # 备用本地开发
-    "http://127.0.0.1:5173",
 ]
+if not _is_prod:
+    _DEFAULT_CORS_ORIGINS.extend([
+        "http://localhost:5173",   # Vite dev server
+        "http://localhost:3000",   # 备用本地开发
+        "http://127.0.0.1:5173",
+    ])
 _extra_origins = os.getenv("CORS_EXTRA_ORIGINS", "")
 _cors_origins = _DEFAULT_CORS_ORIGINS + [
     o.strip() for o in _extra_origins.split(",") if o.strip()
@@ -484,7 +488,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     response_data = ApiResponse.error(
         code=500,
         msg="服务器内部错误",
-        data={"error": str(exc)} if os.getenv("DEBUG") else None
+        data={"error": str(exc)} if os.getenv("DEBUG", "").lower() in ("1", "true") else None
     )
 
     return JSONResponse(

@@ -311,6 +311,181 @@ curl -X POST http://localhost:8001/api/graphrag/query \
 
 ---
 
+### 6. Alertmanager Webhook API
+
+**端点**: `POST /webhooks/alertmanager`
+
+**功能**: 接收Alertmanager告警并转发到企业微信
+
+**请求参数**:
+```typescript
+{
+  status: string;                  // "firing" | "resolved"
+  alerts: Array<{
+    status: string;
+    labels: dict;
+    annotations: dict;
+    startsAt: string;
+    endsAt: string;
+  }>;
+  groupLabels: dict;
+  commonLabels: dict;
+}
+```
+
+**响应结果**:
+```typescript
+{
+  // 发送成功
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "status": "sent",
+    "wechat_response": {...}
+  }
+
+  // 仅记录日志（未配置Webhook）
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "status": "logged",
+    "message": "WECHAT_WEBHOOK_URL not configured"
+  }
+
+  // 发送失败
+  "code": 500,
+  "msg": "企业微信告警发送失败",
+  "data": {
+    "status": "error",
+    "message": "..."
+  }
+}
+```
+
+**环境变量**:
+- `WECHAT_WEBHOOK_URL`: 企业微信Webhook地址（可选，未配置时仅记录日志）
+
+---
+
+### 7. Persona列表API
+
+**端点**: `GET /v1/personas`
+
+**功能**: 获取可用的System Persona列表，供前端风格选择使用
+
+**请求参数**: 无
+
+**响应结果**:
+```typescript
+{
+  code: 200;
+  msg: "操作成功";
+  data: {
+    personas: Array<{
+      id: string;
+      name: string;
+      description: string;
+      system_prompt: string;
+      temperature: number;
+      max_tokens: number;
+    }>;
+    default: string;               // 默认 Persona ID
+  };
+  timestamp: string;
+}
+```
+
+---
+
+### 8. 向量存储管理API
+
+**端点**: `POST /api/vector/store/{session_id}`
+
+**功能**: 存储对话到向量库（只有经过用户评价的高质量对话才能存储）
+
+**请求参数**:
+- session_id: 会话ID（路径参数）
+
+**响应结果**:
+```typescript
+{
+  code: 200;
+  msg: "操作成功";
+  data: {
+    vector_id: string;             // 向量ID
+    quality_score: number;         // 质量评分
+    personalization_grade: string; // 个性化等级 (S/A/B/C)
+    collection_name: string;      // 集合名称
+    operation_info: {...}
+  };
+}
+```
+
+**其他向量相关端点**:
+
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/api/vector/stats` | GET | 获取向量库统计信息 |
+| `/api/vector/quality-monitor` | GET | 获取质量监控数据 |
+| `/api/vector/search` | POST | 基于向量检索相似对话 |
+| `/api/vector/batch-store` | POST | 批量存储对话 |
+
+---
+
+### 9. 用户记忆管理API
+
+**端点**: `/v1/user/memories`
+
+**功能**: 提供用户跨对话记忆的查询和清空接口
+
+#### 获取记忆列表
+
+**端点**: `GET /v1/user/memories?user_id={user_id}`
+
+**请求参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | 是 | 用户ID |
+
+**响应结果**:
+```typescript
+{
+  code: 200;
+  msg: "操作成功";
+  data: {
+    memories: Array<{
+      id: number;
+      content: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+    count: number;
+  };
+}
+```
+
+#### 清空记忆
+
+**端点**: `DELETE /v1/user/memories?user_id={user_id}`
+
+**请求参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | 是 | 用户ID |
+
+**响应结果**:
+```typescript
+{
+  code: 200;
+  msg: "已清空 5 条记忆";
+  data: {
+    deleted_count: number;
+  };
+}
+```
+
+---
+
 ## ⚠️ 错误处理
 
 所有API都遵循统一的错误响应格式：

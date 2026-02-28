@@ -331,6 +331,169 @@ def _generate_modifications(
 
 ---
 
+## 4. postural_assessor - 体态评估工具
+
+**功能说明**: 评估用户体态问题，推荐矫正动作并警告加重动作
+
+**代码路径**: `safety/postural_assessor.py`
+
+**优先级**: P1建议工具
+
+**Requirements**: 20.5, 20.6
+
+### 输入Schema
+
+```python
+class PosturalAssessorInput(BaseModel):
+    """体态评估工具输入Schema"""
+    user_id: str = Field(..., description="用户ID，用于获取体态问题")
+    postural_issues: Optional[List[str]] = Field(
+        None,
+        description="体态问题列表（中文），如果不提供则从用户档案读取"
+    )
+    include_exercises: bool = Field(
+        True,
+        description="是否包含矫正和加重动作列表"
+    )
+    max_exercises_per_issue: int = Field(
+        5,
+        description="每个体态问题返回的最大动作数量"
+    )
+```
+
+### 输出Schema
+
+```python
+class PosturalAssessorOutput(BaseModel):
+    """体态评估工具输出Schema"""
+    success: bool
+    tool_name: str
+    user_id: str
+    assessment_date: str
+
+    # 评估结果
+    total_issues: int
+    issues_assessed: List[PosturalIssueAssessment]
+
+    # 总体建议
+    overall_recommendations: List[str]
+    priority_issues: List[str]
+
+    # 元数据
+    execution_time_ms: float
+    data_source: str
+
+
+class PosturalIssueAssessment(BaseModel):
+    """单个体态问题评估"""
+    issue_name: str
+    issue_name_zh: str
+    category: str
+    description: str
+
+    # 相关肌肉
+    related_muscles: List[RelatedMuscle]
+
+    # 矫正动作
+    corrective_exercises: List[CorrectiveExercise]
+    corrective_count: int
+
+    # 加重动作
+    aggravating_exercises: List[AggravatingExercise]
+    aggravating_count: int
+
+    # 建议
+    recommendations: List[str]
+```
+
+### Neo4j关系查询
+
+```python
+async def _get_corrective_exercises(
+    self, issue_name: str, max_count: int
+) -> List[CorrectiveExercise]:
+    """获取矫正动作"""
+    query = """
+    MATCH (e:Exercise)-[:CORRECTS]->(p:PosturalIssue {name: $issue_name})
+    RETURN e.id as exercise_id,
+           e.name as name,
+           e.name_zh as name_zh,
+           e.category as category,
+           e.difficulty_zh as difficulty,
+           e.description as description
+    ORDER BY e.difficulty_zh
+    LIMIT $max_count
+    """
+    results = self.neo4j_client.execute_query(
+        query,
+        {"issue_name": issue_name, "max_count": max_count}
+    )
+    # ...
+
+
+async def _get_aggravating_exercises(
+    self, issue_name: str, max_count: int
+) -> List[AggravatingExercise]:
+    """获取加重动作"""
+    query = """
+    MATCH (e:Exercise)-[:AGGRAVATES]->(p:PosturalIssue {name: $issue_name})
+    RETURN e.id as exercise_id,
+           e.name as name,
+           e.name_zh as name_zh,
+           e.category as category,
+           e.safety_level as risk_level
+    LIMIT $max_count
+    """
+    # ...
+```
+
+### 功能特性
+
+1. **识别体态问题**: 从用户档案读取或直接输入体态问题
+2. **推荐矫正动作**: 基于CORRECTS关系查询矫正动作
+3. **警告加重动作**: 基于AGGRAVATES关系查询加重动作
+4. **提供相关肌肉信息**: 基于RELATED_TO关系展示相关肌肉
+5. **生成针对性建议**: 根据评估结果生成个性化建议
+
+### 使用示例
+
+```python
+# 体态评估
+assessor = PosturalAssessor(neo4j_client, qdrant_client, three_layer_engine)
+result = await assessor.execute({
+    "user_id": "user_123",
+    "postural_issues": ["圆肩", "骨盆前倾"],
+    "include_exercises": True,
+    "max_exercises_per_issue": 5
+})
+
+# 返回结果示例
+{
+    "success": True,
+    "tool_name": "postural_assessor",
+    "user_id": "user_123",
+    "total_issues": 2,
+    "issues_assessed": [
+        {
+            "issue_name_zh": "圆肩",
+            "category": "upper_body",
+            "corrective_exercises": [...],
+            "aggravating_exercises": [...],
+            "recommendations": [
+                "建议每星期进行2-3次矫正训练",
+                "加强上背部肌肉训练，拉伸胸部肌肉"
+            ]
+        }
+    ],
+    "overall_recommendations": [
+        "检测到2个体态问题，建议制定系统的矫正训练计划",
+        "矫正训练应循序渐进，避免急于求成"
+    ]
+}
+```
+
+---
+
 ## 使用示例
 
 ```python
