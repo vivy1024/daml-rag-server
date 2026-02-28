@@ -96,7 +96,7 @@ class UserMemoryService:
                 for r in points
             ]
         except Exception as e:
-            logger.warning(f"记忆检索失败 (user_id={user_id}): {e}")
+            logger.warning(f"记忆检索失败 (user_id={user_id}): {e}", exc_info=True)
             return []
 
     async def remember(self, user_id: int, content: str, category: str = "general") -> str:

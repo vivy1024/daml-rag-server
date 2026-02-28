@@ -19,6 +19,7 @@ LLM从预定义的DAG模板库中选择，避免直接调用MCP工具，防止�
 
 import logging
 import json
+import warnings
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
@@ -57,7 +58,8 @@ class DAGSelectionResult:
     alternative_templates: List[str] = field(default_factory=list)
     llm_raw_response: Optional[str] = None
     fallback_used: bool = False
-    matched_keywords: List[str] = field(default_factory=list)  # 新增：匹配到的关键词
+    matched_keywords: List[str] = field(default_factory=list)
+    method: str = "llm"  # "llm" 或 "fallback"
 
 
 class LLMDecisionEngine:
@@ -91,132 +93,75 @@ class LLMDecisionEngine:
         request: DAGSelectionRequest
     ) -> DAGSelectionResult:
         """
-        智能选择最合适的DAG模板（优化版：关键词优先，不确定时才用LLM）
-        
-        优化策略：
-        1. 先使用关键词匹配（快速，<10ms）
-        2. 如果置信度高（>=0.8），直接使用关键词结果
-        3. 如果置信度低（<0.6），调用LLM确认
-        4. 中等置信度（0.6-0.8），使用关键词结果
-        
-        预期效果：
-        - 90%的查询：关键词匹配即可（<10ms）
-        - 10%的查询：需要LLM确认（5秒）
-        - 平均耗时：从5.2秒降到0.5秒（节省90%）
-        
+        智能选择最合适的DAG模板（v2: 统一LLM分类，不再使用关键词匹配）
+
+        所有查询统一走LLM分类，避免关键词匹配导致的复合意图误判。
+        LLM分类失败时 fallback 到 general_qa 模板。
+
         Args:
             request: DAG选择请求
-            
+
         Returns:
             DAGSelectionResult: 选择结果
         """
         self.selection_stats["total_selections"] += 1
-        
+
         try:
             logger.info(f"🤔 开始DAG模板选择: 用户查询='{request.user_query[:50]}...'")
-            
-            # ✅ 步骤1: 先尝试关键词匹配（快速路径）
-            keyword_result = self._keyword_matching(request)
-            
-            logger.info(
-                f"📊 关键词匹配结果: {keyword_result.selected_template_id} "
-                f"(置信度: {keyword_result.confidence:.2f})"
+
+            # 统一走LLM分类
+            prompt = self._build_selection_prompt(request)
+            llm_response = await self._call_llm(prompt, request)
+            selection_result = self._parse_llm_response(
+                llm_response,
+                request.available_templates
             )
-            if keyword_result.matched_keywords:
-                logger.info(f"   匹配关键词: {', '.join(keyword_result.matched_keywords)}")
-            
-            # ✅ 步骤2: 根据置信度决定是否需要LLM确认
-            if keyword_result.confidence >= 0.8:
-                # 高置信度：直接使用关键词结果（快速路径）
-                logger.info(f"✅ 关键词匹配置信度高，直接使用（耗时: <10ms）")
-                
-                # 更新统计
-                self.selection_stats["successful_selections"] += 1
-                template_id = keyword_result.selected_template_id
-                self.selection_stats["by_template"][template_id] = \
-                    self.selection_stats["by_template"].get(template_id, 0) + 1
-                
-                # 更新平均置信度
-                total = self.selection_stats["successful_selections"]
-                avg = self.selection_stats["average_confidence"]
-                self.selection_stats["average_confidence"] = \
-                    (avg * (total - 1) + keyword_result.confidence) / total
-                
-                return keyword_result
-            
-            elif keyword_result.confidence < 0.6:
-                # 低置信度：调用LLM确认（慢速路径）
-                logger.warning(
-                    f"⚠️ 关键词匹配置信度低（{keyword_result.confidence:.2f}），"
-                    f"使用LLM确认"
+
+            # 验证选择结果
+            if not self._validate_selection(selection_result, request.available_templates):
+                logger.warning("⚠️ LLM选择验证失败，fallback到quick_consultation")
+                return DAGSelectionResult(
+                    selected_template_id="quick_consultation",
+                    selection_reason="LLM分类验证失败，使用通用问答模板",
+                    expected_tools=[],
+                    confidence=0.5,
+                    confidence_level=SelectionConfidence.MEDIUM,
+                    fallback_used=True,
+                    method="fallback",
                 )
-                
-                # 步骤3: 构建LLM选择提示词
-                prompt = self._build_selection_prompt(request)
-                
-                # 步骤4: 调用LLM
-                llm_response = await self._call_llm(prompt, request)
-                
-                # 步骤5: 解析LLM响应
-                selection_result = self._parse_llm_response(
-                    llm_response,
-                    request.available_templates
-                )
-                
-                # 步骤6: 验证选择结果
-                if not self._validate_selection(selection_result, request.available_templates):
-                    logger.warning("⚠️ LLM选择验证失败，使用关键词结果")
-                    return keyword_result
-                
-                # 更新统计
-                self.selection_stats["successful_selections"] += 1
-                template_id = selection_result.selected_template_id
-                self.selection_stats["by_template"][template_id] = \
-                    self.selection_stats["by_template"].get(template_id, 0) + 1
-                
-                # 更新平均置信度
-                total = self.selection_stats["successful_selections"]
-                avg = self.selection_stats["average_confidence"]
-                self.selection_stats["average_confidence"] = \
-                    (avg * (total - 1) + selection_result.confidence) / total
-                
-                # 增强日志：记录完整决策信息
-                logger.info(
-                    f"✅ LLM确认成功: {selection_result.selected_template_id} "
-                    f"(置信度: {selection_result.confidence:.2f})"
-                )
-                logger.info(f"   选择理由: {selection_result.selection_reason}")
-                if selection_result.matched_keywords:
-                    logger.info(f"   匹配关键词: {', '.join(selection_result.matched_keywords)}")
-                if selection_result.alternative_templates:
-                    logger.info(f"   备选模板: {', '.join(selection_result.alternative_templates)}")
-                
-                return selection_result
-            
-            else:
-                # 中等置信度（0.6-0.8）：使用关键词结果（快速路径）
-                logger.info(
-                    f"✅ 关键词匹配置信度中等（{keyword_result.confidence:.2f}），"
-                    f"直接使用（耗时: <10ms）"
-                )
-                
-                # 更新统计
-                self.selection_stats["successful_selections"] += 1
-                template_id = keyword_result.selected_template_id
-                self.selection_stats["by_template"][template_id] = \
-                    self.selection_stats["by_template"].get(template_id, 0) + 1
-                
-                # 更新平均置信度
-                total = self.selection_stats["successful_selections"]
-                avg = self.selection_stats["average_confidence"]
-                self.selection_stats["average_confidence"] = \
-                    (avg * (total - 1) + keyword_result.confidence) / total
-                
-                return keyword_result
-            
+
+            # 更新统计
+            self.selection_stats["successful_selections"] += 1
+            template_id = selection_result.selected_template_id
+            self.selection_stats["by_template"][template_id] = \
+                self.selection_stats["by_template"].get(template_id, 0) + 1
+
+            total = self.selection_stats["successful_selections"]
+            avg = self.selection_stats["average_confidence"]
+            self.selection_stats["average_confidence"] = \
+                (avg * (total - 1) + selection_result.confidence) / total
+
+            logger.info(
+                f"✅ LLM分类完成: {selection_result.selected_template_id} "
+                f"(置信度: {selection_result.confidence:.2f})"
+            )
+            logger.info(f"   选择理由: {selection_result.selection_reason}")
+            if selection_result.alternative_templates:
+                logger.info(f"   备选模板: {', '.join(selection_result.alternative_templates)}")
+
+            return selection_result
+
         except Exception as e:
             logger.error(f"❌ DAG模板选择失败: {e}", exc_info=True)
-            return self._keyword_matching(request)
+            return DAGSelectionResult(
+                selected_template_id="quick_consultation",
+                selection_reason=f"LLM分类异常({str(e)[:50]})，使用通用问答模板",
+                expected_tools=[],
+                confidence=0.5,
+                confidence_level=SelectionConfidence.MEDIUM,
+                fallback_used=True,
+                method="fallback",
+            )
     
     def _build_selection_prompt(self, request: DAGSelectionRequest) -> str:
         """构建LLM选择提示词"""
@@ -257,20 +202,23 @@ class LLMDecisionEngine:
 
 ## 你的任务
 1. **分析用户查询意图**：理解用户的核心需求和具体问题
-2. **选择最合适的工作流程**：从上述9个工作流程中选择最匹配的一个
+2. **选择最合适的工作流程**：从上述工作流程中选择最匹配的一个
 3. **说明选择理由**：解释为什么这个工作流程最适合
 4. **评估置信度**：给出你对这个选择的置信度（0.0-1.0）
 
 ## 详细选择指南（请仔细阅读每个模板的定义和示例）
 
 ### 1. 问候闲聊 (greeting)
-**定义**: 用户只是打招呼、问候或简单闲聊，不涉及具体的健身问题
-**关键词**: 你好、早上好、晚上好、hi、hello、嗨、在吗
+**定义**: 用户**仅仅**是打招呼、问候或简单闲聊，**不涉及任何具体的健身问题**
 **示例查询**:
-  - "你好"
-  - "早上好"
-  - "在吗"
-**置信度要求**: 必须是明确的问候语才选择此模板（置信度>0.9）
+  - "你好" ✅
+  - "早上好" ✅
+  - "在吗" ✅
+**反例（不要选greeting）**:
+  - "你好，帮我推荐一个胸肌训练动作" ❌ → 应选 exercise_optimization
+  - "嗨，我想制定训练计划" ❌ → 应选 complete_training_plan
+  - "你好，我膝盖疼能练什么" ❌ → 应选 safety_assessment
+**重要**: 如果用户在问候之后紧跟了具体的健身问题，必须根据问题内容选择对应模板，而非greeting
 
 ### 2. 完整训练计划 (complete_training_plan) ⭐⭐⭐ 高权重
 **定义**: 用户需要系统的、详细的训练方案，包含动作选择、训练量计算、周期化安排
@@ -345,10 +293,59 @@ class LLMDecisionEngine:
   - "伤后康复训练计划"
 **置信度要求**: 明确提到康复/伤后时置信度应>0.85
 
-## 关键词权重规则（重要！）
-1. **高权重关键词**（权重×2）: 完整、详细、系统、全面、4周、8周、12周、X周
-2. **中权重关键词**（权重×1.5）: 制定、设计、帮我、给我、想要
-3. **模板特定关键词**（权重×1）: 各模板定义中的关键词
+### 10. 体态矫正 (posture_correction)
+**定义**: 用户有体态问题（圆肩驼背、骨盆前倾等），需要矫正训练方案
+**关键词**: 体态、矫正、圆肩、驼背、骨盆前倾、姿势、改善体态
+**示例查询**:
+  - "我有圆肩驼背怎么矫正？"
+  - "骨盆前倾该做什么训练？"
+  - "帮我评估一下体态问题"
+**置信度要求**: 明确提到体态/矫正时置信度应>0.80
+
+### 11. 训练计划调整 (plan_adjustment)
+**定义**: 用户已有训练计划，需要根据反馈或进展进行调整
+**关键词**: 调整、修改、优化、换动作、调整训练量
+**示例查询**:
+  - "我觉得现在的计划太轻了，帮我调整一下"
+  - "这个动作做不了，帮我换一个"
+  - "训练量需要调整"
+**置信度要求**: 明确提到调整/修改现有计划时置信度应>0.75
+
+### 12. 减脂专项 (fat_loss_program)
+**定义**: 用户以减脂/减肥为主要目标，需要训练+营养的综合减脂方案
+**关键词**: 减脂、减肥、降体脂、瘦身、燃脂
+**示例查询**:
+  - "我想减脂，帮我制定方案"
+  - "怎么减肥最有效？"
+  - "帮我设计一个燃脂训练计划"
+**置信度要求**: 明确提到减脂/减肥时置信度应>0.85
+**重要**: 如果用户只是泛泛提到"减脂"作为目标之一，但主要需求是训练计划，应选 complete_training_plan
+
+### 13. 力量专项 (strength_program)
+**定义**: 用户以增强力量为主要目标，需要力量训练专项计划
+**关键词**: 力量、大重量、最大力量、爆发力、力量提升
+**示例查询**:
+  - "我想提高深蹲力量"
+  - "帮我设计一个力量训练计划"
+  - "怎么提高卧推重量？"
+**置信度要求**: 明确以力量为核心目标时置信度应>0.85
+**重要**: 如果用户要的是"完整训练计划"且力量只是目标之一，应选 complete_training_plan
+
+## 意图理解规则（重要！）
+1. **语义优先**: 理解用户的真实意图，不要被开头的问候语干扰
+2. **复合意图**: 如果用户同时包含问候+具体问题，以具体问题为准
+3. **上下文感知**: 结合用户档案（训练水平、目标、伤病史）判断最合适的模板
+4. **具体优先**: 越具体的需求越应该匹配专业模板，而非通用模板
+
+## 复合意图示例
+- "你好，帮我推荐胸肌训练动作" → exercise_optimization（不是greeting）
+- "嗨，我想制定一个4周增肌计划" → complete_training_plan（不是greeting）
+- "你好，我有腰椎问题能做深蹲吗" → safety_assessment（不是greeting）
+- "早上好，分析一下我最近的训练数据" → progress_analysis（不是greeting）
+- "你好，我想减肥" → fat_loss_program（不是greeting）
+- "帮我调整一下现在的训练计划" → plan_adjustment（不是complete_training_plan）
+- "我有圆肩驼背，怎么改善" → posture_correction（不是safety_assessment）
+- "我想提高深蹲的最大力量" → strength_program（不是complete_training_plan）
 
 ## 决策流程
 1. 首先检查是否包含高权重关键词
@@ -357,11 +354,15 @@ class LLMDecisionEngine:
 4. 如果只提到营养/饮食，选择 nutrition_planning
 5. 如果只提到安全/禁忌，选择 safety_assessment
 6. 如果只提到动作推荐/替代，选择 exercise_optimization
-7. 只有在查询非常简单且不涉及具体计划时，才选择 quick_consultation
+7. 如果明确以减脂/减肥为目标，选择 fat_loss_program
+8. 如果明确以力量提升为核心目标，选择 strength_program
+9. 如果提到体态问题（圆肩/驼背/骨盆前倾），选择 posture_correction
+10. 如果要调整/修改现有计划，选择 plan_adjustment
+11. 只有在查询非常简单且不涉及具体计划时，才选择 quick_consultation
 
 ## 输出格式（必须是有效的JSON）
 {{
-  "selected_template_id": "模板ID（必须是上述9个之一）",
+  "selected_template_id": "模板ID（必须是上述模板之一）",
   "selection_reason": "选择理由（简洁明确，50字以内，说明匹配了哪些关键词）",
   "expected_tools": ["预期使用的工具列表"],
   "confidence": 0.95,
@@ -370,7 +371,7 @@ class LLMDecisionEngine:
 }}
 
 ## 重要约束
-- ❌ 绝对不要编造模板ID，必须从上述9个中选择
+- ❌ 绝对不要编造模板ID，必须从上述模板中选择
 - ✅ 选择理由必须基于用户查询和用户档案
 - ✅ 置信度必须真实反映你的判断
 - ✅ 必须列出匹配到的关键词
@@ -527,17 +528,16 @@ class LLMDecisionEngine:
     
     def _keyword_matching(self, request: DAGSelectionRequest) -> DAGSelectionResult:
         """
-        关键词匹配策略（快速路径）
-        
-        基于规则的模板选择，使用关键词匹配和权重计算。
-        这是主要的选择方法，90%的查询都会使用这个方法。
-        
-        Args:
-            request: DAG选择请求
-            
-        Returns:
-            DAGSelectionResult: 选择结果（包含置信度）
+        @deprecated 关键词匹配策略（快速路径）— 已废弃
+
+        v2 起所有查询统一走 LLM 分类，此方法仅保留供 _fallback_selection() 降级使用。
+        后续版本将移除。
         """
+        warnings.warn(
+            "_keyword_matching() 已废弃，所有查询应走 LLM 分类",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         query_lower = request.user_query.lower()
         
         # 定义关键词映射（按优先级排序）
