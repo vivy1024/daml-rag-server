@@ -257,7 +257,7 @@ class AppContainer:
             primary_backend="anthropic",
             fallback_backends=["deepseek", "template"],
             max_retries=3,
-            timeout=30,
+            timeout=int(os.getenv("LLM_TIMEOUT", "60")),
             enable_health_check=True,
         )
         logger.info("✅ LLMFallbackManager 初始化完成 (via Container)")

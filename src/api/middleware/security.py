@@ -312,6 +312,8 @@ class AuthenticationManager:
         '/openapi.json',
         '/health',
         '/api/health',
+        '/favicon.ico',
+        '/robots.txt',
         '/'
     ]
     

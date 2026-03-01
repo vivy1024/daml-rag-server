@@ -5,6 +5,15 @@
 
 ---
 
+## #48 (fix) 生产日志问题修复 R2 Batch 2 — 2026-03-01
+
+对应产品版本：v1.6.6
+
+- `security.py`: `AuthenticationManager.PUBLIC_PATHS` 补充 `/favicon.ico` 和 `/robots.txt`，修复 SecurityMiddleware 拦截静态资源导致 401
+- `container.py`: `LLMFallbackManager` timeout 从硬编码 30s 改为读取 `LLM_TIMEOUT` 环境变量（默认 60s），修复免费模型响应慢时过早超时
+
+---
+
 ## #47 (fix) 生产日志问题修复 R2 Batch 1 — 2026-03-01
 
 对应产品版本：v1.6.6
