@@ -5,6 +5,24 @@
 
 ---
 
+## #50 (refactor) Phase 1 代码质量治理 — nodes拆分 + stream_executor Mixin + except收窄确认 — 2026-03-05
+
+对应产品版本：v1.6.8
+
+- **nodes.py 拆分** (commit 457cc95): 1641行 → 12个独立步骤文件 + `__init__.py` re-export
+  - `workflow/nodes/` 子包：step1~step11 + constants.py
+  - 所有相对 import 从 `from .state import` 改为 `from ..state import`
+  - 删除旧 `workflow/nodes.py`，所有外部引用兼容
+- **stream_executor.py Mixin 拆分** (commit 70c9056): 1518行 → 170行主类 + 3个 Mixin
+  - `stream_executor_pipeline.py` (PipelineMixin): execute_stream + 步骤1-9 + 步骤11
+  - `stream_executor_llm.py` (LLMStreamMixin): 步骤10 流式LLM生成（316行）
+  - `stream_executor_permission.py` (PermissionMixin): 权限检查 + 三轨评分 + 用量计数 + 积分上报
+  - MRO: StreamWorkflowExecutor → PipelineMixin → LLMStreamMixin → PermissionMixin → WorkflowExecutor
+- **except 收窄**: 确认 clients/ 和 services/ 目录已在 #4 中完成收窄，无 except Exception 残留
+- 验证：403 单元测试通过，无回归
+
+---
+
 ## #49 (security) 移除 pickle 反序列化 — 消除 RCE 向量 — 2026-03-05
 
 对应产品版本：v1.6.8
