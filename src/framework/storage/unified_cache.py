@@ -22,7 +22,7 @@ import time
 from typing import Any, Optional, Dict
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
-import pickle
+
 
 logger = logging.getLogger(__name__)
 
@@ -308,12 +308,15 @@ class UnifiedCache:
                 # 先尝试JSON
                 return json.loads(raw_value)
             except (json.JSONDecodeError, TypeError):
-                # 如果JSON失败，尝试pickle
-                try:
-                    return pickle.loads(raw_value)
-                except Exception:
-                    # 如果都失败，返回原始字符串
-                    return raw_value.decode('utf-8') if isinstance(raw_value, bytes) else raw_value
+                # pickle fallback 已移除（安全风险：RCE向量）
+                # 返回原始字符串
+                if isinstance(raw_value, bytes):
+                    try:
+                        return raw_value.decode('utf-8')
+                    except UnicodeDecodeError:
+                        logger.warning(f"Non-JSON, non-UTF8 cache value for key, returning None")
+                        return None
+                return raw_value
                     
         except Exception as e:
             logger.error(f"Error getting from Redis: {e}")
@@ -329,15 +332,11 @@ class UnifiedCache:
             
             # 序列化值
             try:
-                # 先尝试JSON序列化
-                serialized_value = json.dumps(value, ensure_ascii=False)
-            except (TypeError, ValueError):
-                # 如果JSON失败，使用pickle
-                try:
-                    serialized_value = pickle.dumps(value)
-                except Exception as e:
-                    logger.error(f"Failed to serialize value: {e}")
-                    return False
+                # JSON序列化（default=str 兑底不可序列化类型如 datetime）
+                serialized_value = json.dumps(value, ensure_ascii=False, default=str)
+            except (TypeError, ValueError) as e:
+                logger.error(f"Failed to JSON-serialize value: {e}")
+                return False
             
             # 存储到Redis（使用setex设置TTL）
             await self.redis.setex(key, ttl, serialized_value)

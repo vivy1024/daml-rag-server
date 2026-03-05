@@ -1,11 +1,11 @@
 {
-  "test_time": "2026-02-28T22:59:37.126896",
+  "test_time": "2026-03-01T06:27:01.165310",
   "scenarios": [
     {
       "name": "训练计划",
       "status": "通过",
       "data": {
-        "elapsed_time": 22.816173315048218,
+        "elapsed_time": 5.035676002502441,
         "tools_called": [
           "user_profile_loader",
           "session_manager",
@@ -19,24 +19,21 @@
           "llm_generator",
           "interaction_logger"
         ],
-        "response_length": 793
+        "response_length": 348
       }
     },
     {
       "name": "营养规划",
       "status": "通过",
       "data": {
-        "elapsed_time": 19.305208206176758,
-        "response_length": 617
+        "elapsed_time": 4.607348680496216,
+        "response_length": 340
       }
     },
     {
       "name": "安全检查",
-      "status": "通过",
-      "data": {
-        "elapsed_time": 8.766832113265991,
-        "response_length": 343
-      }
+      "status": "失败",
+      "error": "安全内容不足: ['替代']\nassert 1 >= 2\n +  where 1 = len(['替代'])"
     }
   ]
 }

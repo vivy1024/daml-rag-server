@@ -5,6 +5,17 @@
 
 ---
 
+## #49 (security) 移除 pickle 反序列化 — 消除 RCE 向量 — 2026-03-05
+
+对应产品版本：v1.6.8
+
+- unified_cache.py: 移除 `import pickle` 及所有 pickle 相关代码
+  - `_get_from_redis()`: JSON 反序列化失败时返回原始字符串或 None（移除 pickle.loads fallback）
+  - `_set_to_redis()`: JSON 序列化添加 `default=str` 兜底（移除 pickle.dumps fallback）
+  - 消除 Redis 被攻破时的 RCE（远程代码执行）风险
+
+---
+
 ## #48 (fix) 生产日志问题修复 R2 Batch 2 — 2026-03-01
 
 对应产品版本：v1.6.6
