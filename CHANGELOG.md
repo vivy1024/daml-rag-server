@@ -5,6 +5,21 @@
 
 ---
 
+## #52 (test) Phase 3 测试加强 — adapter集成测试 + 检索测试 + Chaos测试 — 2026-03-06
+
+- **fitness_adapter 集成测试 (REQ-8)**: `tests/integration/test_fitness_adapter.py` — 40 用例
+  - 基础 API (7) + Layer3 规则 (6) + DAG 模板 (8) + MCP 工具 (7) + 领域数据 (7) + 初始化 (3) + 集成 (2)
+- **三层检索引擎单元测试 (REQ-9)**: `tests/unit/framework/test_three_layer_engine.py` — 24 用例
+  - Layer1 向量检索 (3) + Layer2 图检索 (3) + Layer3 规则 (7) + 结果融合 (2) + 降级 (2) + 空查询 (1) + 统计 (1) + 关键词 (2)
+  - 修复 aiohttp mock: `async with ClientSession` 双层上下文管理器正确 mock
+  - 修复 `test_match_fitness_level_advanced_rejects_beginner` 断言（advanced 用户不接受 beginner 难度）
+- **Chaos Engineering 测试 (REQ-10)**: `tests/integration/test_chaos_engineering.py` — 8 用例
+  - Redis 断连 (2) + Neo4j 超时 (2) + LLM 全故障 (2) + Qdrant 不可用 (2)
+  - 修复 aiohttp mock 与三层检索测试一致
+- 验证：427 单元测试通过（1 failed 为已知预存问题 test_safety_check_scenario）
+
+---
+
 ## #51 (refactor) Phase 2 架构优化 — env集中化 + 步骤条件化 — 2026-03-06
 
 - **环境变量集中化 (REQ-6)**: 100+ 处 `os.getenv` → `get_config()` 迁移
