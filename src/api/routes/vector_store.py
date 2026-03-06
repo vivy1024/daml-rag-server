@@ -50,11 +50,12 @@ def _init_services():
     if _qdrant_client is None:
         try:
             # 初始化Qdrant客户端（优化配置）
-            import os
+            from src.framework.config.app_config import get_config
             from src.framework.clients.qdrant_client import create_qdrant_client
+            qd_cfg = get_config().database.qdrant
             _qdrant_client = create_qdrant_client(
-                host=os.getenv('QDRANT_HOST', 'qdrant'),
-                port=int(os.getenv('QDRANT_PORT', '6333')),
+                host=qd_cfg.host,
+                port=qd_cfg.port,
                 timeout=30.0  # 增加超时时间到30秒
                 # prefer_grpc 从环境变量 QDRANT_PREFER_GRPC 读取
             )

@@ -5,6 +5,23 @@
 
 ---
 
+## #51 (refactor) Phase 2 架构优化 — env集中化 + 步骤条件化 — 2026-03-06
+
+- **环境变量集中化 (REQ-6)**: 100+ 处 `os.getenv` → `get_config()` 迁移
+  - api/ 目录: 61 处 (main.py, logging_config, auth_middleware, security, routes/*)
+  - framework/ 目录: 33 处 (container, neo4j_client, three_layer/engine, cypher_templates, kg_full 等)
+  - applications/ 目录: 6 处 (step4/step5, stream_executor_pipeline, credit_reporter, user_memory)
+  - 保留约 30 处（动态 API KEY 池化、ENCRYPTION_KEY 等无法 config 化的场景）
+- **三层检索引擎拆分 (REQ-5)**: 确认已在早期迭代完成
+  - engine.py (278行) + layer1_vector (170) + layer2_graph (438) + layer3_rules (346) + result_merger (100) + fallback (85) + neo4j_manager (98) + models (33)
+  - 主文件 true_three_layer_engine.py 缩减为 39 行别名
+- **步骤条件化 (REQ-7)**: DUAL_MODEL_ENABLED=false 时管线跳过步骤 4/5
+  - 新增 `_is_dual_model_enabled()` + `_execute_step_3_only()` 方法
+  - 步骤 4/5 不再被调用（之前是调用后内部立即返回默认值）
+- 验证：403 单元测试通过
+
+---
+
 ## #50 (refactor) Phase 1 代码质量治理 — nodes拆分 + stream_executor Mixin + except收窄确认 — 2026-03-05
 
 对应产品版本：v1.6.8

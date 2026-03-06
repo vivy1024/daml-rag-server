@@ -5,7 +5,6 @@
 """
 import asyncio
 import logging
-import os
 from typing import List, Dict, Optional, Tuple
 from .bm25_engine import get_bm25_engine
 from .reranker import FitnessReranker
@@ -114,7 +113,9 @@ class HybridSearchEngine:
         """向量化文本（懒加载 GTE-Large-zh）"""
         if self._encoder is None:
             from sentence_transformers import SentenceTransformer
-            model_name = os.getenv("EMBEDDING_MODEL", "thenlper/gte-large-zh")
+            from ..config.app_config import get_config
+            config = get_config()
+            model_name = config.framework.embedding_model
             self._encoder = SentenceTransformer(model_name)
             logger.info(f"HybridSearchEngine 加载向量模型: {model_name}")
         return self._encoder.encode(text).tolist()

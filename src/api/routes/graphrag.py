@@ -15,12 +15,14 @@ GET  /api/graphrag/health - GraphRAG健康检查
 """
 
 import logging
-import os
+import os  # 保留：os.times() 用于 timestamp
 import asyncio
 import time
 import json
 import hashlib
 from fastapi import APIRouter, HTTPException
+
+from src.framework.config.app_config import get_config
 from typing import Dict, Any, Optional
 
 # 导入API模型
@@ -132,11 +134,12 @@ def _get_graphrag_tool():
                 else:
                     # 创建新的 TrueThreeLayerEngine
                     domain_adapter = initializer.components.get("domain_adapter")
+                    cfg = get_config()
                     three_layer_engine = TrueThreeLayerEngine(
-                        graphrag_api_port=os.getenv('API_PORT', '8001'),
-                        neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
-                        neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
-                        neo4j_password=os.getenv('NEO4J_PASSWORD', ''),
+                        graphrag_api_port=str(cfg.api.port),
+                        neo4j_uri=cfg.database.neo4j.uri,
+                        neo4j_user=cfg.database.neo4j.user,
+                        neo4j_password=cfg.database.neo4j.password,
                         domain_adapter=domain_adapter,
                     )
                     logger.info("  → 创建新的 TrueThreeLayerEngine")
@@ -148,13 +151,14 @@ def _get_graphrag_tool():
                 logger.info("✅ GraphRAG查询工具初始化完成（使用框架kg_full + TrueThreeLayerEngine）")
             else:
                 from ...framework.retrieval.graph.kg_full import KnowledgeGraphFull
+                cfg = get_config()
                 kg_full = KnowledgeGraphFull(
-                    neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
-                    neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
-                    neo4j_password=os.getenv('NEO4J_PASSWORD', ''),
-                    qdrant_host=os.getenv('QDRANT_HOST', 'qdrant'),
-                    qdrant_port=int(os.getenv('QDRANT_PORT', '6333')),
-                    qdrant_collection=os.getenv('QDRANT_COLLECTION', 'fitness_exercises_v2'),
+                    neo4j_uri=cfg.database.neo4j.uri,
+                    neo4j_user=cfg.database.neo4j.user,
+                    neo4j_password=cfg.database.neo4j.password,
+                    qdrant_host=cfg.database.qdrant.host,
+                    qdrant_port=cfg.database.qdrant.port,
+                    qdrant_collection=cfg.database.qdrant.collection,
                     embedding_model='thenlper/gte-large-zh'
                 )
                 
@@ -166,10 +170,10 @@ def _get_graphrag_tool():
                 except Exception:
                     pass
                 three_layer_engine = TrueThreeLayerEngine(
-                    graphrag_api_port=os.getenv('API_PORT', '8001'),
-                    neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
-                    neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
-                    neo4j_password=os.getenv('NEO4J_PASSWORD', ''),
+                    graphrag_api_port=str(cfg.api.port),
+                    neo4j_uri=cfg.database.neo4j.uri,
+                    neo4j_user=cfg.database.neo4j.user,
+                    neo4j_password=cfg.database.neo4j.password,
                     domain_adapter=domain_adapter,
                 )
                 
@@ -376,10 +380,11 @@ async def graphrag_health():
             "anti_hallucination": True
         }
 
+        cfg = get_config()
         db_connections = {
-            "neo4j_uri": os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
-            "qdrant_host": os.getenv('QDRANT_HOST', 'qdrant'),
-            "qdrant_port": int(os.getenv('QDRANT_PORT', '6333'))
+            "neo4j_uri": cfg.database.neo4j.uri,
+            "qdrant_host": cfg.database.qdrant.host,
+            "qdrant_port": cfg.database.qdrant.port
         }
 
         health_data = {
@@ -459,9 +464,10 @@ async def _get_knowledge_graph_stats() -> Dict[str, Any]:
     try:
         from neo4j import GraphDatabase
 
-        neo4j_uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
-        neo4j_user = os.getenv('NEO4J_USER', 'neo4j')
-        neo4j_password = os.getenv('NEO4J_PASSWORD', '')
+        cfg = get_config()
+        neo4j_uri = cfg.database.neo4j.uri
+        neo4j_user = cfg.database.neo4j.user
+        neo4j_password = cfg.database.neo4j.password
 
         logger.info(f"Connecting to Neo4j at {neo4j_uri}")
 

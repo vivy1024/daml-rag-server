@@ -17,6 +17,7 @@ import uuid
 import asyncio
 from typing import Dict, Any, Optional, AsyncGenerator
 
+from src.framework.config.app_config import get_config
 from .state import (
     WorkflowState,
     StateUpdate,
@@ -175,23 +176,36 @@ class PipelineMixin:
 
             state = await self._execute_steps_1_2(state)
 
-            # 步骤3-4：并行执行
-            yield {
-                "type": "step",
-                "step": 3,
-                "message": "检查会员权限和分析查询复杂度..."
-            }
+            # 步骤3-4-5：根据 DUAL_MODEL_ENABLED 条件化执行
+            dual_model_enabled = self._is_dual_model_enabled()
 
-            state = await self._execute_steps_3_4(state)
+            if dual_model_enabled:
+                yield {
+                    "type": "step",
+                    "step": 3,
+                    "message": "检查会员权限和分析查询复杂度..."
+                }
+                state = await self._execute_steps_3_4(state)
 
-            # 步骤5：智能模型选择
-            yield {
-                "type": "step",
-                "step": 5,
-                "message": "选择AI模型..."
-            }
-
-            state = await self._execute_step_5(state)
+                yield {
+                    "type": "step",
+                    "step": 5,
+                    "message": "选择AI模型..."
+                }
+                state = await self._execute_step_5(state)
+            else:
+                yield {
+                    "type": "step",
+                    "step": 3,
+                    "message": "检查会员权限..."
+                }
+                state = await self._execute_step_3_only(state)
+                state["complexity_level"] = "complex"
+                state["_complexity_similarity"] = 1.0
+                state["_complexity_reason"] = "双模型选择已禁用"
+                state["selected_model"] = "teacher"
+                request_id = state.get("request_id", "unknown")
+                logger.info(f"⏭️ [{request_id}] 步骤4-5跳过: DUAL_MODEL_ENABLED=false")
 
             # 步骤6：Few-Shot检索
             yield {
@@ -524,6 +538,31 @@ class PipelineMixin:
                 state = result.merge_into(state)
             elif isinstance(result, Exception):
                 state["errors"] = state.get("errors", []) + [str(result)]
+
+        return state
+
+    def _is_dual_model_enabled(self) -> bool:
+        """检查是否启用双模型选择"""
+        return get_config().service.dual_model_enabled
+
+    async def _execute_step_3_only(self, state: WorkflowState) -> WorkflowState:
+        """仅执行步骤3（会员检查），跳过步骤4"""
+        from .nodes import node_check_membership
+
+        backend_client = self._get_backend_client()
+        cache_manager = self._get_cache_manager()
+        membership_cache = self._get_membership_cache()
+
+        result = await node_check_membership(
+            state,
+            backend_client=backend_client,
+            cache_manager=cache_manager,
+            membership_cache=membership_cache
+        )
+        if isinstance(result, StateUpdate):
+            state = result.merge_into(state)
+        elif isinstance(result, Exception):
+            state["errors"] = state.get("errors", []) + [str(result)]
 
         return state
 

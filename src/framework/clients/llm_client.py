@@ -11,97 +11,50 @@ LLM调用模块
 更新: 2026-01-06 - 添加API池轮询，禁用Ollama
 """
 
-import os
 import logging
 import json
 import asyncio
 from typing import List, Dict, Any, Optional, AsyncIterator
 import httpx
 
+from ..config.app_config import get_config
+
 logger = logging.getLogger(__name__)
 
 
+def _cfg():
+    """获取全局配置"""
+    return get_config()
+
+
 class LLMConfig:
-    """LLM配置 - 从环境变量读取"""
-
-    # DeepSeek (teacher模型)
-    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-    DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
-    DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
-
-    # Ollama (student模型) - 已禁用
-    OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:8b")
-    OLLAMA_ENABLED = os.getenv("OLLAMA_ENABLED", "false").lower() == "true"  # 默认禁用
-
-    # Moonshot (备用)
-    MOONSHOT_API_KEY = os.getenv("MOONSHOT_API_KEY", "")
-    MOONSHOT_BASE_URL = os.getenv("MOONSHOT_BASE_URL", "https://api.moonshot.cn/v1")
-    MOONSHOT_MODEL = os.getenv("MOONSHOT_MODEL", "moonshot-v1-32k")
-
-    # 通义千问 (备用)
-    QWEN_API_KEY = os.getenv("QWEN_API_KEY", "")
-    QWEN_BASE_URL = os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-    QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-plus")
-    QWEN_ENABLED = os.getenv("QWEN_ENABLED", "false").lower() == "true"
-
-    # SiliconFlow (免费模型聚合平台)
-    SILICONFLOW_API_KEY = os.getenv("SILICONFLOW_API_KEY", "")
-    SILICONFLOW_BASE_URL = os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1")
-    SILICONFLOW_MODEL = os.getenv("SILICONFLOW_MODEL", "Qwen/Qwen3-8B")
-    SILICONFLOW_ENABLED = os.getenv("SILICONFLOW_ENABLED", "false").lower() == "true"
-
-    # 智谱GLM (免费模型可用)
-    GLM_API_KEY = os.getenv("GLM_API_KEY", "")
-    GLM_BASE_URL = os.getenv("GLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
-    GLM_MODEL = os.getenv("GLM_MODEL", "glm-4-flash")
-    GLM_ENABLED = os.getenv("GLM_ENABLED", "false").lower() == "true"
-
-    # Anthropic Claude (通过Kiro RS反向代理)
-    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-    ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://kirors.yuzhen-fitness.cn")
-    ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
-    ANTHROPIC_ENABLED = os.getenv("ANTHROPIC_ENABLED", "true").lower() == "true"
-
-    # 通用配置
-    TIMEOUT = float(os.getenv("LLM_TIMEOUT", "120.0"))  # 增加到120秒，适应复杂查询
-    MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2000"))
-    TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
-    
-    # 重试配置
-    MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "2"))  # 最大重试次数
-    RETRY_DELAY = float(os.getenv("LLM_RETRY_DELAY", "2.0"))  # 重试延迟（秒）
-    
-    # API池配置
-    USE_API_POOL = os.getenv("USE_API_POOL", "true").lower() == "true"  # 默认启用API池
-    
-    # 双模型选择配置
-    DUAL_MODEL_ENABLED = os.getenv("DUAL_MODEL_ENABLED", "false").lower() == "true"  # 默认禁用
+    """LLM配置 - 从 app_config 读取（兼容旧代码的验证接口）"""
 
     @classmethod
     def validate(cls):
         """验证必需的API密钥是否已配置"""
-        if not cls.DEEPSEEK_API_KEY:
+        cfg = _cfg()
+        if not cfg.llm.deepseek.api_key:
             logger.warning("DEEPSEEK_API_KEY未配置，DeepSeek功能将不可用")
-        if not cls.MOONSHOT_API_KEY:
+        if not cfg.llm.moonshot.api_key:
             logger.warning("MOONSHOT_API_KEY未配置，Moonshot功能将不可用")
-        if not cls.QWEN_API_KEY:
+        if not cfg.llm.qwen.api_key:
             logger.warning("QWEN_API_KEY未配置，通义千问功能将不可用")
-        if not cls.ANTHROPIC_API_KEY:
+        if not cfg.llm.anthropic.api_key:
             logger.warning("ANTHROPIC_API_KEY未配置，Anthropic Claude功能将不可用")
-        if cls.ANTHROPIC_ENABLED:
-            logger.info(f"Anthropic Claude已启用: model={cls.ANTHROPIC_MODEL}")
-        if cls.QWEN_ENABLED:
-            logger.info(f"通义千问已启用: model={cls.QWEN_MODEL}")
-        if cls.SILICONFLOW_ENABLED:
-            logger.info(f"SiliconFlow已启用: model={cls.SILICONFLOW_MODEL}")
-        if cls.GLM_ENABLED:
-            logger.info(f"智谱GLM已启用: model={cls.GLM_MODEL}")
-        if not cls.OLLAMA_ENABLED:
+        if cfg.llm.anthropic.enabled:
+            logger.info(f"Anthropic Claude已启用: model={cfg.llm.anthropic.model}")
+        if cfg.llm.qwen.enabled:
+            logger.info(f"通义千问已启用: model={cfg.llm.qwen.model}")
+        if cfg.llm.siliconflow.enabled:
+            logger.info(f"SiliconFlow已启用: model={cfg.llm.siliconflow.model}")
+        if cfg.llm.glm.enabled:
+            logger.info(f"智谱GLM已启用: model={cfg.llm.glm.model}")
+        if not cfg.llm.ollama.enabled:
             logger.info("Ollama已禁用（服务器环境）")
-        if cls.USE_API_POOL:
+        if cfg.service.use_api_pool:
             logger.info("API池轮询已启用")
-        if not cls.DUAL_MODEL_ENABLED:
+        if not cfg.service.dual_model_enabled:
             logger.info("双模型选择已禁用，直接使用DeepSeek")
     
     @classmethod
@@ -134,8 +87,8 @@ async def call_deepseek(
     few_shot_examples: List[Dict[str, Any]],
     tool_results: Dict[str, Any],
     system_prompt: str = "你是一位专业的健身教练，擅长根据用户档案提供个性化的训练建议。",
-    max_tokens: int = LLMConfig.MAX_TOKENS,
-    temperature: float = LLMConfig.TEMPERATURE
+    max_tokens: Optional[int] = None,
+    temperature: Optional[float] = None
 ) -> str:
     """
     调用DeepSeek API (teacher模型) - 支持自动重试
@@ -151,8 +104,14 @@ async def call_deepseek(
     Returns:
         str: AI回答
     """
+    cfg = _cfg()
+    if max_tokens is None:
+        max_tokens = cfg.llm.base.max_tokens
+    if temperature is None:
+        temperature = cfg.llm.base.temperature
+
     # 检查API密钥
-    if not LLMConfig.DEEPSEEK_API_KEY:
+    if not cfg.llm.deepseek.api_key:
         raise ValueError("DEEPSEEK_API_KEY未配置，请在.env文件中配置")
 
     # 构建消息（在重试循环外，避免重复构建）
@@ -187,29 +146,29 @@ async def call_deepseek(
 
     # 重试逻辑
     last_error = None
-    for attempt in range(LLMConfig.MAX_RETRIES + 1):
+    for attempt in range(cfg.llm.base.max_retries + 1):
         try:
             if attempt > 0:
-                logger.info(f"DeepSeek重试 {attempt}/{LLMConfig.MAX_RETRIES}...")
-                await asyncio.sleep(LLMConfig.RETRY_DELAY * attempt)  # 指数退避
+                logger.info(f"DeepSeek重试 {attempt}/{cfg.llm.base.max_retries}...")
+                await asyncio.sleep(cfg.llm.base.retry_delay * attempt)  # 指数退避
 
             # 调用DeepSeek API（使用更精细的超时配置）
             timeout_config = httpx.Timeout(
                 connect=10.0,  # 连接超时10秒
-                read=LLMConfig.TIMEOUT,  # 读取超时120秒
+                read=cfg.llm.base.timeout,  # 读取超时120秒
                 write=10.0,  # 写入超时10秒
                 pool=5.0  # 连接池超时5秒
             )
             
             async with httpx.AsyncClient(timeout=timeout_config) as client:
                 response = await client.post(
-                    f"{LLMConfig.DEEPSEEK_BASE_URL}/chat/completions",
+                    f"{cfg.llm.deepseek.base_url}/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {LLMConfig.DEEPSEEK_API_KEY}",
+                        "Authorization": f"Bearer {cfg.llm.deepseek.api_key}",
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": LLMConfig.DEEPSEEK_MODEL,
+                        "model": cfg.llm.deepseek.model,
                         "messages": messages,
                         "max_tokens": max_tokens,
                         "temperature": temperature
@@ -232,12 +191,12 @@ async def call_deepseek(
         except httpx.ReadTimeout as e:
             last_error = e
             logger.warning(
-                f"DeepSeek读取超时 (尝试{attempt + 1}/{LLMConfig.MAX_RETRIES + 1}): {e}\n"
-                f"  - 超时设置: {LLMConfig.TIMEOUT}秒\n"
+                f"DeepSeek读取超时 (尝试{attempt + 1}/{cfg.llm.base.max_retries + 1}): {e}\n"
+                f"  - 超时设置: {cfg.llm.base.timeout}秒\n"
                 f"  - 查询长度: {len(query)}\n"
                 f"  - 工具结果数: {len(tool_results) if tool_results else 0}"
             )
-            if attempt >= LLMConfig.MAX_RETRIES:
+            if attempt >= cfg.llm.base.max_retries:
                 break
             continue
 
@@ -246,7 +205,7 @@ async def call_deepseek(
             logger.error(
                 f"DeepSeek HTTP错误 (尝试{attempt + 1}): {e}\n"
                 f"上下文信息:\n"
-                f"  - 模型: {LLMConfig.DEEPSEEK_MODEL}\n"
+                f"  - 模型: {cfg.llm.deepseek.model}\n"
                 f"  - 查询长度: {len(query)}\n"
                 f"  - Few-Shot示例数: {len(few_shot_examples)}\n"
                 f"  - 工具结果数: {len(tool_results) if tool_results else 0}\n"
@@ -261,7 +220,7 @@ async def call_deepseek(
             logger.error(
                 f"DeepSeek调用失败 (尝试{attempt + 1}): {e}\n"
                 f"上下文信息:\n"
-                f"  - 模型: {LLMConfig.DEEPSEEK_MODEL}\n"
+                f"  - 模型: {cfg.llm.deepseek.model}\n"
                 f"  - 查询: {query[:100]}...\n"
                 f"  - Few-Shot示例数: {len(few_shot_examples)}",
                 exc_info=True
@@ -272,7 +231,7 @@ async def call_deepseek(
     return get_fallback_response(
         query=query,
         tool_results=tool_results,
-        reason=f"DeepSeek调用失败（已重试{LLMConfig.MAX_RETRIES}次）: {str(last_error)}"
+        reason=f"DeepSeek调用失败（已重试{cfg.llm.base.max_retries}次）: {str(last_error)}"
     )
 
 
@@ -281,9 +240,9 @@ async def call_ollama(
     few_shot_examples: List[Dict[str, Any]],
     tool_results: Dict[str, Any],
     system_prompt: str = "你是一位专业的健身教练，擅长根据用户档案提供个性化的训练建议。",
-    model: str = LLMConfig.OLLAMA_MODEL,
-    max_tokens: int = LLMConfig.MAX_TOKENS,
-    temperature: float = LLMConfig.TEMPERATURE
+    model: Optional[str] = None,
+    max_tokens: Optional[int] = None,
+    temperature: Optional[float] = None
 ) -> str:
     """
     调用Ollama API (student模型)
@@ -300,6 +259,14 @@ async def call_ollama(
     Returns:
         str: AI回答
     """
+    cfg = _cfg()
+    if model is None:
+        model = cfg.llm.ollama.model
+    if max_tokens is None:
+        max_tokens = cfg.llm.base.max_tokens
+    if temperature is None:
+        temperature = cfg.llm.base.temperature
+
     try:
         # 构建消息
         messages = [
@@ -332,9 +299,9 @@ async def call_ollama(
         })
 
         # 调用Ollama API
-        async with httpx.AsyncClient(timeout=LLMConfig.TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=cfg.llm.base.timeout) as client:
             response = await client.post(
-                f"{LLMConfig.OLLAMA_BASE_URL}/api/chat",
+                f"{cfg.llm.ollama.base_url}/api/chat",
                 json={
                     "model": model,
                     "messages": messages,
@@ -363,7 +330,7 @@ async def call_ollama(
             f"Ollama HTTP错误: {e}\n"
             f"上下文信息:\n"
             f"  - 模型: {model}\n"
-            f"  - 基础URL: {LLMConfig.OLLAMA_BASE_URL}\n"
+            f"  - 基础URL: {cfg.llm.ollama.base_url}\n"
             f"  - 查询长度: {len(query)}\n"
             f"  - Few-Shot示例数: {len(few_shot_examples)}\n"
             f"  - 工具结果数: {len(tool_results) if tool_results else 0}",
@@ -412,8 +379,9 @@ async def call_moonshot(
     Returns:
         str: AI回答
     """
+    cfg = _cfg()
     # 检查API密钥
-    if not LLMConfig.MOONSHOT_API_KEY:
+    if not cfg.llm.moonshot.api_key:
         raise ValueError("MOONSHOT_API_KEY未配置，请在.env文件中配置")
 
     try:
@@ -445,18 +413,18 @@ async def call_moonshot(
             "content": query
         })
 
-        async with httpx.AsyncClient(timeout=LLMConfig.TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=cfg.llm.base.timeout) as client:
             response = await client.post(
-                f"{LLMConfig.MOONSHOT_BASE_URL}/chat/completions",
+                f"{cfg.llm.moonshot.base_url}/chat/completions",
                 headers={
-                    "Authorization": f"Bearer {LLMConfig.MOONSHOT_API_KEY}",
+                    "Authorization": f"Bearer {cfg.llm.moonshot.api_key}",
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": LLMConfig.MOONSHOT_MODEL,
+                    "model": cfg.llm.moonshot.model,
                     "messages": messages,
-                    "max_tokens": LLMConfig.MAX_TOKENS,
-                    "temperature": LLMConfig.TEMPERATURE
+                    "max_tokens": cfg.llm.base.max_tokens,
+                    "temperature": cfg.llm.base.temperature
                 }
             )
 
@@ -470,11 +438,11 @@ async def call_moonshot(
         logger.error(
             f"Moonshot调用失败: {e}\n"
             f"上下文信息:\n"
-            f"  - 模型: {LLMConfig.MOONSHOT_MODEL}\n"
+            f"  - 模型: {cfg.llm.moonshot.model}\n"
             f"  - 查询: {query[:100]}...\n"
             f"  - Few-Shot示例数: {len(few_shot_examples)}\n"
             f"  - 系统提示词长度: {len(system_prompt)}\n"
-            f"  - Max Tokens: {LLMConfig.MAX_TOKENS}",
+            f"  - Max Tokens: {cfg.llm.base.max_tokens}",
             exc_info=True
         )
         # 返回降级响应而不是抛出异常
@@ -490,15 +458,21 @@ async def call_anthropic(
     few_shot_examples: List[Dict[str, Any]],
     tool_results: Dict[str, Any],
     system_prompt: str = "你是一位专业的健身教练，擅长根据用户档案提供个性化的训练建议。",
-    max_tokens: int = LLMConfig.MAX_TOKENS,
-    temperature: float = LLMConfig.TEMPERATURE
+    max_tokens: Optional[int] = None,
+    temperature: Optional[float] = None
 ) -> str:
     """
     调用Anthropic Claude API (通过Kiro RS反向代理)
 
     使用Anthropic Messages API格式 (/v1/messages)
     """
-    if not LLMConfig.ANTHROPIC_API_KEY:
+    cfg = _cfg()
+    if max_tokens is None:
+        max_tokens = cfg.llm.base.max_tokens
+    if temperature is None:
+        temperature = cfg.llm.base.temperature
+
+    if not cfg.llm.anthropic.api_key:
         raise ValueError("ANTHROPIC_API_KEY未配置")
 
     # 强制角色覆盖：确保Kiro RS反向代理的内置身份不会覆盖我们的system prompt
@@ -526,24 +500,24 @@ async def call_anthropic(
     messages.append({"role": "user", "content": user_content})
 
     last_error = None
-    for attempt in range(LLMConfig.MAX_RETRIES + 1):
+    for attempt in range(cfg.llm.base.max_retries + 1):
         try:
             if attempt > 0:
-                logger.info(f"Anthropic重试 {attempt}/{LLMConfig.MAX_RETRIES}...")
-                await asyncio.sleep(LLMConfig.RETRY_DELAY * attempt)
+                logger.info(f"Anthropic重试 {attempt}/{cfg.llm.base.max_retries}...")
+                await asyncio.sleep(cfg.llm.base.retry_delay * attempt)
 
-            timeout_config = httpx.Timeout(connect=10.0, read=LLMConfig.TIMEOUT, write=10.0, pool=5.0)
+            timeout_config = httpx.Timeout(connect=10.0, read=cfg.llm.base.timeout, write=10.0, pool=5.0)
 
             async with httpx.AsyncClient(timeout=timeout_config) as client:
                 response = await client.post(
-                    f"{LLMConfig.ANTHROPIC_BASE_URL}/v1/messages",
+                    f"{cfg.llm.anthropic.base_url}/v1/messages",
                     headers={
-                        "x-api-key": LLMConfig.ANTHROPIC_API_KEY,
+                        "x-api-key": cfg.llm.anthropic.api_key,
                         "Content-Type": "application/json",
                         "anthropic-version": "2023-06-01"
                     },
                     json={
-                        "model": LLMConfig.ANTHROPIC_MODEL,
+                        "model": cfg.llm.anthropic.model,
                         "system": system_prompt,
                         "messages": messages,
                         "max_tokens": max_tokens,
@@ -571,8 +545,8 @@ async def call_anthropic(
         except httpx.TimeoutException as e:
             # 其他超时（ReadTimeout, WriteTimeout, PoolTimeout）：可重试
             last_error = e
-            logger.warning(f"Anthropic超时 (尝试{attempt + 1}/{LLMConfig.MAX_RETRIES + 1}): {e}")
-            if attempt >= LLMConfig.MAX_RETRIES:
+            logger.warning(f"Anthropic超时 (尝试{attempt + 1}/{cfg.llm.base.max_retries + 1}): {e}")
+            if attempt >= cfg.llm.base.max_retries:
                 break
             continue
         except httpx.HTTPError as e:
@@ -587,7 +561,7 @@ async def call_anthropic(
     return get_fallback_response(
         query=query,
         tool_results=tool_results,
-        reason=f"Anthropic调用失败（已重试{LLMConfig.MAX_RETRIES}次）: {str(last_error)}"
+        reason=f"Anthropic调用失败（已重试{cfg.llm.base.max_retries}次）: {str(last_error)}"
     )
 
 
@@ -726,7 +700,7 @@ async def call_deepseek_stream(
         ```
     """
     # ✅ 优先使用API池轮询
-    if LLMConfig.USE_API_POOL:
+    if _cfg().service.use_api_pool:
         from .api_pool_manager import get_api_pool_manager
         
         pool = get_api_pool_manager()
@@ -744,16 +718,17 @@ async def call_deepseek_stream(
             logger.warning("API池为空，回退到单Key模式")
     
     # 检查API密钥
-    if not LLMConfig.DEEPSEEK_API_KEY:
+    cfg = _cfg()
+    if not cfg.llm.deepseek.api_key:
         raise ValueError("DEEPSEEK_API_KEY未配置，请在.env文件中配置")
     
     # 单Key模式的重试逻辑
     last_error = None
-    for attempt in range(LLMConfig.MAX_RETRIES + 1):
+    for attempt in range(cfg.llm.base.max_retries + 1):
         try:
             if attempt > 0:
-                logger.info(f"DeepSeek流式调用重试 {attempt}/{LLMConfig.MAX_RETRIES}...")
-                await asyncio.sleep(LLMConfig.RETRY_DELAY * attempt)  # 指数退避
+                logger.info(f"DeepSeek流式调用重试 {attempt}/{cfg.llm.base.max_retries}...")
+                await asyncio.sleep(cfg.llm.base.retry_delay * attempt)  # 指数退避
             
             # 配置超时
             timeout_config = httpx.Timeout(
@@ -767,13 +742,13 @@ async def call_deepseek_stream(
             async with httpx.AsyncClient(timeout=timeout_config) as client:
                 async with client.stream(
                     "POST",
-                    f"{LLMConfig.DEEPSEEK_BASE_URL}/chat/completions",
+                    f"{cfg.llm.deepseek.base_url}/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {LLMConfig.DEEPSEEK_API_KEY}",
+                        "Authorization": f"Bearer {cfg.llm.deepseek.api_key}",
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": LLMConfig.DEEPSEEK_MODEL,
+                        "model": cfg.llm.deepseek.model,
                         "messages": messages,
                         "max_tokens": max_tokens,
                         "temperature": temperature,
@@ -814,12 +789,12 @@ async def call_deepseek_stream(
         except httpx.ReadTimeout as e:
             last_error = e
             logger.warning(
-                f"DeepSeek流式读取超时 (尝试{attempt + 1}/{LLMConfig.MAX_RETRIES + 1}): {e}\n"
+                f"DeepSeek流式读取超时 (尝试{attempt + 1}/{cfg.llm.base.max_retries + 1}): {e}\n"
                 f"  - 超时设置: {timeout}秒\n"
                 f"  - Max Tokens: {max_tokens}\n"
                 f"  - 消息数: {len(messages)}"
             )
-            if attempt >= LLMConfig.MAX_RETRIES:
+            if attempt >= cfg.llm.base.max_retries:
                 break
             continue
         
@@ -829,7 +804,7 @@ async def call_deepseek_stream(
                 f"DeepSeek流式HTTP状态错误 (尝试{attempt + 1}): {e}\n"
                 f"  - 状态码: {e.response.status_code}\n"
                 f"  - 响应: {e.response.text[:200]}\n"
-                f"  - 模型: {LLMConfig.DEEPSEEK_MODEL}\n"
+                f"  - 模型: {cfg.llm.deepseek.model}\n"
                 f"  - Max Tokens: {max_tokens}",
                 exc_info=True
             )
@@ -837,7 +812,7 @@ async def call_deepseek_stream(
             if e.response.status_code in [401, 403, 404]:
                 break
             # 429 (Rate Limit) 可以重试
-            if e.response.status_code == 429 and attempt < LLMConfig.MAX_RETRIES:
+            if e.response.status_code == 429 and attempt < cfg.llm.base.max_retries:
                 continue
             break
         
@@ -845,12 +820,12 @@ async def call_deepseek_stream(
             last_error = e
             logger.error(
                 f"DeepSeek流式HTTP错误 (尝试{attempt + 1}): {e}\n"
-                f"  - 模型: {LLMConfig.DEEPSEEK_MODEL}\n"
+                f"  - 模型: {cfg.llm.deepseek.model}\n"
                 f"  - 消息数: {len(messages)}\n"
                 f"  - Max Tokens: {max_tokens}",
                 exc_info=True
             )
-            if attempt >= LLMConfig.MAX_RETRIES:
+            if attempt >= cfg.llm.base.max_retries:
                 break
             continue
         
@@ -858,11 +833,11 @@ async def call_deepseek_stream(
             # ✅ 处理流式响应错误（如连接中断、服务器提前关闭）
             last_error = e
             logger.warning(
-                f"DeepSeek流式响应错误 (尝试{attempt + 1}/{LLMConfig.MAX_RETRIES + 1}): {e}\n"
+                f"DeepSeek流式响应错误 (尝试{attempt + 1}/{cfg.llm.base.max_retries + 1}): {e}\n"
                 f"  - 这通常是网络不稳定或服务器端问题\n"
-                f"  - 模型: {LLMConfig.DEEPSEEK_MODEL}"
+                f"  - 模型: {cfg.llm.deepseek.model}"
             )
-            if attempt >= LLMConfig.MAX_RETRIES:
+            if attempt >= cfg.llm.base.max_retries:
                 break
             continue
         
@@ -879,17 +854,17 @@ async def call_deepseek_stream(
             
             if is_stream_error:
                 logger.warning(
-                    f"DeepSeek流式连接错误 (尝试{attempt + 1}/{LLMConfig.MAX_RETRIES + 1}): {e}\n"
+                    f"DeepSeek流式连接错误 (尝试{attempt + 1}/{cfg.llm.base.max_retries + 1}): {e}\n"
                     f"  - 这是网络层面的偶发问题，将重试"
                 )
-                if attempt >= LLMConfig.MAX_RETRIES:
+                if attempt >= cfg.llm.base.max_retries:
                     break
                 continue
             
             # 其他未知错误，记录详细信息
             logger.error(
                 f"DeepSeek流式调用失败 (尝试{attempt + 1}): {e}\n"
-                f"  - 模型: {LLMConfig.DEEPSEEK_MODEL}\n"
+                f"  - 模型: {cfg.llm.deepseek.model}\n"
                 f"  - 消息数: {len(messages)}\n"
                 f"  - Max Tokens: {max_tokens}\n"
                 f"  - Temperature: {temperature}",
@@ -898,7 +873,7 @@ async def call_deepseek_stream(
             break
     
     # 所有重试都失败，抛出最后的错误
-    error_msg = f"DeepSeek流式调用失败（已重试{LLMConfig.MAX_RETRIES}次）: {str(last_error)}"
+    error_msg = f"DeepSeek流式调用失败（已重试{cfg.llm.base.max_retries}次）: {str(last_error)}"
     logger.error(error_msg)
     raise RuntimeError(error_msg) from last_error
 
@@ -918,7 +893,8 @@ async def call_anthropic_stream(
         temperature: 温度参数
         timeout: 超时时间
     """
-    if not LLMConfig.ANTHROPIC_API_KEY:
+    cfg = _cfg()
+    if not cfg.llm.anthropic.api_key:
         raise ValueError("ANTHROPIC_API_KEY未配置")
 
     # 从OpenAI格式messages中提取system prompt
@@ -946,25 +922,25 @@ async def call_anthropic_stream(
     system_prompt = ROLE_OVERRIDE + system_prompt
 
     last_error = None
-    for attempt in range(LLMConfig.MAX_RETRIES + 1):
+    for attempt in range(cfg.llm.base.max_retries + 1):
         try:
             if attempt > 0:
-                logger.info(f"Anthropic流式重试 {attempt}/{LLMConfig.MAX_RETRIES}...")
-                await asyncio.sleep(LLMConfig.RETRY_DELAY * attempt)
+                logger.info(f"Anthropic流式重试 {attempt}/{cfg.llm.base.max_retries}...")
+                await asyncio.sleep(cfg.llm.base.retry_delay * attempt)
 
             timeout_config = httpx.Timeout(connect=10.0, read=timeout, write=10.0, pool=5.0)
 
             async with httpx.AsyncClient(timeout=timeout_config) as client:
                 async with client.stream(
                     "POST",
-                    f"{LLMConfig.ANTHROPIC_BASE_URL}/v1/messages",
+                    f"{cfg.llm.anthropic.base_url}/v1/messages",
                     headers={
-                        "x-api-key": LLMConfig.ANTHROPIC_API_KEY,
+                        "x-api-key": cfg.llm.anthropic.api_key,
                         "Content-Type": "application/json",
                         "anthropic-version": "2023-06-01"
                     },
                     json={
-                        "model": LLMConfig.ANTHROPIC_MODEL,
+                        "model": cfg.llm.anthropic.model,
                         "system": system_prompt,
                         "messages": anthropic_messages,
                         "max_tokens": max_tokens,
@@ -997,7 +973,7 @@ async def call_anthropic_stream(
         except httpx.ReadTimeout as e:
             last_error = e
             logger.warning(f"Anthropic流式读取超时 (尝试{attempt + 1}): {e}")
-            if attempt >= LLMConfig.MAX_RETRIES:
+            if attempt >= cfg.llm.base.max_retries:
                 break
             continue
         except httpx.HTTPError as e:
@@ -1005,7 +981,7 @@ async def call_anthropic_stream(
             logger.error(f"Anthropic流式HTTP错误 (尝试{attempt + 1}): {e}", exc_info=True)
             if isinstance(e, httpx.HTTPStatusError) and e.response.status_code in [401, 403, 404]:
                 break
-            if attempt >= LLMConfig.MAX_RETRIES:
+            if attempt >= cfg.llm.base.max_retries:
                 break
             continue
         except (json.JSONDecodeError, KeyError, ConnectionError, OSError) as e:
@@ -1013,7 +989,7 @@ async def call_anthropic_stream(
             logger.error(f"Anthropic流式调用失败 (尝试{attempt + 1}): {e}", exc_info=True)
             break
 
-    error_msg = f"Anthropic流式调用失败（已重试{LLMConfig.MAX_RETRIES}次）: {str(last_error)}"
+    error_msg = f"Anthropic流式调用失败（已重试{cfg.llm.base.max_retries}次）: {str(last_error)}"
     logger.error(error_msg)
     raise RuntimeError(error_msg) from last_error
 
@@ -1038,8 +1014,9 @@ async def stream_deepseek(
     Yields:
         str: 流式返回的文本片段
     """
+    cfg = _cfg()
     # 检查API密钥
-    if not LLMConfig.DEEPSEEK_API_KEY:
+    if not cfg.llm.deepseek.api_key:
         raise ValueError("DEEPSEEK_API_KEY未配置，请在.env文件中配置")
 
     try:
@@ -1059,9 +1036,9 @@ async def stream_deepseek(
         # 使用新的流式函数
         async for chunk in call_deepseek_stream(
             messages=messages,
-            max_tokens=LLMConfig.MAX_TOKENS,
-            temperature=LLMConfig.TEMPERATURE,
-            timeout=LLMConfig.TIMEOUT
+            max_tokens=cfg.llm.base.max_tokens,
+            temperature=cfg.llm.base.temperature,
+            timeout=cfg.llm.base.timeout
         ):
             yield chunk
 
@@ -1070,7 +1047,7 @@ async def stream_deepseek(
         logger.error(
             f"DeepSeek流式调用失败: {e}\n"
             f"上下文信息:\n"
-            f"  - 模型: {LLMConfig.DEEPSEEK_MODEL}\n"
+            f"  - 模型: {cfg.llm.deepseek.model}\n"
             f"  - 查询: {query[:100]}...\n"
             f"  - Few-Shot示例数: {len(few_shot_examples)}\n"
             f"  - 系统提示词长度: {len(system_prompt)}\n"

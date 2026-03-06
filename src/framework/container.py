@@ -15,7 +15,6 @@
 """
 
 import logging
-import os
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
@@ -252,12 +251,14 @@ class AppContainer:
 
     def _create_llm_fallback_manager(self, **kwargs):
         from .clients.llm_fallback_manager import LLMFallbackManager
+        from .config.app_config import get_config
 
+        config = get_config()
         instance = LLMFallbackManager(
             primary_backend="anthropic",
             fallback_backends=["deepseek", "template"],
             max_retries=3,
-            timeout=int(os.getenv("LLM_TIMEOUT", "60")),
+            timeout=int(config.llm.base.timeout),
             enable_health_check=True,
         )
         logger.info("✅ LLMFallbackManager 初始化完成 (via Container)")
@@ -318,9 +319,12 @@ class AppContainer:
             if qdrant_client is None:
                 try:
                     from .clients.qdrant_client import create_qdrant_client
-                    qdrant_host = os.getenv("QDRANT_HOST", "fitness_qdrant")
-                    qdrant_port = int(os.getenv("QDRANT_PORT", "6333"))
-                    qdrant_client = create_qdrant_client(host=qdrant_host, port=qdrant_port)
+                    from .config.app_config import get_config
+                    config = get_config()
+                    qdrant_client = create_qdrant_client(
+                        host=config.database.qdrant.host,
+                        port=config.database.qdrant.port
+                    )
                 except Exception as e:
                     logger.warning(f"⚠️ QdrantClient 创建失败: {e}")
 
@@ -368,9 +372,10 @@ class AppContainer:
         try:
             from .orchestration.mcp_orchestrator import MCPOrchestrator
             from .storage.metadata_database import MetadataDB
+            from .config.app_config import get_config
 
-            db_path = os.getenv("MCP_METADATA_DB_PATH", "/tmp/mcp_metadata.db")
-            metadata_db = MetadataDB(db_path=db_path)
+            config = get_config()
+            metadata_db = MetadataDB(db_path=config.framework.mcp_metadata_db_path)
 
             tool_registry = self.get(
                 "mcp_tool_registry",

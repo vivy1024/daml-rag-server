@@ -864,23 +864,15 @@ class MCPOrchestrator:
                 try:
                     from src.framework.retrieval.graphrag import GraphRAGQueryTool
                     from src.framework.retrieval.graph.kg_full import KnowledgeGraphFull
-                    import os
+                    from ..config.app_config import get_config
 
-                    # 初始化KnowledgeGraphFull
-                    # 框架层领域无关 - Requirements 6.2
-                    # 所有配置从环境变量读取，无硬编码默认值
-                    neo4j_uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
-                    neo4j_user = os.getenv('NEO4J_USER', 'neo4j')
-                    neo4j_password = os.getenv('NEO4J_PASSWORD', '')
-                    qdrant_host = os.getenv('QDRANT_HOST', 'qdrant')
-                    qdrant_port = int(os.getenv('QDRANT_PORT', '6333'))
-
+                    config = get_config()
                     kg_full = KnowledgeGraphFull(
-                        neo4j_uri=neo4j_uri,
-                        neo4j_user=neo4j_user,
-                        neo4j_password=neo4j_password,
-                        qdrant_host=qdrant_host,
-                        qdrant_port=qdrant_port,
+                        neo4j_uri=config.database.neo4j.uri,
+                        neo4j_user=config.database.neo4j.user,
+                        neo4j_password=config.database.neo4j.password,
+                        qdrant_host=config.database.qdrant.host,
+                        qdrant_port=config.database.qdrant.port,
                         qdrant_collection="training_knowledge",
                         vector_size=1024,  # 使用BGE-M3
                         embedding_model="BAAI/bge-m3"  # 指定BGE-M3模型

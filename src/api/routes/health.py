@@ -20,8 +20,9 @@ GET  /api/health/metrics - 性能指标（需要管理员认证）
 """
 
 import logging
-import os
 import asyncio
+
+from src.framework.config.app_config import get_config
 import psutil
 import jwt
 from datetime import datetime, timedelta
@@ -172,8 +173,8 @@ def _verify_admin_token(credentials: Optional[HTTPAuthorizationCredentials]) -> 
         return False
     
     try:
-        # 获取JWT密钥
-        jwt_secret = os.getenv('JWT_SECRET', '')
+        # 获取JWT密钥（health.py 使用 internal_jwt_secret 验证管理员 Token）
+        jwt_secret = get_config().api.internal_jwt_secret
         if not jwt_secret:
             structured_logger.warning(
                 "JWT_SECRET未配置",
@@ -327,7 +328,7 @@ async def detailed_health_check(credentials: HTTPAuthorizationCredentials = Depe
         timestamp = datetime.now()
         
         # 获取认证启用状态（安全加固：Requirements 6.4）
-        auth_enabled = os.getenv('ENABLE_AUTH', 'false').lower() == 'true'
+        auth_enabled = get_config().api.enable_auth
 
         # 2. 检查各组件状态
         components = await _check_all_components()
@@ -882,9 +883,10 @@ async def _check_databases() -> Dict[str, Any]:
             # Neo4j检查
             try:
                 from neo4j import GraphDatabase
-                neo4j_uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
-                neo4j_user = os.getenv('NEO4J_USER', 'neo4j')
-                neo4j_password = os.getenv('NEO4J_PASSWORD', 'build_body_2024')
+                db_cfg = get_config().database
+                neo4j_uri = db_cfg.neo4j.uri
+                neo4j_user = db_cfg.neo4j.user
+                neo4j_password = db_cfg.neo4j.password
 
                 driver = GraphDatabase.driver(
                     neo4j_uri,
@@ -901,10 +903,11 @@ async def _check_databases() -> Dict[str, Any]:
             # Qdrant检查
             try:
                 from qdrant_client import QdrantClient
-                qdrant_host = os.getenv('QDRANT_HOST', 'qdrant')
-                qdrant_port = int(os.getenv('QDRANT_PORT', '6333'))
-                qdrant_api_key = os.getenv('QDRANT_API_KEY', '')
-                qdrant_https = os.getenv('QDRANT_HTTPS', 'false').lower() == 'true'
+                qd_cfg = get_config().database.qdrant
+                qdrant_host = qd_cfg.host
+                qdrant_port = qd_cfg.port
+                qdrant_api_key = qd_cfg.api_key or ''
+                qdrant_https = qd_cfg.https
 
                 client = QdrantClient(
                     host=qdrant_host,
@@ -921,11 +924,12 @@ async def _check_databases() -> Dict[str, Any]:
             # MySQL检查
             try:
                 import pymysql
-                mysql_host = os.getenv('MYSQL_HOST', 'mysql')
-                mysql_port = int(os.getenv('MYSQL_PORT', '3306'))
-                mysql_user = os.getenv('MYSQL_USER', 'root')
-                mysql_password = os.getenv('MYSQL_PASSWORD', 'build_body_2024')
-                mysql_db = os.getenv('MYSQL_DATABASE', 'fitness_app')
+                mysql_cfg = get_config().database.mysql
+                mysql_host = mysql_cfg.host
+                mysql_port = mysql_cfg.port
+                mysql_user = mysql_cfg.user
+                mysql_password = mysql_cfg.password
+                mysql_db = mysql_cfg.database
 
                 conn = pymysql.connect(
                     host=mysql_host,
@@ -944,9 +948,10 @@ async def _check_databases() -> Dict[str, Any]:
             # Redis检查
             try:
                 import redis
-                redis_host = os.getenv('REDIS_HOST', 'redis')
-                redis_port = int(os.getenv('REDIS_PORT', '6379'))
-                redis_password = os.getenv('REDIS_PASSWORD', '')
+                redis_cfg = get_config().database.redis
+                redis_host = redis_cfg.host
+                redis_port = redis_cfg.port
+                redis_password = redis_cfg.password or ''
 
                 r = redis.Redis(
                     host=redis_host,

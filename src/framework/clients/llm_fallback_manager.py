@@ -20,6 +20,8 @@ import asyncio
 import time
 import os
 from typing import Dict, Any, List, Optional, AsyncIterator
+
+from ..config.app_config import get_config
 from dataclasses import dataclass
 from enum import Enum
 
@@ -113,8 +115,9 @@ class LLMFallbackManager:
         self.enable_health_check = enable_health_check
 
         # 构建降级链
-        ollama_enabled = os.getenv("OLLAMA_ENABLED", "false").lower() == "true"
-        anthropic_enabled = os.getenv("ANTHROPIC_ENABLED", "true").lower() == "true"
+        cfg = get_config()
+        ollama_enabled = cfg.llm.ollama.enabled
+        anthropic_enabled = cfg.llm.anthropic.enabled
         if fallback_backends:
             if not ollama_enabled:
                 fallback_backends = [b for b in fallback_backends if b != "ollama"]
@@ -155,42 +158,43 @@ class LLMFallbackManager:
             self._clients[BackendType.ANTHROPIC] = AnthropicClient()
             self._clients[BackendType.DEEPSEEK] = DeepSeekClient()
 
-            # 通用OpenAI兼容后端（按环境变量ENABLED控制）
-            if os.getenv("QWEN_ENABLED", "false").lower() == "true":
+            # 通用OpenAI兼容后端（按 app_config 的 ENABLED 控制）
+            cfg = get_config()
+            if cfg.llm.qwen.enabled:
                 self._clients[BackendType.QWEN] = GenericOpenAIClient(
                     backend_name="qwen",
-                    base_url=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
-                    api_key=os.getenv("QWEN_API_KEY", ""),
-                    model=os.getenv("QWEN_MODEL", "qwen-plus"),
+                    base_url=cfg.llm.qwen.base_url,
+                    api_key=cfg.llm.qwen.api_key,
+                    model=cfg.llm.qwen.model,
                 )
-                logger.info(f"✅ Qwen后端已注册: model={os.getenv('QWEN_MODEL', 'qwen-plus')}")
+                logger.info(f"✅ Qwen后端已注册: model={cfg.llm.qwen.model}")
 
-            if os.getenv("SILICONFLOW_ENABLED", "false").lower() == "true":
+            if cfg.llm.siliconflow.enabled:
                 self._clients[BackendType.SILICONFLOW] = GenericOpenAIClient(
                     backend_name="siliconflow",
-                    base_url=os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"),
-                    api_key=os.getenv("SILICONFLOW_API_KEY", ""),
-                    model=os.getenv("SILICONFLOW_MODEL", "Qwen/Qwen3-8B"),
+                    base_url=cfg.llm.siliconflow.base_url,
+                    api_key=cfg.llm.siliconflow.api_key,
+                    model=cfg.llm.siliconflow.model,
                 )
-                logger.info(f"✅ SiliconFlow后端已注册: model={os.getenv('SILICONFLOW_MODEL', 'Qwen/Qwen3-8B')}")
+                logger.info(f"✅ SiliconFlow后端已注册: model={cfg.llm.siliconflow.model}")
 
-            if os.getenv("GLM_ENABLED", "false").lower() == "true":
+            if cfg.llm.glm.enabled:
                 self._clients[BackendType.GLM] = GenericOpenAIClient(
                     backend_name="glm",
-                    base_url=os.getenv("GLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4"),
-                    api_key=os.getenv("GLM_API_KEY", ""),
-                    model=os.getenv("GLM_MODEL", "glm-4.7-flash"),
+                    base_url=cfg.llm.glm.base_url,
+                    api_key=cfg.llm.glm.api_key,
+                    model=cfg.llm.glm.model,
                 )
-                logger.info(f"✅ GLM后端已注册: model={os.getenv('GLM_MODEL', 'glm-4.7-flash')}")
+                logger.info(f"✅ GLM后端已注册: model={cfg.llm.glm.model}")
 
-            if os.getenv("MOONSHOT_ENABLED", "false").lower() == "true":
+            if cfg.llm.moonshot.enabled:
                 self._clients[BackendType.MOONSHOT] = GenericOpenAIClient(
                     backend_name="moonshot",
-                    base_url=os.getenv("MOONSHOT_BASE_URL", "https://api.moonshot.cn/v1"),
-                    api_key=os.getenv("MOONSHOT_API_KEY", ""),
-                    model=os.getenv("MOONSHOT_MODEL", "kimi-k2-0905-preview"),
+                    base_url=cfg.llm.moonshot.base_url,
+                    api_key=cfg.llm.moonshot.api_key,
+                    model=cfg.llm.moonshot.model,
                 )
-                logger.info(f"✅ Moonshot后端已注册: model={os.getenv('MOONSHOT_MODEL', 'kimi-k2-0905-preview')}")
+                logger.info(f"✅ Moonshot后端已注册: model={cfg.llm.moonshot.model}")
 
             self._health_checker = BackendHealthChecker()
             self._template_generator = TemplateResponseGenerator()

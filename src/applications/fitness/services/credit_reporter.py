@@ -13,6 +13,8 @@ import os
 import math
 import asyncio
 import logging
+
+from src.framework.config.app_config import get_config
 import json
 from pathlib import Path
 from datetime import datetime, timezone
@@ -69,12 +71,13 @@ class CreditReporter:
             timeout: HTTP请求超时时间（秒）
             enabled: 是否启用积分上报，默认True
         """
-        # 优先使用BACKEND_INTERNAL_URL，回退到BACKEND_API_URL
+        config = get_config()
+        # 优先使用BACKEND_INTERNAL_URL，回退到 config.backend.api_url
         self.backend_url = backend_url or os.getenv(
-            "BACKEND_INTERNAL_URL", 
-            os.getenv("BACKEND_API_URL", "http://host.docker.internal:8000")
+            "BACKEND_INTERNAL_URL",
+            config.backend.api_url
         )
-        self.internal_token = internal_token or os.getenv("INTERNAL_API_TOKEN", "")
+        self.internal_token = internal_token or config.internal.api_token
         self.timeout = timeout
         self.enabled = enabled and os.getenv("CREDIT_REPORT_ENABLED", "true").lower() == "true"
         

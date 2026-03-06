@@ -31,13 +31,14 @@ class Neo4jClientConfig(ClientConfig):
     
     @classmethod
     def from_env(cls) -> "Neo4jClientConfig":
-        """从环境变量创建配置"""
-        import os
+        """从配置创建配置"""
+        from ..config.app_config import get_config
+        config = get_config()
         return cls(
-            uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
-            user=os.getenv("NEO4J_USER", "neo4j"),
-            password=os.getenv("NEO4J_PASSWORD", ""),
-            database=os.getenv("NEO4J_DATABASE", "neo4j")
+            uri=config.database.neo4j.uri,
+            user=config.database.neo4j.user,
+            password=config.database.neo4j.password,
+            database=config.database.neo4j.database
         )
 
 

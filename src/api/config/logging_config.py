@@ -11,16 +11,18 @@
 """
 
 import logging
-import os
 from pathlib import Path
+
+from src.framework.config.app_config import get_config
 from typing import Dict
 from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
 
-# 环境变量控制
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'WARNING').upper()  # 默认WARNING，只输出警告和错误
-ENABLE_REQUEST_LOGGING = os.getenv('ENABLE_REQUEST_LOGGING', 'false').lower() == 'true'
-ENABLE_FILE_LOGGING = os.getenv('ENABLE_FILE_LOGGING', 'true').lower() == 'true'  # 默认启用文件日志
+# 从 app_config 读取配置
+_config = get_config()
+LOG_LEVEL = _config.service.log_level.upper()  # 默认WARNING，只输出警告和错误
+ENABLE_REQUEST_LOGGING = _config.service.enable_request_logging
+ENABLE_FILE_LOGGING = _config.service.enable_file_logging  # 默认启用文件日志
 
 # 日志目录
 LOG_DIR = Path('/app/logs')

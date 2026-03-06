@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """步骤5：智能模型选择"""
 
-import os
 import logging
 
+from src.framework.config.app_config import get_config
 from ..state import WorkflowState, StateUpdate
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ async def node_select_model(
     request_id = state.get("request_id", "unknown")
 
     # ✅ 检查是否启用双模型选择
-    dual_model_enabled = os.getenv("DUAL_MODEL_ENABLED", "false").lower() == "true"
+    dual_model_enabled = get_config().service.dual_model_enabled
     if not dual_model_enabled:
         logger.info(f"✅ [{request_id}] 步骤5完成: 双模型选择已禁用，直接使用DeepSeek")
         return StateUpdate(updates={"selected_model": "teacher"})

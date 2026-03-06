@@ -14,6 +14,8 @@
 
 import asyncio
 import logging
+
+from src.framework.config.app_config import get_config
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -56,10 +58,9 @@ class UserMemoryService:
             return self._embedding_fn(text)
 
         if self._encoder is None:
-            import os
             try:
                 from sentence_transformers import SentenceTransformer
-                model_name = os.getenv("EMBEDDING_MODEL", "thenlper/gte-large-zh")
+                model_name = get_config().framework.embedding_model
                 self._encoder = SentenceTransformer(model_name)
                 logger.info(f"✅ UserMemoryService 加载向量模型: {model_name}")
             except Exception as e:

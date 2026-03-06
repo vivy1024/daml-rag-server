@@ -11,7 +11,6 @@ Neo4j Cypher 查询模板 + 直查执行器
 日期: 2026-02-17
 """
 
-import os
 import logging
 from typing import List, Dict, Any, Optional
 
@@ -368,7 +367,9 @@ class CypherQueryExecutor:
         """延迟获取 Neo4j 连接"""
         if self._neo4j is None:
             from .graph.neo4j_manager import Neo4jManager
-            uri = os.getenv("NEO4J_URI", "bolt://fitness_neo4j:7687")
+            from ..config.app_config import get_config
+            config = get_config()
+            uri = config.database.neo4j.uri
             # 修复：环境变量可能配置了不可达的hostname，尝试回退
             if "://" in uri:
                 import socket
@@ -378,9 +379,11 @@ class CypherQueryExecutor:
                 except socket.gaierror:
                     uri = "bolt://fitness_neo4j:7687"
                     logger.info(f"Neo4j URI DNS解析失败，回退到: {uri}")
-            user = os.getenv("NEO4J_USER", "neo4j")
-            password = os.getenv("NEO4J_PASSWORD", "")
-            self._neo4j = Neo4jManager(uri=uri, user=user, password=password)
+            self._neo4j = Neo4jManager(
+                uri=uri,
+                user=config.database.neo4j.user,
+                password=config.database.neo4j.password
+            )
             logger.info(f"✅ CypherQueryExecutor: Neo4j 连接成功 ({uri})")
         return self._neo4j
 

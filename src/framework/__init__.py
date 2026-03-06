@@ -104,16 +104,15 @@ def get_graphrag_tool():
                 logger.info("✓ GraphRAG查询工具初始化成功（使用框架kg_full）")
             else:
                 # 直接创建
-                # 框架层领域无关 - Requirements 6.2
-                # 所有配置从环境变量读取，无硬编码默认值
                 from .retrieval.graph.kg_full import KnowledgeGraphFull
-                import os
+                from .config.app_config import get_config
+                config = get_config()
                 kg_full = KnowledgeGraphFull(
-                    neo4j_uri=os.getenv('NEO4J_URI', 'bolt://neo4j:7687'),
-                    neo4j_user=os.getenv('NEO4J_USER', 'neo4j'),
-                    neo4j_password=os.getenv('NEO4J_PASSWORD', ''),
-                    qdrant_host=os.getenv('QDRANT_HOST', 'qdrant'),
-                    qdrant_port=int(os.getenv('QDRANT_PORT', '6333'))
+                    neo4j_uri=config.database.neo4j.uri,
+                    neo4j_user=config.database.neo4j.user,
+                    neo4j_password=config.database.neo4j.password,
+                    qdrant_host=config.database.qdrant.host,
+                    qdrant_port=config.database.qdrant.port
                 )
                 _graphrag_tool = GraphRAGQueryTool(kg_full)
                 logger.info("✓ GraphRAG查询工具初始化成功（直接创建）")

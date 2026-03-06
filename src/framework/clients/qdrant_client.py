@@ -11,10 +11,11 @@ Qdrant客户端配置
 创建日期：2025-12-16
 """
 
-import os
 import logging
 from typing import Optional
 from qdrant_client import QdrantClient as BaseQdrantClient
+
+from ..config.app_config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -55,24 +56,23 @@ class OptimizedQdrantClient:
             timeout: 超时时间（秒，默认30.0）
             **kwargs: 其他QdrantClient参数
         """
-        self.host = host or os.getenv('QDRANT_HOST', 'qdrant')
-        self.port = port or int(os.getenv('QDRANT_PORT', '6333'))
-        self.grpc_port = grpc_port or int(os.getenv('QDRANT_GRPC_PORT', '6334'))
-        self.api_key = api_key or os.getenv('QDRANT_API_KEY')
+        qdrant_cfg = get_config().database.qdrant
+        self.host = host or qdrant_cfg.host
+        self.port = port or qdrant_cfg.port
+        self.grpc_port = grpc_port or qdrant_cfg.grpc_port
+        self.api_key = api_key or qdrant_cfg.api_key
         
-        # 从环境变量读取prefer_grpc配置
+        # prefer_grpc 配置
         if prefer_grpc is None:
-            prefer_grpc_env = os.getenv('QDRANT_PREFER_GRPC', 'true').lower()
-            self.prefer_grpc = prefer_grpc_env in ('true', '1', 'yes')
+            self.prefer_grpc = qdrant_cfg.prefer_grpc
         else:
             self.prefer_grpc = prefer_grpc
         
-        # 从环境变量读取https配置
+        # https 配置
         # 注意：Zeabur内网直连Qdrant 6333端口使用明文HTTP + API Key认证，不需要HTTPS
         # 只有通过公网域名/反代访问时才需要HTTPS
         if https is None:
-            https_env = os.getenv('QDRANT_HTTPS', 'false').lower()
-            self.https = https_env in ('true', '1', 'yes')
+            self.https = qdrant_cfg.https
         else:
             self.https = https
             

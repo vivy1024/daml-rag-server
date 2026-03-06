@@ -17,13 +17,15 @@ import logging
 import re
 import time
 import hashlib
-import os
+import os  # 保留：BYPASS_RATE_LIMIT_FOR_INTERNAL 未在 config 中定义
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from collections import defaultdict
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from src.framework.config.app_config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -317,18 +319,20 @@ class AuthenticationManager:
         '/'
     ]
     
-    def __init__(self, require_auth: bool = False):
+    def __init__(self, require_auth: bool = False, config=None):
         """
         初始化认证管理器
         
         Args:
             require_auth: 是否要求认证（默认False，开发环境）
+            config: AppConfig 实例（可选，用于获取 internal token）
         """
         self.require_auth = require_auth
         self.valid_tokens: Dict[str, Dict[str, Any]] = {}
 
-        # 从环境变量加载 INTERNAL_API_TOKEN（Laravel 后端内部调用使用）
-        internal_token = os.getenv("INTERNAL_API_TOKEN")
+        # 从 app_config 加载 INTERNAL_API_TOKEN（Laravel 后端内部调用使用）
+        cfg = config or get_config()
+        internal_token = cfg.internal.api_token
         if internal_token:
             self.valid_tokens[internal_token] = {
                 "user_id": "internal_api",
@@ -607,7 +611,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         
         # 初始化组件
         self.rate_limiter = RateLimiter() if enable_rate_limit else None
-        self.auth_manager = AuthenticationManager(require_auth=enable_auth)
+        self.auth_manager = AuthenticationManager(require_auth=enable_auth, config=get_config())
         
         logger.info(
             f"安全中间件已初始化: "

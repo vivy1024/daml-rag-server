@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """步骤4：BGE复杂度分类"""
 
-import os
 import logging
 import hashlib
 
+from src.framework.config.app_config import get_config
 from ..state import WorkflowState, StateUpdate
 
 logger = logging.getLogger(__name__)

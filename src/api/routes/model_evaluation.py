@@ -11,8 +11,9 @@ GET /api/internal/model-evaluation/stats
 """
 
 import logging
-import os
 from fastapi import APIRouter, HTTPException, Request
+
+from src.framework.config.app_config import get_config
 from src.api.models.api_response import ApiResponse
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ def _verify_internal_request(request: Request) -> bool:
         return True
 
     auth = request.headers.get("Authorization", "")
-    expected = os.getenv("INTERNAL_API_TOKEN", "")
+    expected = get_config().internal.api_token
     if expected and auth == f"Bearer {expected}":
         return True
 

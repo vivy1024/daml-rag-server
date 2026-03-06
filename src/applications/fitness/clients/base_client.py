@@ -5,11 +5,12 @@ BackendClientBase — HTTP 核心基础设施
 从 backend_client.py 拆分，包含配置、连接管理、请求重试等核心逻辑。
 """
 
-import os
 import json
 import httpx
 import logging
 from typing import Dict, Any, Optional
+
+from src.framework.config.app_config import get_config
 
 from .models import (
     BackendAPIError,
@@ -23,20 +24,21 @@ logger = logging.getLogger(__name__)
 
 
 class BackendConfig:
-    """后端API配置"""
+    """后端API配置 - 从 app_config 读取"""
 
     def __init__(self):
-        self.base_url = os.getenv('BACKEND_API_URL', 'http://host.docker.internal:8000')
-        self.internal_token = os.getenv('INTERNAL_API_TOKEN', '')
-        self.timeout = float(os.getenv('BACKEND_API_TIMEOUT', '10.0'))
-        self.max_retries = int(os.getenv('BACKEND_API_MAX_RETRIES', '3'))
+        cfg = get_config()
+        self.base_url = cfg.backend.api_url
+        self.internal_token = cfg.internal.api_token
+        self.timeout = cfg.backend.api_timeout
+        self.max_retries = cfg.backend.api_max_retries
 
-        self.pool_max_connections = int(os.getenv('BACKEND_POOL_MAX_CONNECTIONS', '100'))
-        self.pool_max_keepalive = int(os.getenv('BACKEND_POOL_MAX_KEEPALIVE', '20'))
-        self.pool_keepalive_expiry = float(os.getenv('BACKEND_POOL_KEEPALIVE_EXPIRY', '5.0'))
+        self.pool_max_connections = cfg.backend.pool_max_connections
+        self.pool_max_keepalive = cfg.backend.pool_max_keepalive
+        self.pool_keepalive_expiry = cfg.backend.pool_keepalive_expiry
 
-        self.membership_timeout_ms = int(os.getenv('BACKEND_MEMBERSHIP_TIMEOUT_MS', '2000'))
-        self.user_profile_timeout_ms = int(os.getenv('BACKEND_USER_PROFILE_TIMEOUT_MS', '5000'))
+        self.membership_timeout_ms = cfg.backend.membership_timeout_ms
+        self.user_profile_timeout_ms = cfg.backend.user_profile_timeout_ms
 
         if not self.base_url:
             raise ValueError("BACKEND_API_URL environment variable is required")

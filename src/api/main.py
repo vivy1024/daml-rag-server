@@ -16,8 +16,9 @@ DAML-RAG API Server
 
 import logging
 import asyncio
-import os
 import sys
+
+from src.framework.config.app_config import get_config
 import time
 import json
 from datetime import datetime
@@ -241,7 +242,8 @@ async def lifespan(app: FastAPI):
 
 
 # 创建FastAPI应用
-_is_prod = os.getenv("ENVIRONMENT", "production") == "production"
+_api_cfg = get_config().api
+_is_prod = _api_cfg.environment == "production"
 app = FastAPI(
     title="DAML-RAG API Server",
     description="""
@@ -286,7 +288,7 @@ if not _is_prod:
         "http://localhost:3000",   # 备用本地开发
         "http://127.0.0.1:5173",
     ])
-_extra_origins = os.getenv("CORS_EXTRA_ORIGINS", "")
+_extra_origins = _api_cfg.cors_extra_origins or ""
 _cors_origins = _DEFAULT_CORS_ORIGINS + [
     o.strip() for o in _extra_origins.split(",") if o.strip()
 ]
@@ -321,10 +323,10 @@ except ImportError as e:
 try:
     from .middleware.security import SecurityMiddleware
     
-    # 从环境变量读取安全配置
-    enable_rate_limit = os.getenv("ENABLE_RATE_LIMIT", "true").lower() == "true"
-    enable_auth = os.getenv("ENABLE_AUTH", "true").lower() == "true"
-    enable_input_validation = os.getenv("ENABLE_INPUT_VALIDATION", "true").lower() == "true"
+    # 从 app_config 读取安全配置
+    enable_rate_limit = _api_cfg.enable_rate_limit
+    enable_auth = _api_cfg.enable_auth
+    enable_input_validation = _api_cfg.enable_input_validation
     
     app.add_middleware(
         SecurityMiddleware,
@@ -348,9 +350,10 @@ try:
     from .middleware.auth_middleware import DualAuthMiddleware
     from ..framework.auth.internal_jwt_verifier import InternalJwtVerifier
 
-    jwt_secret = os.getenv("INTERNAL_JWT_SECRET", "")
-    jwt_issuer = os.getenv("INTERNAL_JWT_ISSUER", "yuzhen-auth-gateway")
-    legacy_auth_enabled = os.getenv("LEGACY_AUTH_ENABLED", "true").lower() == "true"
+    _auth_cfg = get_config().api
+    jwt_secret = _auth_cfg.internal_jwt_secret
+    jwt_issuer = _auth_cfg.internal_jwt_issuer
+    legacy_auth_enabled = _auth_cfg.legacy_auth_enabled
 
     jwt_verifier = InternalJwtVerifier(jwt_secret, jwt_issuer) if jwt_secret else None
 
@@ -488,7 +491,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     response_data = ApiResponse.error(
         code=500,
         msg="服务器内部错误",
-        data={"error": str(exc)} if os.getenv("DEBUG", "").lower() in ("1", "true") else None
+        data={"error": str(exc)} if get_config().api.debug else None
     )
 
     return JSONResponse(
@@ -533,7 +536,7 @@ async def version_info():
             "field_standardization": "v1.0.0",
             "anti_hallucination": "v3.0.0",
             "build_date": "2025-11-17",
-            "environment": os.getenv("ENVIRONMENT", "development")
+            "environment": get_config().api.environment
         },
         msg="版本信息获取成功"
     )
@@ -581,7 +584,7 @@ async def simple_health():
 
 
 # 开发环境专用路由
-if os.getenv("ENVIRONMENT") == "development":
+if get_config().api.environment == "development":
     @app.get("/debug/routes")
     async def debug_routes():
         """调试：显示所有路由"""
@@ -598,13 +601,13 @@ if os.getenv("ENVIRONMENT") == "development":
     @app.get("/debug/config")
     async def debug_config():
         """调试：显示环境配置"""
-        import os
+        cfg = get_config()
         config = {
-            "ENVIRONMENT": os.getenv("ENVIRONMENT", "development"),
-            "DEBUG": os.getenv("DEBUG", "false"),
-            "NEO4J_URI": os.getenv("NEO4J_URI", "not_set"),
-            "QDRANT_HOST": os.getenv("QDRANT_HOST", "not_set"),
-            "QDRANT_PORT": os.getenv("QDRANT_PORT", "not_set"),
+            "ENVIRONMENT": cfg.api.environment,
+            "DEBUG": str(cfg.api.debug).lower(),
+            "NEO4J_URI": cfg.database.neo4j.uri,
+            "QDRANT_HOST": cfg.database.qdrant.host,
+            "QDRANT_PORT": str(cfg.database.qdrant.port),
         }
         return {"config": config}
 
@@ -618,10 +621,11 @@ def create_app():
 if __name__ == "__main__":
     import uvicorn
 
-    # 从环境变量读取配置
-    host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 8001))
-    reload = os.getenv("ENVIRONMENT") == "development"
+    # 从 app_config 读取配置
+    _run_cfg = get_config().api
+    host = _run_cfg.host
+    port = _run_cfg.port
+    reload = _run_cfg.environment == "development"
 
     logger.info(f"🚀 启动DAML-RAG API Server: http://{host}:{port}")
 

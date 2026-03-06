@@ -12,8 +12,9 @@ Requirements: 7.1, 7.2
 """
 
 import logging
-import os
 import hmac
+
+from src.framework.config.app_config import get_config
 from typing import Optional
 
 from fastapi import Request
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 audit_logger = logging.getLogger("audit.auth")
 
 # 不需要认证的路径（生产环境不暴露API文档）
-_is_production = os.getenv("APP_ENV", "production") == "production"
+_is_production = get_config().api.environment == "production"
 PUBLIC_PATHS = [
     "/health",
     "/api/health",
@@ -65,7 +66,7 @@ class DualAuthMiddleware(BaseHTTPMiddleware):
     ):
         super().__init__(app)
         self.jwt_verifier = jwt_verifier
-        self.legacy_token = legacy_token or os.getenv("INTERNAL_API_TOKEN", "")
+        self.legacy_token = legacy_token or get_config().internal.api_token
         self.legacy_auth_enabled = legacy_auth_enabled
 
     def _is_public_path(self, path: str) -> bool:

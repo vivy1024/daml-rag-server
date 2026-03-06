@@ -11,7 +11,7 @@
 
 from typing import Optional
 
-from pydantic import model_validator
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -72,6 +72,7 @@ class QdrantConfig(BaseSettings):
     api_key: Optional[str] = None
     prefer_grpc: bool = True
     https: bool = False
+    collection: str = 'default_collection'
 
 
 class RedisConfig(BaseSettings):
@@ -147,6 +148,82 @@ class AnthropicConfig(BaseSettings):
     enabled: bool = True
 
 
+class OllamaConfig(BaseSettings):
+    """Ollama 本地 LLM 配置"""
+    model_config = SettingsConfigDict(env_prefix='OLLAMA_')
+
+    enabled: bool = False
+    base_url: str = 'http://localhost:11434'
+    model: str = 'llama3'
+
+
+class MoonshotConfig(BaseSettings):
+    """Moonshot Kimi 配置"""
+    model_config = SettingsConfigDict(env_prefix='MOONSHOT_')
+
+    enabled: bool = False
+    api_key: str = ''
+    base_url: str = 'https://api.moonshot.cn/v1'
+    model: str = 'moonshot-v1-8k'
+
+
+class QwenConfig(BaseSettings):
+    """通义千问配置"""
+    model_config = SettingsConfigDict(env_prefix='QWEN_')
+
+    enabled: bool = False
+    api_key: str = ''
+    base_url: str = 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+    model: str = 'qwen-turbo'
+
+
+class SiliconFlowConfig(BaseSettings):
+    """SiliconFlow 配置"""
+    model_config = SettingsConfigDict(env_prefix='SILICONFLOW_')
+
+    enabled: bool = False
+    api_key: str = ''
+    base_url: str = 'https://api.siliconflow.cn/v1'
+    model: str = 'Qwen/Qwen2.5-7B-Instruct'
+
+
+class GLMConfig(BaseSettings):
+    """智谱 GLM 配置"""
+    model_config = SettingsConfigDict(env_prefix='GLM_')
+
+    enabled: bool = False
+    api_key: str = ''
+    base_url: str = 'https://open.bigmodel.cn/api/paas/v4'
+    model: str = 'glm-4-flash'
+
+
+class APIConfig(BaseSettings):
+    """API 服务配置"""
+    model_config = SettingsConfigDict(env_prefix='')
+
+    environment: str = 'development'
+    host: str = '0.0.0.0'
+    port: int = Field(default=8001, validation_alias=AliasChoices('API_PORT', 'PORT'))
+    cors_extra_origins: str = ''
+    enable_rate_limit: bool = True
+    enable_auth: bool = True
+    enable_input_validation: bool = True
+    internal_jwt_secret: str = ''
+    internal_jwt_issuer: str = 'fitness-backend'
+    legacy_auth_enabled: bool = False
+    debug: bool = False
+
+
+class FrameworkConfig(BaseSettings):
+    """框架配置"""
+    model_config = SettingsConfigDict(env_prefix='')
+
+    metadata_db_path: str = '/tmp/metadata.db'
+    mcp_config_path: str = '/app/config/mcp_registry.json'
+    mcp_metadata_db_path: str = '/tmp/mcp_metadata.db'
+    embedding_model: str = 'BAAI/bge-small-zh-v1.5'
+
+
 class ServiceConfig(BaseSettings):
     """服务运行配置"""
     model_config = SettingsConfigDict(env_prefix='')
@@ -170,12 +247,17 @@ class DatabaseConfig:
 
 
 class LLMProviderConfig:
-    """LLM 配置聚合（DeepSeek + Anthropic + 通用参数）"""
+    """LLM 配置聚合（DeepSeek + Anthropic + Ollama + Moonshot + Qwen + SiliconFlow + GLM + 通用参数）"""
 
     def __init__(self):
         self.base = LLMBaseConfig()
         self.deepseek = DeepSeekConfig()
         self.anthropic = AnthropicConfig()
+        self.ollama = OllamaConfig()
+        self.moonshot = MoonshotConfig()
+        self.qwen = QwenConfig()
+        self.siliconflow = SiliconFlowConfig()
+        self.glm = GLMConfig()
 
 
 class AppConfig:
@@ -196,6 +278,8 @@ class AppConfig:
         self.backend = BackendAPIConfig()
         self.internal = InternalTokenConfig()
         self.service = ServiceConfig()
+        self.api = APIConfig()
+        self.framework = FrameworkConfig()
 
 
 # ============ 单例 ============
