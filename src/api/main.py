@@ -276,6 +276,15 @@ app = FastAPI(
     default_encoder=CustomJSONEncoder
 )
 
+# OpenTelemetry 全链路追踪 (REQ-11)
+try:
+    from src.framework.monitoring.tracing import init_tracing, instrument_fastapi
+    init_tracing()
+    instrument_fastapi(app)
+    logger.info("✅ OpenTelemetry 全链路追踪已启用")
+except Exception as e:
+    logger.warning(f"⚠️ OpenTelemetry 初始化失败: {e}，追踪功能将不可用")
+
 # CORS白名单配置
 _DEFAULT_CORS_ORIGINS = [
     "https://yuzhen.fit",

@@ -5,6 +5,25 @@
 
 ---
 
+## #53 (feat) Phase 4 长期改进 — OpenTelemetry + pyproject.toml — 2026-03-06
+
+- **OpenTelemetry 基础集成 (REQ-11)**: `framework/monitoring/tracing.py`
+  - `init_tracing()` 初始化 TracerProvider + ConsoleSpanExporter
+  - `get_tracer()` 工具函数，管线步骤使用 `with get_tracer().start_as_current_span()`
+  - `instrument_fastapi()` 自动追踪 FastAPI 请求
+  - `api/main.py` 启动时自动初始化，失败不影响服务
+- **管线步骤 Span 注入 (REQ-11)**: `stream_executor_pipeline.py`
+  - 所有步骤方法包裹 `start_as_current_span`: step_1_2, step_3, step_3_4, step_5, step_6, step_6_5, step_7_8, step_9, step_11
+  - 每个 span 记录 request_id 和 user_id
+- **依赖管理 (REQ-12)**: 新增 `pyproject.toml` (hatchling build system)
+  - `[project.dependencies]` 对齐 requirements.txt
+  - `[project.optional-dependencies.dev]` 对齐 requirements-dev.txt
+  - Dockerfile 添加 uv 迁移注释（未正式迁移，保留 requirements.txt）
+- **代码清理**: `monitoring/__init__.py` 简化、`tests/conftest.py` 精简为 sys.path 设置
+- 验证：427 单元测试通过
+
+---
+
 ## #52 (test) Phase 3 测试加强 — adapter集成测试 + 检索测试 + Chaos测试 — 2026-03-06
 
 - **fitness_adapter 集成测试 (REQ-8)**: `tests/integration/test_fitness_adapter.py` — 40 用例

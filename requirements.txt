@@ -45,3 +45,8 @@ jieba>=0.42.1
 
 # WebSearch 兜底（完全免费，无需 API Key）
 duckduckgo-search>=6.0.0  # 或 ddgs>=7.0.0（新包名）
+
+# OpenTelemetry 全链路追踪 (REQ-11)
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-instrumentation-fastapi>=0.41b0

@@ -18,6 +18,7 @@ import asyncio
 from typing import Dict, Any, Optional, AsyncGenerator
 
 from src.framework.config.app_config import get_config
+from src.framework.monitoring.tracing import get_tracer
 from .state import (
     WorkflowState,
     StateUpdate,
@@ -514,30 +515,33 @@ class PipelineMixin:
 
     async def _execute_steps_1_2(self, state: WorkflowState) -> WorkflowState:
         """执行步骤1-2（并行）"""
-        from .nodes import node_preload_user_profile, node_store_session
+        with get_tracer(__name__).start_as_current_span("step_1_2") as span:
+            span.set_attribute("request_id", state.get("request_id", "unknown"))
+            span.set_attribute("user_id", str(state.get("user_id", "unknown")))
+            from .nodes import node_preload_user_profile, node_store_session
 
-        backend_client = self._get_backend_client()
-        cache_manager = self._get_cache_manager()
-        user_cache = self._get_user_cache()
+            backend_client = self._get_backend_client()
+            cache_manager = self._get_cache_manager()
+            user_cache = self._get_user_cache()
 
-        # 并行执行
-        results = await asyncio.gather(
-            node_preload_user_profile(
-                state,
-                backend_client=backend_client,
-                cache_manager=cache_manager,
-                user_cache=user_cache
-            ),
-            node_store_session(state, conversation_memory=self.conversation_memory),
-            return_exceptions=True
-        )
+            # 并行执行
+            results = await asyncio.gather(
+                node_preload_user_profile(
+                    state,
+                    backend_client=backend_client,
+                    cache_manager=cache_manager,
+                    user_cache=user_cache
+                ),
+                node_store_session(state, conversation_memory=self.conversation_memory),
+                return_exceptions=True
+            )
 
-        # 合并结果
-        for result in results:
-            if isinstance(result, StateUpdate):
-                state = result.merge_into(state)
-            elif isinstance(result, Exception):
-                state["errors"] = state.get("errors", []) + [str(result)]
+            # 合并结果
+            for result in results:
+                if isinstance(result, StateUpdate):
+                    state = result.merge_into(state)
+                elif isinstance(result, Exception):
+                    state["errors"] = state.get("errors", []) + [str(result)]
 
         return state
 
@@ -547,50 +551,21 @@ class PipelineMixin:
 
     async def _execute_step_3_only(self, state: WorkflowState) -> WorkflowState:
         """仅执行步骤3（会员检查），跳过步骤4"""
-        from .nodes import node_check_membership
+        with get_tracer(__name__).start_as_current_span("step_3") as span:
+            span.set_attribute("request_id", state.get("request_id", "unknown"))
+            span.set_attribute("user_id", str(state.get("user_id", "unknown")))
+            from .nodes import node_check_membership
 
-        backend_client = self._get_backend_client()
-        cache_manager = self._get_cache_manager()
-        membership_cache = self._get_membership_cache()
+            backend_client = self._get_backend_client()
+            cache_manager = self._get_cache_manager()
+            membership_cache = self._get_membership_cache()
 
-        result = await node_check_membership(
-            state,
-            backend_client=backend_client,
-            cache_manager=cache_manager,
-            membership_cache=membership_cache
-        )
-        if isinstance(result, StateUpdate):
-            state = result.merge_into(state)
-        elif isinstance(result, Exception):
-            state["errors"] = state.get("errors", []) + [str(result)]
-
-        return state
-
-    async def _execute_steps_3_4(self, state: WorkflowState) -> WorkflowState:
-        """执行步骤3-4（并行）"""
-        from .nodes import node_check_membership, node_classify_complexity
-
-        backend_client = self._get_backend_client()
-        cache_manager = self._get_cache_manager()
-        membership_cache = self._get_membership_cache()
-
-        # 并行执行
-        results = await asyncio.gather(
-            node_check_membership(
+            result = await node_check_membership(
                 state,
                 backend_client=backend_client,
                 cache_manager=cache_manager,
                 membership_cache=membership_cache
-            ),
-            node_classify_complexity(
-                state,
-                cache_manager=cache_manager
-            ),
-            return_exceptions=True
-        )
-
-        # 合并结果
-        for result in results:
+            )
             if isinstance(result, StateUpdate):
                 state = result.merge_into(state)
             elif isinstance(result, Exception):
@@ -598,51 +573,98 @@ class PipelineMixin:
 
         return state
 
+    async def _execute_steps_3_4(self, state: WorkflowState) -> WorkflowState:
+        """执行步骤3-4（并行）"""
+        with get_tracer(__name__).start_as_current_span("step_3_4") as span:
+            span.set_attribute("request_id", state.get("request_id", "unknown"))
+            span.set_attribute("user_id", str(state.get("user_id", "unknown")))
+            from .nodes import node_check_membership, node_classify_complexity
+
+            backend_client = self._get_backend_client()
+            cache_manager = self._get_cache_manager()
+            membership_cache = self._get_membership_cache()
+
+            # 并行执行
+            results = await asyncio.gather(
+                node_check_membership(
+                    state,
+                    backend_client=backend_client,
+                    cache_manager=cache_manager,
+                    membership_cache=membership_cache
+                ),
+                node_classify_complexity(
+                    state,
+                    cache_manager=cache_manager
+                ),
+                return_exceptions=True
+            )
+
+            # 合并结果
+            for result in results:
+                if isinstance(result, StateUpdate):
+                    state = result.merge_into(state)
+                elif isinstance(result, Exception):
+                    state["errors"] = state.get("errors", []) + [str(result)]
+
+        return state
+
     async def _execute_step_5(self, state: WorkflowState) -> WorkflowState:
         """执行步骤5"""
-        from .nodes import node_select_model
+        with get_tracer(__name__).start_as_current_span("step_5") as span:
+            span.set_attribute("request_id", state.get("request_id", "unknown"))
+            span.set_attribute("user_id", str(state.get("user_id", "unknown")))
+            from .nodes import node_select_model
 
-        result = await node_select_model(state)
-        if isinstance(result, StateUpdate):
-            state = result.merge_into(state)
+            result = await node_select_model(state)
+            if isinstance(result, StateUpdate):
+                state = result.merge_into(state)
 
         return state
 
     async def _execute_step_6(self, state: WorkflowState) -> WorkflowState:
         """执行步骤6"""
-        from .nodes import node_retrieve_few_shot
+        with get_tracer(__name__).start_as_current_span("step_6") as span:
+            span.set_attribute("request_id", state.get("request_id", "unknown"))
+            span.set_attribute("user_id", str(state.get("user_id", "unknown")))
+            from .nodes import node_retrieve_few_shot
 
-        backend_client = self._get_backend_client()
-        cache_manager = self._get_cache_manager()
+            backend_client = self._get_backend_client()
+            cache_manager = self._get_cache_manager()
 
-        result = await node_retrieve_few_shot(
-            state,
-            backend_client=backend_client,
-            cache_manager=cache_manager
-        )
-        if isinstance(result, StateUpdate):
-            state = result.merge_into(state)
+            result = await node_retrieve_few_shot(
+                state,
+                backend_client=backend_client,
+                cache_manager=cache_manager
+            )
+            if isinstance(result, StateUpdate):
+                state = result.merge_into(state)
 
         return state
 
     async def _execute_step_6_5(self, state: WorkflowState) -> WorkflowState:
         """执行步骤6.5"""
-        from .nodes import node_select_dag_template
-        cache_manager = self._get_cache_manager()
-        result = await node_select_dag_template(state, cache_manager=cache_manager)
-        if isinstance(result, StateUpdate):
-            state = result.merge_into(state)
+        with get_tracer(__name__).start_as_current_span("step_6_5") as span:
+            span.set_attribute("request_id", state.get("request_id", "unknown"))
+            span.set_attribute("user_id", str(state.get("user_id", "unknown")))
+            from .nodes import node_select_dag_template
+            cache_manager = self._get_cache_manager()
+            result = await node_select_dag_template(state, cache_manager=cache_manager)
+            if isinstance(result, StateUpdate):
+                state = result.merge_into(state)
 
         return state
 
     async def _execute_steps_7_8(self, state: WorkflowState) -> WorkflowState:
         """执行步骤7-8（支持 DAG 固定编排 / Agent 动态决策）"""
-        strategy = state.get("strategy", "dag")
+        with get_tracer(__name__).start_as_current_span("step_7_8") as span:
+            span.set_attribute("request_id", state.get("request_id", "unknown"))
+            span.set_attribute("user_id", str(state.get("user_id", "unknown")))
+            strategy = state.get("strategy", "dag")
 
-        if strategy == "agent":
-            return await self._execute_steps_7_8_agent(state)
+            if strategy == "agent":
+                return await self._execute_steps_7_8_agent(state)
 
-        return await self._execute_steps_7_8_dag(state)
+            return await self._execute_steps_7_8_dag(state)
 
     async def _execute_steps_7_8_dag(self, state: WorkflowState) -> WorkflowState:
         """步骤7-8: DAG 固定编排模式"""
@@ -723,25 +745,29 @@ class PipelineMixin:
 
     async def _execute_step_9(self, state: WorkflowState) -> WorkflowState:
         """执行步骤9"""
-        from .nodes import node_aggregate_data
+        with get_tracer(__name__).start_as_current_span("step_9") as span:
+            span.set_attribute("request_id", state.get("request_id", "unknown"))
+            from .nodes import node_aggregate_data
 
-        result = await node_aggregate_data(state)
-        if isinstance(result, StateUpdate):
-            state = result.merge_into(state)
+            result = await node_aggregate_data(state)
+            if isinstance(result, StateUpdate):
+                state = result.merge_into(state)
 
         return state
 
     async def _execute_step_11(self, state: WorkflowState) -> WorkflowState:
         """执行步骤11"""
-        from .nodes import node_log_interaction
+        with get_tracer(__name__).start_as_current_span("step_11") as span:
+            span.set_attribute("request_id", state.get("request_id", "unknown"))
+            from .nodes import node_log_interaction
 
-        backend_client = self._get_backend_client()
+            backend_client = self._get_backend_client()
 
-        result = await node_log_interaction(
-            state,
-            backend_client=backend_client
-        )
-        if isinstance(result, StateUpdate):
-            state = result.merge_into(state)
+            result = await node_log_interaction(
+                state,
+                backend_client=backend_client
+            )
+            if isinstance(result, StateUpdate):
+                state = result.merge_into(state)
 
         return state

@@ -25,6 +25,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # Python 依赖（--mount=type=cache 持久化 pip 下载缓存）
+# 未来可迁移到 uv: 需在镜像中安装 uv，使用 uv pip install -r requirements.txt 或 uv sync
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
