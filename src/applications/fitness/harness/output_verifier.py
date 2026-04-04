@@ -147,7 +147,7 @@ class OutputVerifier:
         dag_results: Dict[str, Any],
         hard_constraints: List[str],
     ):
-        """检查计划中的动作是否与硬约束冲突"""
+        """检查计划中的动作是否与硬约束冲突（关键词交集匹配）"""
         if not hard_constraints:
             return
 
@@ -156,18 +156,36 @@ class OutputVerifier:
         if not exercises:
             return
 
-        constraint_lower = [c.lower() for c in hard_constraints]
-
         for exercise in exercises:
-            ex_lower = exercise.lower()
-            for i, constraint in enumerate(constraint_lower):
-                # 模糊匹配：约束文本中包含动作名，或反过来
-                if ex_lower in constraint or constraint in ex_lower:
+            ex_keywords = self._extract_keywords(exercise)
+            for constraint in hard_constraints:
+                con_keywords = self._extract_keywords(constraint)
+                # 关键词交集：动作名中的词出现在约束文本中
+                overlap = ex_keywords & con_keywords
+                if overlap:
                     result.add_failure(
                         dimension="safety_conflict",
-                        detail=f"动作 '{exercise}' 与硬约束冲突: '{hard_constraints[i]}'",
+                        detail=f"动作 '{exercise}' 与硬约束冲突: '{constraint}' (匹配词: {', '.join(overlap)})",
                         severity="critical",
                     )
+
+    @staticmethod
+    def _extract_keywords(text: str) -> set:
+        """从文本中提取关键词（中文2+字符词 + 英文单词）"""
+        import re
+        keywords = set()
+        # 中文词提取：连续中文字符（2字及以上作为词）
+        chinese_words = re.findall(r'[\u4e00-\u9fff]{2,}', text)
+        for w in chinese_words:
+            keywords.add(w)
+            # 长词也拆出2字子串（"杠铃深蹲" → "杠铃", "深蹲"）
+            if len(w) > 2:
+                for i in range(len(w) - 1):
+                    keywords.add(w[i:i+2])
+        # 英文词
+        eng_words = re.findall(r'[a-zA-Z_]+', text.lower())
+        keywords.update(eng_words)
+        return keywords
 
     # ============================================================
     # 维度 2: 器械可用性
