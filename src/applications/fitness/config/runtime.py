@@ -245,6 +245,50 @@ class PromptOptimizationConfig:
 
 
 @dataclass
+class HarnessConfig:
+    """
+    Harness v1 灰度配置
+    
+    控制新 harness 管道的启用范围，支持按模板和按用户灰度。
+    默认全部关闭，通过 YAML 配置或环境变量逐步开启。
+    """
+    enabled: bool = False                           # 主开关
+    enabled_templates: List[str] = field(            # 按模板灰度
+        default_factory=list
+    )
+    enabled_user_ids: List[int] = field(             # 按用户灰度
+        default_factory=list
+    )
+    memory_v2_enabled: bool = False                  # 记忆 Schema v2
+    context_packet_enabled: bool = False             # 分层上下文包
+    verifier_enabled: bool = False                   # 输出校验器
+    policy_enabled: bool = False                     # 执行策略层
+    tracer_enabled: bool = False                     # 追踪器
+    
+    def is_active_for(self, template_id: str, user_id: int = 0) -> bool:
+        """
+        判定指定模板+用户是否走新 harness 路径
+        
+        Args:
+            template_id: 模板ID
+            user_id: 用户ID（0表示不按用户过滤）
+        
+        Returns:
+            是否启用新 harness
+        """
+        if not self.enabled:
+            return False
+        # 如果白名单为空，表示对所有模板/用户启用
+        template_ok = not self.enabled_templates or template_id in self.enabled_templates
+        user_ok = not self.enabled_user_ids or user_id in self.enabled_user_ids
+        return template_ok and user_ok
+    
+    def validate(self) -> List[str]:
+        """验证配置"""
+        return []  # 无强约束
+
+
+@dataclass
 class RuntimeConfig:
     """
     运行时配置
@@ -262,6 +306,7 @@ class RuntimeConfig:
     workflow: WorkflowConfig = field(default_factory=WorkflowConfig)
     monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
     prompt_optimization: PromptOptimizationConfig = field(default_factory=PromptOptimizationConfig)
+    harness: HarnessConfig = field(default_factory=HarnessConfig)
     
     # 环境
     environment: str = "development"
@@ -286,6 +331,7 @@ class RuntimeConfig:
         all_errors.extend(self.workflow.validate())
         all_errors.extend(self.monitoring.validate())
         all_errors.extend(self.prompt_optimization.validate())
+        all_errors.extend(self.harness.validate())
         
         if all_errors:
             error_msg = "配置验证失败:\n" + "\n".join(f"  - {e}" for e in all_errors)
@@ -456,6 +502,18 @@ class RuntimeConfig:
             self.prompt_optimization.summarize_cycles_after = prompt_config.get("summarize_cycles_after", self.prompt_optimization.summarize_cycles_after)
             self.prompt_optimization.enable_summarization = prompt_config.get("enable_summarization", self.prompt_optimization.enable_summarization)
             self.prompt_optimization.log_prompt_length = prompt_config.get("log_prompt_length", self.prompt_optimization.log_prompt_length)
+        
+        # Harness v1 配置
+        harness_config = config.get("harness", {})
+        if harness_config:
+            self.harness.enabled = harness_config.get("enabled", self.harness.enabled)
+            self.harness.enabled_templates = harness_config.get("enabled_templates", self.harness.enabled_templates)
+            self.harness.enabled_user_ids = harness_config.get("enabled_user_ids", self.harness.enabled_user_ids)
+            self.harness.memory_v2_enabled = harness_config.get("memory_v2_enabled", self.harness.memory_v2_enabled)
+            self.harness.context_packet_enabled = harness_config.get("context_packet_enabled", self.harness.context_packet_enabled)
+            self.harness.verifier_enabled = harness_config.get("verifier_enabled", self.harness.verifier_enabled)
+            self.harness.policy_enabled = harness_config.get("policy_enabled", self.harness.policy_enabled)
+            self.harness.tracer_enabled = harness_config.get("tracer_enabled", self.harness.tracer_enabled)
     
     def _apply_env_overrides(self):
         """应用环境变量覆盖"""
@@ -499,6 +557,16 @@ class RuntimeConfig:
         # 提示词优化
         if os.getenv("MAX_PROMPT_CHARS"):
             self.prompt_optimization.max_prompt_chars = int(os.getenv("MAX_PROMPT_CHARS", str(self.prompt_optimization.max_prompt_chars)))
+        
+        # Harness v1
+        if os.getenv("HARNESS_V1_ENABLED"):
+            self.harness.enabled = os.getenv("HARNESS_V1_ENABLED", "").lower() == "true"
+        if os.getenv("HARNESS_MEMORY_V2"):
+            self.harness.memory_v2_enabled = os.getenv("HARNESS_MEMORY_V2", "").lower() == "true"
+        if os.getenv("HARNESS_POLICY"):
+            self.harness.policy_enabled = os.getenv("HARNESS_POLICY", "").lower() == "true"
+        if os.getenv("HARNESS_VERIFIER"):
+            self.harness.verifier_enabled = os.getenv("HARNESS_VERIFIER", "").lower() == "true"
 
 
 class RuntimeConfigManager:
