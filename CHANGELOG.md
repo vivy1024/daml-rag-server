@@ -5,6 +5,49 @@
 
 ---
 
+## #54 (feat) Harness v1 — 确定性执行壳层 8 模块 — 2026-04-05
+
+**REQ-1 路由分流**: `workflow/nodes/step7_execute_dag.py`
+  - 在 DAG 执行前后插入 harness 管道钩子（策略→执行→校验→追踪）
+  - 完全由 HarnessConfig feature flag 控制，关闭时零行为变更
+  - harness 初始化失败自动回退旧路径（静默降级）
+
+**REQ-2 执行策略**: `harness/execution_policy.py` (280行)
+  - `ExecutionPolicy.check_pre_template()` fail-closed 安全检查
+  - `TemplateRiskLevel` 三级风险分级 (HIGH/MEDIUM/LOW)
+  - HIGH 模板在用户有 health_conditions 时强制要求 contraindications_checker + injury_risk_assessor
+
+**REQ-3 上下文包**: `harness/context_packet_builder.py` (330行)
+  - 9 层固定槽位上下文组装（system_rules → retrieved_knowledge）
+  - 独立 token 预算与自动截断
+  - `hard_constraints` 层标记 compressible=False，绝不压缩
+
+**REQ-4 记忆 Schema v2**: `services/user_memory.py` (+90行)
+  - `MemoryCategory` 6 类细分: PREFERENCE/HARD_CONSTRAINT/OUTCOME_PATTERN/COACH_DECISION/FAILURE_CASE/SESSION_FACT
+  - 置信度评分、来源追踪、TTL 过期机制
+  - `recall_constraints()` 专用接口 + v1 兼容映射 `_normalize_category()`
+
+**REQ-5 MCP 三层化**: `mcp_resources/` + `mcp_prompts/`
+  - `MCPResourceRegistry`: 9 个 URI 可寻址资源 (fitness://rules/* + fitness://data/*)
+  - `MCPPromptRegistry`: 4 个预制模板 (training-plan-synthesis/safety-assessment/nutrition-plan/harness-fallback)
+
+**REQ-6 输出校验**: `harness/output_verifier.py` (310行)
+  - 5 维度纯 Python 确定性校验: safety_conflict/equipment_mismatch/duration_exceeded/volume_overload/goal_mismatch
+  - safety_conflict 使用关键词交集匹配（中文2字子串拆分）
+  - critical 失败阻止输出，warning 放行
+
+**REQ-7 追踪器**: `harness/harness_tracer.py` (160行)
+  - 结构化 `HarnessTrace` 记录各阶段耗时、策略判定、工具执行、验证结果
+
+**REQ-8 灰度配置**: `config/runtime.py` (+44行)
+  - `HarnessConfig` dataclass: 主开关 + 6 个子开关 (policy/verifier/tracer/memory_v2/context_packet)
+  - `is_active_for(template_id, user_id)` 白名单灰度
+  - 支持 YAML 配置文件 + 环境变量覆盖
+
+- 容器内全部组件导入 + 烟雾测试通过 (test_harness_smoke.py + test_mcp_three_layer.py)
+
+---
+
 ## #53 (feat) Phase 4 长期改进 — OpenTelemetry + pyproject.toml — 2026-03-06
 
 - **OpenTelemetry 基础集成 (REQ-11)**: `framework/monitoring/tracing.py`
