@@ -1,0 +1,98 @@
+{
+  "version": "1.0.0",
+  "recorded_at": "2026-05-09T23:07:18.468665",
+  "harness_version": "v1.0.0",
+  "scenarios_count": 3,
+  "baselines": [
+    {
+      "id": "baseline-ctp",
+      "template": "complete_training_plan",
+      "name": "增肌计划 baseline",
+      "recorded_at": "2026-05-09T23:07:18.463922",
+      "harness_config": {
+        "enabled": true,
+        "policy_enabled": true,
+        "verifier_enabled": true,
+        "tracer_enabled": true
+      },
+      "result": {
+        "has_dag_results": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "tasks_completed": 8,
+        "tasks_failed": 0,
+        "error": null,
+        "warning": null,
+        "tools_executed": [
+          "get_user_profile",
+          "contraindications_checker",
+          "injury_risk_assessor",
+          "muscle_group_volume_calculator",
+          "movement_pattern_balancer",
+          "intelligent_exercise_selector",
+          "intelligent_weight_calculator",
+          "professional_program_designer",
+          "periodized_program_designer",
+          "training_split_designer"
+        ]
+      }
+    },
+    {
+      "id": "baseline-sa",
+      "template": "safety_assessment",
+      "name": "安全评估 baseline",
+      "recorded_at": "2026-05-09T23:07:18.465052",
+      "harness_config": {
+        "enabled": true,
+        "policy_enabled": true,
+        "verifier_enabled": true,
+        "tracer_enabled": true
+      },
+      "result": {
+        "has_dag_results": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "tasks_completed": 3,
+        "tasks_failed": 0,
+        "error": null,
+        "warning": null,
+        "tools_executed": [
+          "get_user_profile",
+          "contraindications_checker",
+          "injury_risk_assessor",
+          "safe_exercise_modifier",
+          "exercise_alternative_finder"
+        ]
+      }
+    },
+    {
+      "id": "baseline-pa",
+      "template": "plan_adjustment",
+      "name": "计划调整 baseline",
+      "recorded_at": "2026-05-09T23:07:18.466028",
+      "harness_config": {
+        "enabled": true,
+        "policy_enabled": true,
+        "verifier_enabled": true,
+        "tracer_enabled": true
+      },
+      "result": {
+        "has_dag_results": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "tasks_completed": 4,
+        "tasks_failed": 0,
+        "error": null,
+        "warning": null,
+        "tools_executed": [
+          "get_user_profile",
+          "contraindications_checker",
+          "muscle_group_volume_calculator",
+          "intelligent_exercise_selector",
+          "exercise_alternative_finder",
+          "movement_pattern_balancer"
+        ]
+      }
+    }
+  ]
+}

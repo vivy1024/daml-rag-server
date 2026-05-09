@@ -1,0 +1,38 @@
+{
+  "timestamp": "20260509_230436",
+  "total_cases": 1,
+  "passed": 1,
+  "failed": 0,
+  "results": [
+    {
+      "case_id": "SA-01",
+      "case_name": "健康用户安全评估",
+      "template": "safety_assessment",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (6 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 63.20783600676805,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 47.26044199196622,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      }
+    }
+  ]
+}

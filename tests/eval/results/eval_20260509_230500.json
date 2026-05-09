@@ -1,0 +1,458 @@
+{
+  "timestamp": "20260509_230500",
+  "total_cases": 15,
+  "passed": 14,
+  "failed": 1,
+  "results": [
+    {
+      "case_id": "CTP-01",
+      "case_name": "健康用户增肌计划",
+      "template": "complete_training_plan",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (11 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 70.68277800863143,
+        "error": null,
+        "tasks_completed": 8,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 57.239086003392,
+        "error": null,
+        "tasks_completed": 8,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "CTP-02",
+      "case_name": "有伤病用户增肌计划",
+      "template": "complete_training_plan",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (11 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 1.0965139954350889,
+        "error": null,
+        "tasks_completed": 8,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 1.118436994147487,
+        "error": null,
+        "tasks_completed": 8,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "CTP-03",
+      "case_name": "器械受限用户",
+      "template": "complete_training_plan",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (11 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 2.3461139935534447,
+        "error": null,
+        "tasks_completed": 8,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 1.1315239971736446,
+        "error": null,
+        "tasks_completed": 8,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "CTP-04",
+      "case_name": "时间极短用户",
+      "template": "complete_training_plan",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (11 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 1.5452370134880766,
+        "error": null,
+        "tasks_completed": 8,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 2.499438007362187,
+        "error": null,
+        "tasks_completed": 8,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "CTP-05",
+      "case_name": "多重健康问题用户",
+      "template": "complete_training_plan",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (11 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 1.385600000503473,
+        "error": null,
+        "tasks_completed": 8,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 0.9183090005535632,
+        "error": null,
+        "tasks_completed": 8,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "SA-01",
+      "case_name": "健康用户安全评估",
+      "template": "safety_assessment",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (6 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 0.4595560021698475,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 0.46035800187382847,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "SA-02",
+      "case_name": "膝伤用户评估深蹲",
+      "template": "safety_assessment",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (6 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 20.583601013640873,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 0.8403940009884536,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "SA-03",
+      "case_name": "孕期用户安全评估",
+      "template": "safety_assessment",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (6 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 0.7607359875692055,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 0.9316560026491061,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "SA-04",
+      "case_name": "心血管疾病用户",
+      "template": "safety_assessment",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (6 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 0.6108270026743412,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 0.90222799917683,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "SA-05",
+      "case_name": "老年用户平衡训练评估",
+      "template": "safety_assessment",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (6 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 0.7366780046140775,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 0.6085619970690459,
+        "error": null,
+        "tasks_completed": 3,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "PA-01",
+      "case_name": "因伤调整计划",
+      "template": "plan_adjustment",
+      "passed": false,
+      "dimension_scores": {
+        "policy": "❌ FAIL (expected=allow, actual=deny)",
+        "dag_execution": "❌ FAIL (expected=True, actual=False)",
+        "tool_completeness": "⚠️ SKIP (no DAG results)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 0.4899159976048395,
+        "error": null,
+        "tasks_completed": 4,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": false,
+        "policy_deny": true,
+        "deny_reason": "用户有健康状况 (右肩拉伤(急性期)), 但模板缺少必要安全检查: contraindications_checker",
+        "duration_ms": 0.22514800366479903,
+        "error": null,
+        "tasks_completed": 0,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "PA-02",
+      "case_name": "时间变化调整",
+      "template": "plan_adjustment",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (7 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 0.5944639997323975,
+        "error": null,
+        "tasks_completed": 4,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 0.5795040051452816,
+        "error": null,
+        "tasks_completed": 4,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "PA-03",
+      "case_name": "器械变化调整",
+      "template": "plan_adjustment",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (7 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 0.5180919979466125,
+        "error": null,
+        "tasks_completed": 4,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 1.30964900017716,
+        "error": null,
+        "tasks_completed": 4,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "PA-04",
+      "case_name": "疲劳反馈调整",
+      "template": "plan_adjustment",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (7 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 0.9891099907690659,
+        "error": null,
+        "tasks_completed": 4,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 1.1013140028808266,
+        "error": null,
+        "tasks_completed": 4,
+        "tasks_failed": 0
+      }
+    },
+    {
+      "case_id": "PA-05",
+      "case_name": "目标变化调整",
+      "template": "plan_adjustment",
+      "passed": true,
+      "dimension_scores": {
+        "policy": "✅ PASS",
+        "dag_execution": "✅ PASS",
+        "tool_completeness": "✅ PASS (7 tools)",
+        "verifier": "⚠️ SKIP (no verification)",
+        "error": "✅ No error"
+      },
+      "notes": [],
+      "old_path": {
+        "dag_executed": true,
+        "duration_ms": 0.7800640014465898,
+        "error": null,
+        "tasks_completed": 4,
+        "tasks_failed": 0
+      },
+      "harness_path": {
+        "dag_executed": true,
+        "policy_deny": false,
+        "deny_reason": "",
+        "duration_ms": 0.8939809922594577,
+        "error": null,
+        "tasks_completed": 4,
+        "tasks_failed": 0
+      }
+    }
+  ]
+}

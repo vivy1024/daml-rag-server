@@ -53,8 +53,10 @@ class TaskParamBuilder:
 
     def build_params(self, tool_name: str) -> Dict[str, Any]:
         """构建工具参数"""
+        # user_id 统一转为 string（schema 要求 string 类型）
+        raw_user_id = self.user_profile.get("user_id")
         base_params = {
-            "user_id": self.user_profile.get("user_id"),
+            "user_id": str(raw_user_id) if raw_user_id is not None else None,
             "user_profile": self.user_profile
         }
 
@@ -167,8 +169,9 @@ class TaskParamBuilder:
 
     def _build_contraindications_params(self) -> Dict[str, Any]:
         """构建禁忌症检查参数"""
+        raw_uid = self.user_profile.get("user_id")
         return {
-            "user_id": self.user_profile.get("user_id"),
+            "user_id": str(raw_uid) if raw_uid is not None else None,
             "exercise_ids": [],
             "health_conditions": self.user_profile.get("health_conditions", []),
             "include_recommendations": True,
@@ -177,8 +180,9 @@ class TaskParamBuilder:
 
     def _build_injury_risk_params(self) -> Dict[str, Any]:
         """构建损伤风险评估参数"""
+        raw_uid = self.user_profile.get("user_id")
         return {
-            "user_id": self.user_profile.get("user_id"),
+            "user_id": str(raw_uid) if raw_uid is not None else None,
             "planned_exercises": [],
             "training_intensity": self.user_profile.get("training_intensity", "moderate"),
             "session_duration_minutes": self.user_profile.get("session_duration", 60),
@@ -633,6 +637,9 @@ class TaskExecutor:
         # 步骤1.5: 确保user_id存在（跳过已由 _enhance_task_params 设置的情况）
         if not task.params.get("user_id"):
             self._ensure_user_id(task, previous_results)
+        elif not isinstance(task.params.get("user_id"), str):
+            # user_id 已存在但类型不是 string，强制转换（schema 要求 string）
+            task.params["user_id"] = str(task.params["user_id"])
         
         # 步骤2: 参数转换
         if self.parameter_converter:
@@ -701,7 +708,7 @@ class TaskExecutor:
         return workflow_state
 
     def _ensure_user_id(self, task: DAGTask, previous_results: Dict[str, Any]):
-        """确保user_id参数存在"""
+        """确保user_id参数存在且为string类型（schema要求）"""
         if "user_id" not in task.params or not task.params["user_id"]:
             if "get_user_profile" in previous_results:
                 user_profile_result = previous_results["get_user_profile"]
@@ -711,13 +718,16 @@ class TaskExecutor:
                         profile = user_profile_result.get("profile", {})
                         user_id = profile.get("user_id")
                     if user_id:
-                        task.params["user_id"] = user_id
+                        task.params["user_id"] = str(user_id)
             
             if not task.params.get("user_id"):
                 context = previous_results.get("_context", {})
                 user_id = context.get("user_id")
                 if user_id:
-                    task.params["user_id"] = user_id
+                    task.params["user_id"] = str(user_id)
+        elif task.params.get("user_id") and not isinstance(task.params["user_id"], str):
+            # 已有 user_id 但类型不是 string，强制转换
+            task.params["user_id"] = str(task.params["user_id"])
 
     def _try_extract_missing_param(self, task: DAGTask, tool_name: str, param_name: str):
         """

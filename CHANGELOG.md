@@ -5,6 +5,27 @@
 
 ---
 
+## #57 (feat) Harness v1 收尾 — 评估集 + baseline + bugfix — 2026-05-09
+
+**Task 3.3 — 兼容模式切换集成测试**:
+- `tests/integration/test_harness_feature_flag.py`: 11 个测试用例验证 feature flag 新旧路径切换
+- 覆盖：主开关/模板白名单/用户白名单/子开关独立/policy deny/初始化失败降级
+
+**Task 5.2 — 首批回归评估集**:
+- `tests/eval/cases/harness_regression_cases.py`: 15 个评估用例（3模板×5场景）
+- `tests/eval/run_harness_eval.py`: 评估运行器（对比旧路径 vs harness 路径）
+- 评估结果: 15/15 通过
+
+**Task 5.3 — Baseline trace 录制**:
+- `tests/eval/record_baseline_traces.py`: Baseline 录制器
+- `tests/eval/results/baseline_traces.json`: 3 个模板的 baseline 数据
+
+**Bugfix — user_id 类型强制转换**:
+- `src/applications/fitness/dag/task_executor.py`: user_id int→string 自动转换
+- 修复 contraindications_checker / injury_risk_assessor 参数验证失败
+
+---
+
 ## #56 (refactor) 移除 Ollama 本地 LLM — 2026-05-09
 
 - 删除 `OllamaConfig` 类及 `LLMProviderConfig.ollama` 属性
