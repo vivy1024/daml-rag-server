@@ -249,7 +249,7 @@ class TestLLMDecisionEngine:
 # 集成测试（需要LLM API）
 @pytest.mark.asyncio
 @pytest.mark.skipif(
-    not os.getenv("DEEPSEEK_API_KEY") and not os.getenv("OLLAMA_BASE_URL"),
+    not os.getenv("DEEPSEEK_API_KEY"),
     reason="需要LLM API配置"
 )
 async def test_full_selection_flow():

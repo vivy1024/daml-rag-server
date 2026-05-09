@@ -5,6 +5,19 @@
 
 ---
 
+## #56 (refactor) 移除 Ollama 本地 LLM — 2026-05-09
+
+- 删除 `OllamaConfig` 类及 `LLMProviderConfig.ollama` 属性
+- 删除 `call_ollama()` 函数及 `__init__.py` 导出
+- 删除 `BackendType.OLLAMA` 枚举值及 fallback manager 中的 ollama 分支
+- 删除 docker-compose.yml / .env / .env.example / .env.production 中的 OLLAMA_* 环境变量
+- 删除 `config/performance_optimization.yaml` 中的 ollama 后端配置
+- 删除 `scripts/数据质量增强/test_ollama_*.py` 3 个测试脚本
+- 更新 `llm_decision_engine.py` 移除 `call_ollama` import
+- 更新测试文件和文档中的 ollama 引用
+
+---
+
 ## #55 (feat) Skills-first Agent v2 — 全面重构 — 2026-05-09
 
 **Group A — 基础设施**:

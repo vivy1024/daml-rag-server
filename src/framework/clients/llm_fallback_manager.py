@@ -36,7 +36,6 @@ class BackendType(Enum):
     SILICONFLOW = "siliconflow"
     GLM = "glm"
     MOONSHOT = "moonshot"
-    OLLAMA = "ollama"  # 保留枚举值，实际已禁用
     TEMPLATE = "template"
 
 
@@ -116,11 +115,8 @@ class LLMFallbackManager:
 
         # 构建降级链
         cfg = get_config()
-        ollama_enabled = cfg.llm.ollama.enabled
         anthropic_enabled = cfg.llm.anthropic.enabled
         if fallback_backends:
-            if not ollama_enabled:
-                fallback_backends = [b for b in fallback_backends if b != "ollama"]
             self.fallback_backends = [BackendType(b) for b in fallback_backends]
         else:
             if self.primary_backend == BackendType.ANTHROPIC:
@@ -143,7 +139,7 @@ class LLMFallbackManager:
             f"primary={self.primary_backend.value}, "
             f"fallbacks={[b.value for b in self.fallback_backends]}, "
             f"max_retries={self.max_retries}, timeout={self.timeout}s, "
-            f"ollama_enabled={ollama_enabled}, anthropic_enabled={anthropic_enabled}"
+            f"anthropic_enabled={anthropic_enabled}"
         )
 
     def _init_backends(self):
@@ -548,15 +544,6 @@ class LLMFallbackManager:
                     max_tokens=request.max_tokens, temperature=request.temperature,
                 ), timeout=self.timeout,
             )
-        elif backend == BackendType.OLLAMA:
-            from .llm_client import call_ollama
-            return await asyncio.wait_for(
-                call_ollama(
-                    query=request.query, few_shot_examples=request.few_shot_examples,
-                    tool_results=request.tool_results, system_prompt=request.system_prompt,
-                    max_tokens=request.max_tokens, temperature=request.temperature,
-                ), timeout=self.timeout,
-            )
         raise ValueError(f"未知的后端类型: {backend}")
 
     async def _call_backend_stream_inline(
@@ -578,10 +565,6 @@ class LLMFallbackManager:
                 temperature=request.temperature, timeout=self.timeout,
             ):
                 yield chunk
-        elif backend == BackendType.OLLAMA:
-            from .llm_client import call_ollama
-            content = await self._call_backend_inline(backend, request)
-            yield content
         else:
             raise ValueError(
                 f"后端 {backend.value} 未注册且无内联实现，"

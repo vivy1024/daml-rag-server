@@ -148,14 +148,6 @@ class AnthropicConfig(BaseSettings):
     enabled: bool = True
 
 
-class OllamaConfig(BaseSettings):
-    """Ollama 本地 LLM 配置"""
-    model_config = SettingsConfigDict(env_prefix='OLLAMA_')
-
-    enabled: bool = False
-    base_url: str = 'http://localhost:11434'
-    model: str = 'llama3'
-
 
 class MoonshotConfig(BaseSettings):
     """Moonshot Kimi 配置"""
@@ -247,13 +239,12 @@ class DatabaseConfig:
 
 
 class LLMProviderConfig:
-    """LLM 配置聚合（DeepSeek + Anthropic + Ollama + Moonshot + Qwen + SiliconFlow + GLM + 通用参数）"""
+    """LLM 配置聚合（DeepSeek + Anthropic + Moonshot + Qwen + SiliconFlow + GLM + 通用参数）"""
 
     def __init__(self):
         self.base = LLMBaseConfig()
         self.deepseek = DeepSeekConfig()
         self.anthropic = AnthropicConfig()
-        self.ollama = OllamaConfig()
         self.moonshot = MoonshotConfig()
         self.qwen = QwenConfig()
         self.siliconflow = SiliconFlowConfig()

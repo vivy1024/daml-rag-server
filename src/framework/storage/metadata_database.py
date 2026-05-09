@@ -475,7 +475,7 @@ class MetadataDB:
             Dict: 性能统计
                 {
                     "user_id": "zhangsan",
-                    "model_name": "ollama",
+                    "model_name": "deepseek",
                     "total_count": 90,
                     "avg_reward": 4.2,
                     "recent_rewards": "[4.5, 4.2, 4.0, ...]",

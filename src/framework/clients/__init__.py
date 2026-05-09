@@ -18,7 +18,7 @@ from .base_client import BaseClient, ClientConfig
 from .http_client import HTTPClient
 from .mcp_client_v2 import ConfigurableMCPClient, create_configurable_mcp_client
 from .neo4j_client import Neo4jClient
-from .llm_client import call_deepseek, call_ollama, call_moonshot, LLMConfig, get_fallback_response
+from .llm_client import call_deepseek, call_moonshot, LLMConfig, get_fallback_response
 from .llm_fallback_manager import (
     LLMFallbackManager,
     LLMRequest,
@@ -34,7 +34,6 @@ __all__ = [
     'create_configurable_mcp_client',
     'Neo4jClient',
     'call_deepseek',
-    'call_ollama',
     'call_moonshot',
     'LLMConfig',
     'get_fallback_response',

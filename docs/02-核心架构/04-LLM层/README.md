@@ -44,7 +44,6 @@ USE_API_POOL=true  # 启用API池轮询
 
 ```bash
 DUAL_MODEL_ENABLED=false  # 禁用双模型选择
-OLLAMA_ENABLED=false      # 禁用Anthropic Claude降级
 ```
 
 **影响**:

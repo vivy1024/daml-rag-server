@@ -122,7 +122,6 @@ llm_fallback:
   
   # 降级后端列表(按优先级排序)
   fallback_backends:
-    - "ollama"
     - "template"
   
   # 重试配置
@@ -156,11 +155,6 @@ llm_fallback:
       api_url: "https://api.deepseek.com/v1"
       timeout: 30
       max_tokens: 4096
-    ollama:
-      api_url: "http://localhost:11434"
-      timeout: 60
-      max_tokens: 4096
-      model: "llama2"
 
 # ============================================
 # 并发限流配置 (需求4)

@@ -4,11 +4,10 @@ LLM调用模块
 
 支持多个LLM提供商:
 - DeepSeek (teacher模型，经济实惠) - 支持API池轮询
-- Ollama (student模型，本地部署) - 已禁用（服务器无Ollama）
 - Moonshot Kimi (备用，长文本)
 
-版本: v1.1.0
-更新: 2026-01-06 - 添加API池轮询，禁用Ollama
+版本: v1.2.0
+更新: 2026-05-09 - 移除Ollama（不再使用本地LLM）
 """
 
 import logging
@@ -50,8 +49,6 @@ class LLMConfig:
             logger.info(f"SiliconFlow已启用: model={cfg.llm.siliconflow.model}")
         if cfg.llm.glm.enabled:
             logger.info(f"智谱GLM已启用: model={cfg.llm.glm.model}")
-        if not cfg.llm.ollama.enabled:
-            logger.info("Ollama已禁用（服务器环境）")
         if cfg.service.use_api_pool:
             logger.info("API池轮询已启用")
         if not cfg.service.dual_model_enabled:
@@ -235,130 +232,6 @@ async def call_deepseek(
     )
 
 
-async def call_ollama(
-    query: str,
-    few_shot_examples: List[Dict[str, Any]],
-    tool_results: Dict[str, Any],
-    system_prompt: str = "你是一位专业的健身教练，擅长根据用户档案提供个性化的训练建议。",
-    model: Optional[str] = None,
-    max_tokens: Optional[int] = None,
-    temperature: Optional[float] = None
-) -> str:
-    """
-    调用Ollama API (student模型)
-
-    Args:
-        query: 用户查询
-        few_shot_examples: Few-Shot示例列表
-        tool_results: 工具调用结果
-        system_prompt: 系统提示词
-        model: Ollama模型名称
-        max_tokens: 最大生成token数
-        temperature: 温度参数（0.0-1.0）
-
-    Returns:
-        str: AI回答
-    """
-    cfg = _cfg()
-    if model is None:
-        model = cfg.llm.ollama.model
-    if max_tokens is None:
-        max_tokens = cfg.llm.base.max_tokens
-    if temperature is None:
-        temperature = cfg.llm.base.temperature
-
-    try:
-        # 构建消息
-        messages = [
-            {"role": "system", "content": system_prompt}
-        ]
-
-        # 添加Few-Shot示例
-        for example in few_shot_examples:
-            messages.append({
-                "role": "user",
-                "content": example.get("query", "")
-            })
-            messages.append({
-                "role": "assistant",
-                "content": example.get("response", "")
-            })
-
-        # 添加工具结果到上下文
-        tool_context = _format_tool_results(tool_results)
-        if tool_context:
-            messages.append({
-                "role": "system",
-                "content": f"工具调用结果:\n{tool_context}"
-            })
-
-        # 添加当前查询
-        messages.append({
-            "role": "user",
-            "content": query
-        })
-
-        # 调用Ollama API
-        async with httpx.AsyncClient(timeout=cfg.llm.base.timeout) as client:
-            response = await client.post(
-                f"{cfg.llm.ollama.base_url}/api/chat",
-                json={
-                    "model": model,
-                    "messages": messages,
-                    "stream": False,
-                    "options": {
-                        "num_predict": max_tokens,
-                        "temperature": temperature
-                    }
-                }
-            )
-
-            response.raise_for_status()
-            result = response.json()
-
-            answer = result["message"]["content"]
-
-            logger.info(
-                f"Ollama调用成功: model={model}, length={len(answer)}"
-            )
-
-            return answer
-
-    except httpx.HTTPError as e:
-        # 记录详细的错误上下文
-        logger.error(
-            f"Ollama HTTP错误: {e}\n"
-            f"上下文信息:\n"
-            f"  - 模型: {model}\n"
-            f"  - 基础URL: {cfg.llm.ollama.base_url}\n"
-            f"  - 查询长度: {len(query)}\n"
-            f"  - Few-Shot示例数: {len(few_shot_examples)}\n"
-            f"  - 工具结果数: {len(tool_results) if tool_results else 0}",
-            exc_info=True
-        )
-        # 返回降级响应而不是抛出异常
-        return get_fallback_response(
-            query=query,
-            tool_results=tool_results,
-            reason=f"Ollama HTTP错误: {str(e)}"
-        )
-    except (json.JSONDecodeError, KeyError, ConnectionError, OSError) as e:
-        # 记录详细的错误上下文
-        logger.error(
-            f"Ollama调用失败: {e}\n"
-            f"上下文信息:\n"
-            f"  - 模型: {model}\n"
-            f"  - 查询: {query[:100]}...\n"
-            f"  - Few-Shot示例数: {len(few_shot_examples)}\n"
-            f"  - 系统提示词长度: {len(system_prompt)}",
-            exc_info=True
-        )
-        # 返回降级响应而不是抛出异常
-        return get_fallback_response(
-            query=query,
-            tool_results=tool_results,
-            reason=f"Ollama调用失败: {str(e)}"
-        )
 
 
 async def call_moonshot(
@@ -1073,7 +946,7 @@ class LLMClient:
         初始化LLM客户端
         
         Args:
-            provider: LLM提供商，可选 "deepseek", "ollama", "moonshot", "anthropic"
+            provider: LLM提供商，可选 "deepseek", "moonshot", "anthropic"
         """
         self.provider = provider
         LLMConfig.validate()
@@ -1104,14 +977,6 @@ class LLMClient:
         
         if self.provider == "deepseek":
             return await call_deepseek(
-                query=query,
-                few_shot_examples=few_shot_examples,
-                tool_results=tool_results,
-                system_prompt=system_prompt,
-                **kwargs
-            )
-        elif self.provider == "ollama":
-            return await call_ollama(
                 query=query,
                 few_shot_examples=few_shot_examples,
                 tool_results=tool_results,
@@ -1196,7 +1061,7 @@ def get_llm_client(provider: str = "deepseek") -> LLMClient:
     获取LLM客户端实例（工厂函数）
     
     Args:
-        provider: LLM提供商，可选 "deepseek", "ollama", "moonshot", "anthropic"
+        provider: LLM提供商，可选 "deepseek", "moonshot", "anthropic"
     
     Returns:
         LLMClient: LLM客户端实例

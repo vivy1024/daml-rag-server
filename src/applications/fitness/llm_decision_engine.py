@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from .dag_template_system import DAGTemplate, DAGTemplateManager
-from ...framework.clients.llm_client import call_deepseek, call_ollama, LLMConfig
+from ...framework.clients.llm_client import call_deepseek, LLMConfig
 
 logger = logging.getLogger(__name__)
 
@@ -402,7 +402,7 @@ class LLMDecisionEngine:
         调用LLM（使用降级管理器）
         
         使用LLMFallbackManager进行LLM调用，支持自动降级和重试。
-        降级策略：DeepSeek → Ollama → Template
+        降级策略：DeepSeek → Template
         """
         try:
             # ✅ 使用DI容器单例

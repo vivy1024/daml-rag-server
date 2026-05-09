@@ -143,7 +143,6 @@ class TestLLMFallbackIntegration:
         llm_config = config['llm_fallback']
         
         assert llm_config['primary_backend'] == 'deepseek'
-        assert 'ollama' in llm_config['fallback_backends']
         assert 'template' in llm_config['fallback_backends']
         assert llm_config['max_retries'] == 3
         assert llm_config['timeout'] == 30

@@ -26,7 +26,7 @@ class LLMConfig:
     LLM configuration class.
     
     Attributes:
-        provider: LLM provider name (e.g., "openai", "deepseek", "ollama", "custom")
+        provider: LLM provider name (e.g., "openai", "deepseek", "anthropic", "custom")
         api_key: API key for the provider
         base_url: Base URL for API endpoint
         model: Model name/identifier

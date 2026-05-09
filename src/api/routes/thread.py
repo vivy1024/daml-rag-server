@@ -28,7 +28,7 @@ from ..models.thread import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/thread")
+router = APIRouter(prefix="/v1/thread")
 
 # 内存存储（后续由 Redis/DB 替换）
 _thread_store: dict[str, ThreadInfo] = {}
