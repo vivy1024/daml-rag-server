@@ -84,6 +84,7 @@ def build_agent_graph(
     output_verifier: Optional[OutputVerifierV2] = None,
     harness_tracer: Optional[HarnessTracerV2] = None,
     llm_pool: Optional[LLMPoolManager] = None,
+    tool_registry=None,
     use_memory_checkpointer: bool = True,
 ):
     """构建 Agent v2 编排图
@@ -118,6 +119,7 @@ def build_agent_graph(
             executor=skill_executor,
             allowlist=_allowlist,
             tracer=_tracer,
+            tool_registry=tool_registry,
         )
 
     _verifier = output_verifier or OutputVerifierV2()

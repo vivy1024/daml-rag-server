@@ -29,6 +29,7 @@ _skill_manager: SkillManager | None = None
 _skill_executor: SkillExecutor | None = None
 _tool_allowlist: ToolAllowlist | None = None
 _harness_tracer: HarnessTracerV2 | None = None
+_tool_registry: Any = None
 
 
 def configure_skill_execute(
@@ -36,6 +37,7 @@ def configure_skill_execute(
     executor: SkillExecutor,
     allowlist: ToolAllowlist,
     tracer: HarnessTracerV2,
+    tool_registry: Any = None,
 ) -> None:
     """配置 skill_execute 节点依赖
 
@@ -44,12 +46,14 @@ def configure_skill_execute(
         executor: SkillExecutor 实例
         allowlist: ToolAllowlist 实例
         tracer: HarnessTracerV2 实例
+        tool_registry: 工具注册表（实现 call_tool 方法）
     """
-    global _skill_manager, _skill_executor, _tool_allowlist, _harness_tracer
+    global _skill_manager, _skill_executor, _tool_allowlist, _harness_tracer, _tool_registry
     _skill_manager = manager
     _skill_executor = executor
     _tool_allowlist = allowlist
     _harness_tracer = tracer
+    _tool_registry = tool_registry
 
 
 async def skill_execute(state: AgentState) -> Dict[str, Any]:
@@ -73,6 +77,10 @@ async def skill_execute(state: AgentState) -> Dict[str, Any]:
     if not _skill_manager or not _skill_executor:
         logger.error("skill_execute: 依赖未配置")
         return {"error": "skill_execute 依赖未配置"}
+
+    if not _tool_registry:
+        logger.error("skill_execute: tool_registry 未配置")
+        return {"error": "skill_execute tool_registry 未配置"}
 
     # 加载 Skill 定义
     try:
@@ -106,14 +114,15 @@ async def skill_execute(state: AgentState) -> Dict[str, Any]:
         result: ExecutionResult = await _skill_executor.execute(
             skill=skill_def,
             state=exec_state,
+            tool_registry=_tool_registry,
         )
 
         # 记录工具执行事件
         for tool_name, tool_result in result.tool_results.items():
             tracer.record_tool_execute(
                 tool_name=tool_name,
-                allowed=tool_result.success,
-                details={"duration_ms": tool_result.duration_ms},
+                success=tool_result.success,
+                duration_ms=tool_result.duration_ms,
             )
 
         logger.info(
