@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""步骤6：Few-Shot检索"""
+"""
+步骤6：Few-Shot检索（运行时从 Qdrant 检索）
+
+⚠️ DEPRECATED (2026-05-09): 已被 Skills-first Agent v2 替代。
+新系统使用 Skill YAML 内嵌静态 example_output 替代运行时 FewShot 检索。
+fitness_fewshot_pool Qdrant 集合不再被运行时依赖。
+待全量切换稳定后删除。
+"""
 
 import logging
 import hashlib

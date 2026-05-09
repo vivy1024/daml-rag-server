@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""步骤5：智能模型选择"""
+"""
+步骤5：智能模型选择（教师/学生切换）
+
+⚠️ DEPRECATED (2026-05-09): 已被 Skills-first Agent v2 替代。
+新系统使用 src/framework/models/llm_pool.py (LLMPoolManager) 统一管理模型。
+教师/学生切换逻辑已废弃，改为后台可配置的国产模型池。
+待全量切换稳定后删除。
+"""
 
 import logging
 

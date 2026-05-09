@@ -1,0 +1,54 @@
+# 训练进展分析
+id: progress_analysis
+name: 训练进展分析
+description: 分析用户的训练记录和进展，提供调整建议和下一步方向
+triggers:
+  - 用户问训练效果如何
+  - 用户想了解进步情况
+  - 用户觉得没有进步
+  - 用户问是否需要调整计划
+  - 用户分享训练记录
+required_tools:
+  - get_user_profile
+  - find_similar_training_cases
+  - muscle_group_volume_calculator
+  - record_training_feedback
+optional_tools:
+  - intelligent_exercise_selector
+  - periodized_program_designer
+safety_preconditions:
+  user_has_profile: true
+  requires_training_history: true
+output_standard: |
+  必须包含：
+  1. 训练量趋势分析
+  2. 力量/体能进步评估
+  3. 当前瓶颈识别
+  4. 具体调整建议
+  5. 下一阶段目标设定
+  禁止：
+  - 无数据支撑的结论
+  - 过度乐观或悲观的评价
+  - 忽略恢复和疲劳因素
+example_output: |
+  ## 📊 训练进展分析
+
+  ### 过去 4 周数据
+  - 训练频率: 4次/周（目标达成 ✅）
+  - 卧推进步: 60kg → 65kg（+8.3%）
+  - 总训练量: 稳步上升
+
+  ### 分析
+  你的上肢力量进步明显，但下肢训练量偏低。
+  建议增加一次腿部训练日。
+
+  ### 下一步建议
+  1. 卧推尝试 67.5kg（渐进超负荷）
+  2. 增加深蹲频率到 2次/周
+  3. 考虑加入 deload 周（已连续训练 4 周）
+degradation: |
+  如果训练记录不足：基于用户口述进行定性分析
+  如果相似案例查找失败：仅基于用户数据分析
+harness_checkpoints:
+  pre_execution: verify user has training history
+  post_execution: recommendations must be progressive

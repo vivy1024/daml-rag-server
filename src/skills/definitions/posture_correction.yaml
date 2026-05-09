@@ -1,0 +1,55 @@
+# 体态矫正指导
+id: posture_correction
+name: 体态矫正指导
+description: 评估用户体态问题并提供矫正训练方案，包括拉伸和强化练习
+triggers:
+  - 用户提到体态问题
+  - 用户说圆肩/驼背/骨盆前倾
+  - 用户问如何改善姿势
+  - 用户久坐导致不适
+  - 用户想改善体态
+required_tools:
+  - get_user_profile
+  - postural_assessor
+  - safe_exercise_modifier
+  - intelligent_exercise_selector
+optional_tools:
+  - contraindications_checker
+  - injury_risk_assessor
+safety_preconditions:
+  user_has_profile: false
+  check_existing_injuries: true
+output_standard: |
+  必须包含：
+  1. 体态问题评估结果
+  2. 需要拉伸的紧张肌群
+  3. 需要强化的薄弱肌群
+  4. 具体矫正动作（含频率和持续时间）
+  5. 预期改善时间线
+  禁止：
+  - 诊断医学疾病
+  - 推荐超出安全范围的拉伸
+  - 忽略用户现有伤病
+example_output: |
+  ## 🧘 体态矫正方案 — 圆肩驼背
+
+  ### 评估结果
+  - 主要问题：上交叉综合征（圆肩+头前伸）
+  - 紧张肌群：胸大肌、上斜方肌、胸锁乳突肌
+  - 薄弱肌群：菱形肌、中下斜方肌、深层颈屈肌
+
+  ### 每日矫正计划（15分钟）
+  | 动作 | 类型 | 时间/次数 |
+  |------|------|-----------|
+  | 门框胸肌拉伸 | 拉伸 | 30秒×3组 |
+  | 面拉 | 强化 | 15次×3组 |
+  | 收下巴练习 | 强化 | 10次×3组 |
+  | 猫牛式 | 活动度 | 10次×2组 |
+
+  > 坚持 4-6 周可见明显改善。
+degradation: |
+  如果体态评估工具失败：基于用户描述给出通用建议
+  如果动作选择失败：推荐基础自重矫正动作
+harness_checkpoints:
+  pre_execution: check for spinal injuries
+  post_execution: verify exercises are appropriate for condition

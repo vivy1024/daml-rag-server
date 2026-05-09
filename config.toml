@@ -92,21 +92,6 @@ max_delay_ms = 10000           # 最大延迟(毫秒)
 # - API稳定性从85%提升到98%
 # - 内存使用稳定在阈值以下
 
-[query_complexity]
-# 查询复杂度分类配置（v3.2.0新增）
-# 使用GTE-Large-zh向量模型替代硬编码关键词，智能判断查询复杂度
-bge_model_name = "thenlper/gte-large-zh"  # 更新为GTE-Large-zh
-similarity_threshold = 0.7    # >= 此值判定为复杂查询 → DeepSeek
-moderate_threshold = 0.5      # < 此值判定为简单查询 → Ollama
-use_fallback_keywords = true  # 模型加载失败时使用关键词兜底
-enable_vector_cache = true    # 启用向量缓存（预计算复杂查询向量库）
-lazy_load_model = true        # 懒加载模型（首次使用时才加载）
-
-# 分类策略:
-# - 高相似度（>= 0.7）: 与复杂查询示例高度相似 → 使用教师模型（DeepSeek）
-# - 低相似度（< 0.5）: 简单查询 → 使用学生模型（Ollama）
-# - 中等相似度（0.5-0.7）: 需要结合Few-Shot判断 → 保守策略（DeepSeek）
-
 [logging]
 level = "INFO"
 format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

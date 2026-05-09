@@ -5,6 +5,41 @@
 
 ---
 
+## #55 (feat) Skills-first Agent v2 — 全面重构 — 2026-05-09
+
+**Group A — 基础设施**:
+- `src/framework/models/llm_pool.py`: LLMPoolManager + LLMPoolConfig，国产模型池，fallback 降级链，健康检查
+- `src/framework/persistence/checkpointer.py`: Redis Checkpointer 工厂，InMemorySaver 开发模式
+- `src/api/routes/thread.py` + `src/api/models/thread.py`: Thread CRUD API
+
+**Group B — Agent Runtime**:
+- `src/agent_v2/state.py`: AgentState TypedDict (12 字段)
+- `src/agent_v2/graph.py`: LangGraph StateGraph 6 节点 + 2 条件边
+- `src/agent_v2/nodes/`: init_thread / skill_select / safety_check / skill_execute / output_generate / record
+- `src/agent_v2/sse_emitter.py`: 7 种 SSE 事件类型 + stream_agent_response async generator
+- `src/agent_v2/feature_flag.py`: AGENT_V2_ENABLED 环境变量控制
+
+**Group C — Skills 体系**:
+- `src/skills/definition.py`: SkillDefinition dataclass (11 字段)
+- `src/skills/loader.py`: YAML 加载器 + 字段验证
+- `src/skills/manager.py`: SkillManager v2 (注册/获取/列表/function calling schema)
+- `src/skills/router.py`: SkillRouter (LLM function calling 路由)
+- `src/skills/executor.py`: SkillExecutor (工具链执行 + 并行组 + 容错)
+- `src/skills/definitions/`: 10 个核心 Skill YAML
+
+**Group D — Harness v2**:
+- `src/harness_v2/pre_skill_policy.py`: PreSkillPolicy (Skill 前安全策略)
+- `src/harness_v2/tool_allowlist.py`: ToolAllowlist (工具权限控制)
+- `src/harness_v2/output_verifier.py`: OutputVerifierV2 (6 维度确定性校验)
+- `src/harness_v2/harness_tracer.py`: HarnessTracerV2 (结构化决策链追踪)
+
+**Group G — 废弃标记**:
+- step4_classify_complexity / step5_select_model / step6_retrieve_few_shot / step6_5_select_dag_template / mode_router / model_evaluation → 标记 DEPRECATED
+
+**测试**: 69+ 个新测试用例 (test_llm_pool / test_checkpointer / test_thread_routes / test_skill_* / test_agent_graph)
+
+---
+
 ## #54 (feat) Harness v1 — 确定性执行壳层 8 模块 — 2026-04-05
 
 **REQ-1 路由分流**: `workflow/nodes/step7_execute_dag.py`

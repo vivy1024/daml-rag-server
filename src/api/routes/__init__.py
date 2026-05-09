@@ -10,10 +10,11 @@ API Routes Package
 - 食物数据查询接口
 - 用户预热接口
 - 对话历史管理接口
+- 线程管理接口
 
-版本：v2.3.0
-更新日期：2026-02-17
-重构说明：新增对话历史管理API
+版本：v2.4.0
+更新日期：2026-03-15
+重构说明：新增线程管理API（LangGraph v2）
 """
 
 from fastapi import APIRouter
@@ -27,6 +28,7 @@ from .conversation import router as conversation_router
 from .model_evaluation import router as model_evaluation_router
 from .memories import router as memories_router
 from .personas import router as personas_router
+from .thread import router as thread_router
 
 # 创建主路由器
 api_router = APIRouter()
@@ -80,6 +82,11 @@ api_router.include_router(
 api_router.include_router(
     personas_router,
     tags=["Persona"]
+)
+
+api_router.include_router(
+    thread_router,
+    tags=["Thread"]
 )
 
 # 导出路由

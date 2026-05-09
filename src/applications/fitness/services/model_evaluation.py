@@ -2,6 +2,11 @@
 """
 模型评估统计服务
 
+⚠️ DEPRECATED (2026-05-09): 已被 yuzhen-eval 评测平台替代。
+新系统使用独立评测平台（yuzhen-eval/）进行自动+人工评测。
+旧的基于 Qdrant FewShot 库的评估逻辑已废弃。
+待全量切换稳定后删除。
+
 从 Qdrant Few-Shot 库中聚合各模型的评估数据，
 提供按 backend_used 分组的统计分析。
 

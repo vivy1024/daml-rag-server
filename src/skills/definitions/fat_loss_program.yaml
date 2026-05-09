@@ -1,0 +1,62 @@
+# 减脂方案
+id: fat_loss_program
+name: 减脂方案
+description: 为用户制定综合减脂方案，包含训练和营养两个维度的建议
+triggers:
+  - 用户想减肥/减脂
+  - 用户问如何降低体脂率
+  - 用户想要减脂训练计划
+  - 用户问有氧怎么做
+  - 用户想瘦下来
+required_tools:
+  - get_user_profile
+  - tdee_calculator
+  - contraindications_checker
+  - intelligent_exercise_selector
+  - nutrition_intake_analyzer
+  - professional_program_designer
+optional_tools:
+  - meal_plan_designer
+  - training_split_designer
+  - exercise_nutrition_optimization
+safety_preconditions:
+  user_has_profile: true
+  check_bmi_extremes: true
+output_standard: |
+  必须包含：
+  1. 热量缺口计算和目标
+  2. 训练方案（力量+有氧结合）
+  3. 饮食调整建议
+  4. 合理的减脂速度预期（0.5-1kg/周）
+  5. 阶段性目标设定
+  禁止：
+  - 推荐极端节食（低于 BMR 的 80%）
+  - 过度有氧（每周超过 5 小时）
+  - 忽略力量训练的重要性
+  - 推荐违禁减脂产品
+example_output: |
+  ## 🔥 你的减脂方案
+
+  ### 目标设定
+  - 当前体重: 80kg | 目标: 72kg
+  - 预计周期: 10-16 周
+  - 每周减脂速度: 0.5-0.8kg
+
+  ### 热量策略
+  - TDEE: 2,500 kcal
+  - 目标摄入: 2,000 kcal（-500 kcal/天）
+  - 蛋白质: 160g（保护肌肉）
+
+  ### 训练安排
+  | 日期 | 内容 | 时长 |
+  |------|------|------|
+  | 周一 | 上肢力量 | 50min |
+  | 周三 | 下肢力量 | 50min |
+  | 周五 | 全身力量 | 45min |
+  | 周二/四 | 低强度有氧 | 30min |
+degradation: |
+  如果 TDEE 计算失败：使用保守估算值
+  如果用户无体重数据：提示补充基础数据
+harness_checkpoints:
+  pre_execution: verify no eating disorder history
+  post_execution: calorie target must be above 80% BMR

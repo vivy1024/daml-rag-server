@@ -1,0 +1,51 @@
+# 营养膳食规划
+id: nutrition_planning
+name: 营养膳食规划
+description: 根据用户的训练目标、体重和活动量，制定个性化的营养和膳食方案
+triggers:
+  - 用户问吃什么
+  - 用户请求饮食计划
+  - 用户问热量/蛋白质摄入
+  - 用户想要减脂/增肌饮食方案
+  - 用户问训练前后吃什么
+required_tools:
+  - get_user_profile
+  - tdee_calculator
+  - nutrition_intake_analyzer
+  - meal_plan_designer
+optional_tools:
+  - exercise_nutrition_optimization
+safety_preconditions:
+  user_has_profile: true
+  requires_weight_data: true
+output_standard: |
+  必须包含：
+  1. TDEE 和目标热量计算
+  2. 宏量营养素分配（蛋白质/碳水/脂肪）
+  3. 具体膳食建议（至少一天示例）
+  4. 训练日与休息日的区别
+  禁止：
+  - 推荐极端节食（低于 BMR）
+  - 忽略用户的饮食偏好/过敏
+  - 推荐违禁补剂
+example_output: |
+  ## 🥗 你的营养方案
+
+  ### 基础数据
+  - TDEE: 2,450 kcal/天
+  - 目标热量: 2,100 kcal/天（减脂期，-350 kcal）
+  - 蛋白质: 160g | 碳水: 210g | 脂肪: 70g
+
+  ### 训练日膳食示例
+  | 餐次 | 食物 | 热量 | 蛋白质 |
+  |------|------|------|--------|
+  | 早餐 | 鸡蛋3个+全麦面包2片+牛奶 | 450 kcal | 30g |
+  | 午餐 | 鸡胸肉150g+糙米+西兰花 | 550 kcal | 45g |
+  | 训练后 | 蛋白粉+香蕉 | 250 kcal | 30g |
+  | 晚餐 | 三文鱼120g+红薯+沙拉 | 500 kcal | 35g |
+degradation: |
+  如果 TDEE 计算失败：使用通用公式估算
+  如果用户无体重数据：提示补充后再生成
+harness_checkpoints:
+  pre_execution: user must have weight data
+  post_execution: calorie target must be above BMR

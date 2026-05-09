@@ -2,6 +2,12 @@
 """
 执行模式路由器
 
+⚠️ DEPRECATED (2026-05-09): 已被 Skills-first Agent v2 替代。
+新系统不再区分 dag/agent 模式，统一走 Agent v2 流程。
+前端不再暴露策略切换，由 Agent 自主决策。
+当 AGENT_V2_ENABLED=true 时此模块不再被调用。
+待全量切换稳定后删除。
+
 v4.1.0: 积分体系对齐 — 所有用户均可使用Agent模式，
 权限控制由积分消耗机制统一处理（与DAG模板一致）。
 - DAG: 固定编排（默认）

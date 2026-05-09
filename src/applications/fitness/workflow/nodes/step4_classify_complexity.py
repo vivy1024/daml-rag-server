@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""步骤4：BGE复杂度分类"""
+"""
+步骤4：BGE复杂度分类
+
+⚠️ DEPRECATED (2026-05-09): 已被 Skills-first Agent v2 替代。
+新系统使用 src/skills/router.py (LLM function calling) 替代 BGE 向量分类。
+当 AGENT_V2_ENABLED=true 时此模块不再被调用。
+待全量切换稳定后删除。
+"""
 
 import logging
 import hashlib

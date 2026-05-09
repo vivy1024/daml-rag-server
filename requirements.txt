@@ -36,6 +36,9 @@ PyJWT>=2.8.0  # Internal JWT验证（权限系统重构）
 langgraph>=0.2.0
 langchain-core>=0.3.0
 
+# LangGraph Checkpoint (Redis 持久化)
+langgraph-checkpoint-redis>=0.1.0
+
 # GraphRAG检索（neo4j官方包，替代自研Layer1+Layer2）
 neo4j-graphrag[qdrant]>=1.13.0
 

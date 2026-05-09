@@ -1,0 +1,61 @@
+# 力量提升方案
+id: strength_program
+name: 力量提升方案
+description: 为用户制定以力量提升为目标的训练方案，注重渐进超负荷和周期化
+triggers:
+  - 用户想提升力量
+  - 用户问如何增加卧推/深蹲/硬拉重量
+  - 用户想突破力量瓶颈
+  - 用户请求力量训练计划
+  - 用户提到 PR/个人记录
+required_tools:
+  - get_user_profile
+  - contraindications_checker
+  - intelligent_exercise_selector
+  - muscle_group_volume_calculator
+  - training_split_designer
+  - professional_program_designer
+optional_tools:
+  - periodized_program_designer
+  - movement_pattern_balancer
+  - find_similar_training_cases
+safety_preconditions:
+  user_has_profile: true
+  check_experience_level: true
+output_standard: |
+  必须包含：
+  1. 主要力量动作选择和目标
+  2. 周期化安排（积累期/强化期/测试期）
+  3. 渐进超负荷策略
+  4. 辅助动作安排
+  5. Deload 周安排
+  禁止：
+  - 新手直接上大重量
+  - 忽略热身和辅助训练
+  - 每周测试 1RM
+  - 推荐超出用户能力的重量
+example_output: |
+  ## 🏋️ 力量提升方案 — 卧推突破
+
+  ### 当前水平
+  - 卧推 1RM 估算: 80kg
+  - 目标: 4 周后达到 85kg
+
+  ### 4 周计划
+  | 周次 | 强度 | 组×次 | 重量 |
+  |------|------|-------|------|
+  | 第1周 | 积累 | 4×6 | 65kg (81%) |
+  | 第2周 | 积累 | 4×5 | 68kg (85%) |
+  | 第3周 | 强化 | 5×3 | 72kg (90%) |
+  | 第4周 | Deload | 3×5 | 56kg (70%) |
+
+  ### 辅助动作
+  - 上斜哑铃卧推 3×8-10
+  - 窄距卧推 3×8
+  - 三头绳索下压 3×12-15
+degradation: |
+  如果用户无训练历史：基于自述水平估算起始重量
+  如果周期化工具失败：使用线性渐进方案
+harness_checkpoints:
+  pre_execution: verify user experience level
+  post_execution: weights must not exceed estimated 1RM

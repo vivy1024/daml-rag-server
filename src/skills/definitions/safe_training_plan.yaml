@@ -1,0 +1,50 @@
+# 安全训练计划制定
+id: safe_training_plan
+name: 安全训练计划制定
+description: 为用户制定考虑伤病和禁忌的安全训练计划，确保动作选择、训练量和强度都在安全范围内
+triggers:
+  - 用户请求训练计划
+  - 用户请求增肌/力量/减脂计划
+  - 用户提到特定肌群训练
+  - 用户想要一周训练安排
+  - 用户问今天练什么
+required_tools:
+  - get_user_profile
+  - contraindications_checker
+  - injury_risk_assessor
+  - intelligent_exercise_selector
+  - muscle_group_volume_calculator
+  - professional_program_designer
+optional_tools:
+  - movement_pattern_balancer
+  - periodized_program_designer
+safety_preconditions:
+  user_has_profile: true
+  if_health_conditions: must_run_safety_assessment_first
+output_standard: |
+  必须包含：
+  1. 每个训练日的动作列表（名称、组数、次数、RPE）
+  2. 安全注意事项（如有伤病）
+  3. 渐进超负荷建议
+  4. 总训练量不超过用户 MAV
+  禁止：
+  - 推荐禁忌动作
+  - 超过用户可用时间
+  - 使用用户没有的器械
+example_output: |
+  ## 💪 你的胸肌训练计划
+
+  ### 训练日 A — 胸肌为主
+  | 动作 | 组数 | 次数 | RPE |
+  |------|------|------|-----|
+  | 平板杠铃卧推 | 4 | 8-10 | 7-8 |
+  | 上斜哑铃卧推 | 3 | 10-12 | 7 |
+  | 龙门架夹胸 | 3 | 12-15 | 6-7 |
+
+  > ⚠️ 注意：由于你提到右肩有轻微不适，建议卧推时使用较窄握距，避免过度外展。
+degradation: |
+  如果动作选择工具失败：使用 fallback 自重动作库
+  如果用户无档案：提示补充后再生成
+harness_checkpoints:
+  pre_execution: contraindications_checker must pass
+  post_execution: safety_conflict check

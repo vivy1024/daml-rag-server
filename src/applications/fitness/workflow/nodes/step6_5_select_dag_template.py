@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""步骤6.5：LLM选择DAG模板（含会员权限检查）"""
+"""
+步骤6.5：LLM选择DAG模板（含会员权限检查）
+
+⚠️ DEPRECATED (2026-05-09): 已被 Skills-first Agent v2 替代。
+新系统使用 src/skills/router.py (SkillRouter) 替代 LLM 选 DAG 模板。
+Skill 选择由 function calling 完成，不再暴露模板概念给用户。
+待全量切换稳定后删除。
+"""
 
 import logging
 import hashlib
