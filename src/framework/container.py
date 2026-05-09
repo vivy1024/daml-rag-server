@@ -255,8 +255,8 @@ class AppContainer:
 
         config = get_config()
         instance = LLMFallbackManager(
-            primary_backend="anthropic",
-            fallback_backends=["deepseek", "template"],
+            primary_backend="deepseek",
+            fallback_backends=["template"],
             max_retries=3,
             timeout=int(config.llm.base.timeout),
             enable_health_check=True,

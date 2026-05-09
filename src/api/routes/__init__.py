@@ -29,6 +29,7 @@ from .model_evaluation import router as model_evaluation_router
 from .memories import router as memories_router
 from .personas import router as personas_router
 from .thread import router as thread_router
+from .approval import router as approval_router
 
 # 创建主路由器
 api_router = APIRouter()
@@ -87,6 +88,11 @@ api_router.include_router(
 api_router.include_router(
     thread_router,
     tags=["Thread"]
+)
+
+api_router.include_router(
+    approval_router,
+    tags=["Approval"]
 )
 
 # 导出路由

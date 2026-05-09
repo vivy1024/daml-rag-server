@@ -5,11 +5,11 @@ LLM降级管理器 - v2.0.0 (策略模式重构)
 管理LLM调用的降级策略和错误恢复。
 后端调用逻辑已拆分到 backends/ 子模块：
 - IBackendClient: 统一接口
-- AnthropicClient / DeepSeekClient: 具体实现
+- DeepSeekClient: 具体实现
 - BackendHealthChecker: 健康检查
 - TemplateResponseGenerator: 模板降级
 
-降级策略：Anthropic → DeepSeek → Template → Error
+降级策略：DeepSeek → Template → Error
 
 版本: v2.0.0
 Task 45 - Phase 7 Batch 4 架构重构
@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 
 class BackendType(Enum):
     """LLM后端类型"""
-    ANTHROPIC = "anthropic"
     DEEPSEEK = "deepseek"
     QWEN = "qwen"
     SILICONFLOW = "siliconflow"
@@ -102,7 +101,7 @@ class LLMFallbackManager:
 
     def __init__(
         self,
-        primary_backend: str = "anthropic",
+        primary_backend: str = "deepseek",
         fallback_backends: Optional[List[str]] = None,
         max_retries: int = 3,
         timeout: int = 30,
@@ -114,15 +113,10 @@ class LLMFallbackManager:
         self.enable_health_check = enable_health_check
 
         # 构建降级链
-        cfg = get_config()
-        anthropic_enabled = cfg.llm.anthropic.enabled
         if fallback_backends:
             self.fallback_backends = [BackendType(b) for b in fallback_backends]
         else:
-            if self.primary_backend == BackendType.ANTHROPIC:
-                self.fallback_backends = [BackendType.DEEPSEEK, BackendType.TEMPLATE]
-            else:
-                self.fallback_backends = [BackendType.TEMPLATE]
+            self.fallback_backends = [BackendType.TEMPLATE]
 
         # 初始化后端客户端（延迟导入避免循环依赖）
         self._clients: Dict[BackendType, Any] = {}
@@ -138,20 +132,17 @@ class LLMFallbackManager:
             f"LLM降级管理器初始化: "
             f"primary={self.primary_backend.value}, "
             f"fallbacks={[b.value for b in self.fallback_backends]}, "
-            f"max_retries={self.max_retries}, timeout={self.timeout}s, "
-            f"anthropic_enabled={anthropic_enabled}"
+            f"max_retries={self.max_retries}, timeout={self.timeout}s"
         )
 
     def _init_backends(self):
         """延迟初始化后端客户端"""
         try:
-            from .backends.anthropic_client import AnthropicClient
             from .backends.deepseek_client import DeepSeekClient
             from .backends.generic_openai_client import GenericOpenAIClient
             from .backends.health_checker import BackendHealthChecker
             from .backends.template_generator import TemplateResponseGenerator
 
-            self._clients[BackendType.ANTHROPIC] = AnthropicClient()
             self._clients[BackendType.DEEPSEEK] = DeepSeekClient()
 
             # 通用OpenAI兼容后端（按 app_config 的 ENABLED 控制）
@@ -526,16 +517,7 @@ class LLMFallbackManager:
 
     async def _call_backend_inline(self, backend: BackendType, request: LLMRequest) -> str:
         """内联后端调用（兼容路径，当backends模块不可用时）"""
-        if backend == BackendType.ANTHROPIC:
-            from .llm_client import call_anthropic
-            return await asyncio.wait_for(
-                call_anthropic(
-                    query=request.query, few_shot_examples=request.few_shot_examples,
-                    tool_results=request.tool_results, system_prompt=request.system_prompt,
-                    max_tokens=request.max_tokens, temperature=request.temperature,
-                ), timeout=self.timeout,
-            )
-        elif backend == BackendType.DEEPSEEK:
+        if backend == BackendType.DEEPSEEK:
             from .llm_client import call_deepseek
             return await asyncio.wait_for(
                 call_deepseek(
@@ -551,14 +533,7 @@ class LLMFallbackManager:
     ) -> AsyncIterator[str]:
         """内联流式调用（兼容路径）"""
         messages = request.messages or self._build_messages(request)
-        if backend == BackendType.ANTHROPIC:
-            from .llm_client import call_anthropic_stream
-            async for chunk in call_anthropic_stream(
-                messages=messages, max_tokens=request.max_tokens,
-                temperature=request.temperature, timeout=self.timeout,
-            ):
-                yield chunk
-        elif backend == BackendType.DEEPSEEK:
+        if backend == BackendType.DEEPSEEK:
             from .llm_client import call_deepseek_stream
             async for chunk in call_deepseek_stream(
                 messages=messages, max_tokens=request.max_tokens,

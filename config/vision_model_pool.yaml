@@ -34,12 +34,3 @@ pool:
     context_window: 128000
     cost_tier: low
     note: "通义千问VL-Max，视觉理解强"
-
-  # === 基准 Vision 模型 15% ===
-  - backend: anthropic
-    model: claude-haiku-4-5-20250315
-    weight: 15
-    api_base: https://api.kirors.com/v1
-    context_window: 200000
-    cost_tier: baseline
-    note: "Claude Haiku 4.5，原生Vision支持"

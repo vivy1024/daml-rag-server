@@ -90,10 +90,10 @@ class TestBackendHealthChecker:
         checker = BackendHealthChecker()
         client = AsyncMock()
         client.health_check = AsyncMock(return_value=True)
-        run_async(checker.is_healthy("anthropic", client))
+        run_async(checker.is_healthy("deepseek", client))
         status = checker.get_status()
-        assert "anthropic" in status
-        assert status["anthropic"] is True
+        assert "deepseek" in status
+        assert status["deepseek"] is True
 
 
 # ═══════════════════════════════════════════════════════════
@@ -147,12 +147,12 @@ class TestLLMFallbackManagerOrchestration:
         manager = LLMFallbackManager(enable_health_check=False)
         mock_client = AsyncMock()
         mock_client.call = AsyncMock(return_value="AI回复内容")
-        manager._clients[BackendType.ANTHROPIC] = mock_client
+        manager._clients[BackendType.DEEPSEEK] = mock_client
 
         request = _make_request()
         response = run_async(manager.call_with_fallback(request))
         assert response.content == "AI回复内容"
-        assert response.backend_used == BackendType.ANTHROPIC
+        assert response.backend_used == BackendType.DEEPSEEK
         assert response.fallback_used is False
 
     def test_fallback_to_template(self):
@@ -162,7 +162,6 @@ class TestLLMFallbackManagerOrchestration:
         )
         mock_client = AsyncMock()
         mock_client.call = AsyncMock(side_effect=Exception("API error"))
-        manager._clients[BackendType.ANTHROPIC] = mock_client
         manager._clients[BackendType.DEEPSEEK] = mock_client
 
         request = _make_request()
@@ -179,7 +178,6 @@ class TestLLMFallbackManagerOrchestration:
 
     def test_backend_type_enum(self):
         """BackendType枚举值正确"""
-        assert BackendType.ANTHROPIC.value == "anthropic"
         assert BackendType.DEEPSEEK.value == "deepseek"
         assert BackendType.TEMPLATE.value == "template"
 
@@ -193,7 +191,7 @@ class TestLLMFallbackManagerOrchestration:
     def test_response_dataclass(self):
         """LLMResponse数据类"""
         resp = LLMResponse(
-            content="test", backend_used=BackendType.ANTHROPIC,
+            content="test", backend_used=BackendType.DEEPSEEK,
             fallback_used=False, attempt_count=1, duration_ms=100.0,
         )
         assert resp.error is None

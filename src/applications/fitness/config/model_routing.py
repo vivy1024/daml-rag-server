@@ -5,7 +5,7 @@
 三种路由模式共存，优先级：固定覆盖 > YAML加权池 > 环境变量池 > 默认降级链
 
 1. TEMPLATE_MODEL_MAP  — 固定覆盖（某模板必须用某模型）
-   格式: greeting:siliconflow,safety_assessment:anthropic
+   格式: greeting:siliconflow,safety_assessment:deepseek
 2. multi_model_pool.yaml — YAML加权随机池（9模型4层级）
 3. MULTI_MODEL_POOL    — 环境变量等权池（向后兼容）
 

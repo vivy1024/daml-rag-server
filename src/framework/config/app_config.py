@@ -138,17 +138,6 @@ class DeepSeekConfig(BaseSettings):
     model: str = 'deepseek-chat'
 
 
-class AnthropicConfig(BaseSettings):
-    """Anthropic Claude 配置（通过 Kiro RS 反向代理）"""
-    model_config = SettingsConfigDict(env_prefix='ANTHROPIC_')
-
-    api_key: str = ''
-    base_url: str = 'https://kirors.yuzhen-fitness.cn'
-    model: str = 'claude-haiku-4-5-20251001'
-    enabled: bool = True
-
-
-
 class MoonshotConfig(BaseSettings):
     """Moonshot Kimi 配置"""
     model_config = SettingsConfigDict(env_prefix='MOONSHOT_')
@@ -239,12 +228,11 @@ class DatabaseConfig:
 
 
 class LLMProviderConfig:
-    """LLM 配置聚合（DeepSeek + Anthropic + Moonshot + Qwen + SiliconFlow + GLM + 通用参数）"""
+    """LLM 配置聚合（DeepSeek + Moonshot + Qwen + SiliconFlow + GLM + 通用参数）"""
 
     def __init__(self):
         self.base = LLMBaseConfig()
         self.deepseek = DeepSeekConfig()
-        self.anthropic = AnthropicConfig()
         self.moonshot = MoonshotConfig()
         self.qwen = QwenConfig()
         self.siliconflow = SiliconFlowConfig()

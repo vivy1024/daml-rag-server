@@ -45,12 +45,10 @@ class TestAutoRegisterFromYamlPool:
         """创建一个最小化的 LLMFallbackManager 用于测试"""
         from src.framework.clients.llm_fallback_manager import LLMFallbackManager
         with patch.dict(os.environ, {
-            "ANTHROPIC_ENABLED": "true",
-            "ANTHROPIC_API_KEY": "test-key",
-            "ANTHROPIC_BASE_URL": "https://test.api.com/v1",
+            "DEEPSEEK_API_KEY": "test-key",
         }):
             manager = LLMFallbackManager(
-                primary_backend="anthropic",
+                primary_backend="deepseek",
                 fallback_backends=["template"],
                 max_retries=1,
                 timeout=10,

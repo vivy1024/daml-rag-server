@@ -2,7 +2,7 @@
 """
 IBackendClient - LLM后端抽象接口
 
-所有LLM后端（Anthropic, DeepSeek等）必须实现此接口。
+所有LLM后端（DeepSeek等）必须实现此接口。
 LLMFallbackManager通过此接口统一调用不同后端。
 
 Task 45 - Phase 7 Batch 4

@@ -103,7 +103,7 @@ class ConnectionPoolConfig:
 class LLMConfig:
     """LLM 配置"""
     # 主要后端
-    primary_backend: str = "anthropic"
+    primary_backend: str = "deepseek"
 
     # 降级后端
     fallback_backends: List[str] = field(default_factory=lambda: ["deepseek", "template"])

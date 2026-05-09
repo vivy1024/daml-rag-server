@@ -200,7 +200,7 @@ class CreditReporter:
             conversation_id: 会话ID（可选，用于幂等性去重）
             input_tokens: 输入Token数量
             output_tokens: 输出Token数量
-            backend_used: 实际使用的LLM后端（anthropic/deepseek/template）
+            backend_used: 实际使用的LLM后端（deepseek/template）
             ttfb_ms: 首字节时间(毫秒)
             duration_ms: 总耗时(毫秒)
             tokens_per_sec: 令牌生成速率

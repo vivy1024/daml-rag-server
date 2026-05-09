@@ -28,14 +28,14 @@ class TestDegradationChainTiming:
     async def test_full_degradation_within_30s(self):
         """所有后端 5xx 失败 → 降级到 template，总耗时 ≤ 30s
 
-        降级链: deepseek(3 retries) → anthropic(3 retries) → template
+        降级链: deepseek(3 retries) → template
         指数退避: 200ms → 400ms → 800ms（每个后端最多 1.4s 退避）
         预期总耗时: < 5s（mock 后端无网络延迟）
         """
         with patch.object(LLMFallbackManager, "_init_backends"):
             mgr = LLMFallbackManager(
                 primary_backend="deepseek",
-                fallback_backends=["anthropic", "template"],
+                fallback_backends=["template"],
                 max_retries=3,
                 enable_health_check=False,
             )
@@ -71,9 +71,9 @@ class TestDegradationChainTiming:
         # 关键断言：总耗时 ≤ 30s
         assert elapsed < 30.0, f"降级链耗时 {elapsed:.1f}s 超过 30s 上限"
 
-        # deepseek 3 retries + anthropic 3 retries = 6 次调用
-        assert len(call_log) == 6, f"预期 6 次后端调用，实际 {len(call_log)}: {call_log}"
-        assert call_log == ["deepseek"] * 3 + ["anthropic"] * 3
+        # deepseek 3 retries = 3 次调用
+        assert len(call_log) == 3, f"预期 3 次后端调用，实际 {len(call_log)}: {call_log}"
+        assert call_log == ["deepseek"] * 3
 
         # 最终降级到 template
         final_meta = chunks[-1][1]
@@ -87,7 +87,7 @@ class TestDegradationChainTiming:
         with patch.object(LLMFallbackManager, "_init_backends"):
             mgr = LLMFallbackManager(
                 primary_backend="deepseek",
-                fallback_backends=["anthropic", "template"],
+                fallback_backends=["template"],
                 max_retries=3,
                 enable_health_check=False,
             )

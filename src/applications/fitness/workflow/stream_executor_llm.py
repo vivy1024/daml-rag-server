@@ -166,7 +166,7 @@ class LLMStreamMixin:
                 }
                 model_override = routed.model
                 routed_primary = routed.backend
-                routed_fallbacks = ["anthropic", "deepseek", "template"]
+                routed_fallbacks = ["deepseek", "template"]
                 selected_context_window = routed.context_window
                 logger.info(
                     f"🔀 [{request_id}] 步骤10: 蓝绿池 {selected_template_id} → "
@@ -176,7 +176,7 @@ class LLMStreamMixin:
             elif routed:
                 # 固定覆盖或环境变量池（返回字符串）
                 routed_primary = routed
-                routed_fallbacks = ["anthropic", "deepseek", "template"]
+                routed_fallbacks = ["deepseek", "template"]
                 logger.info(
                     f"🔀 [{request_id}] 步骤10: 模板路由 {selected_template_id} → {routed}"
                 )
@@ -304,7 +304,7 @@ class LLMStreamMixin:
                             llm_request.model_override = chosen_v["model"]
                             # Vision 路由覆盖（复用单例，通过参数覆盖后端）
                             routed_primary = chosen_v["backend"]
-                            routed_fallbacks = ["anthropic", "deepseek", "template"]
+                            routed_fallbacks = ["deepseek", "template"]
                             pool_meta = {
                                 "model_id": chosen_v["model"],
                                 "cost_tier": chosen_v.get("cost_tier", "free"),

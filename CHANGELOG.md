@@ -5,6 +5,38 @@
 
 ---
 
+## #58 (feat) Skills-first Agent v2 完成 — 2026-05-10
+
+**Agent v2 核心 (Group B)**:
+- `src/agent_v2/`: LangGraph StateGraph 6 节点 + SSE 流式输出 + Feature Flag
+- 节点: init_thread → skill_select → safety_check → skill_execute → output_generate → record
+- HITL interrupt/resume 支持（LangGraph Command(resume=...)）
+- 端到端冒烟测试 4/4 通过（真实 LLM 调用）
+
+**Skills 体系 (Group C)**:
+- `src/skills/`: 10 个 Skill YAML + Loader + Manager + Router + Executor
+- LLM function calling 路由选择 Skill
+- 工具链并行/串行执行 + 容错（单工具失败不阻断）
+- 工具链测试 10/10 Skill 通过
+
+**Harness v2 (Group D)**:
+- `src/harness_v2/`: PreSkillPolicy + ToolAllowlist + OutputVerifier + HarnessTracer
+- Policy: 有伤病用户 → force_safety / 无档案 → require_profile
+- Allowlist: 每个 Skill 只能调用声明的工具
+- Verifier: 6 维度确定性校验（禁忌冲突/剂量超标/年龄不适等）
+- 集成测试 9/9 + Feature Flag 11/11 通过
+
+**三端接口对齐 (Group E)**:
+- `src/api/routes/chat.py`: 新增 `POST /v1/chat/agent` Agent v2 流式入口
+- `src/api/routes/approval.py`: HITL 审批端点（respond + pending）
+- 前端 SSE Worker 支持 Agent v2 事件格式
+- 前端 useChatStream 集成 approval 流程
+
+**文档**:
+- README.md 重写为 v2 架构
+
+---
+
 ## #57 (feat) Harness v1 收尾 — 评估集 + baseline + bugfix — 2026-05-09
 
 **Task 3.3 — 兼容模式切换集成测试**:

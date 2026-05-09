@@ -1,282 +1,253 @@
 # DAML-RAG Server
 
-**版本**: v9.83.0
-**更新日期**: 2026-02-20
+**版本**: v2.0.0 (构建号 #58)
+**更新日期**: 2026-05-10
 **状态**: ✅ 生产运行 · Docker容器部署 · Zeabur生产环境
 
 ---
 
 ## 📋 概述
 
-DAML-RAG Server 是玉珍健身的核心AI服务，实现了**面向垂直领域的自适应多源学习型RAG框架**。通过DAG固定编排和三层检索架构（向量+图谱+约束），提供专业、安全、个性化的健身指导服务。
+DAML-RAG Server 是玉珍健身的核心 AI 服务，实现了 **Skills-first Autonomous Agent** 架构。通过 LangGraph 状态图驱动 Skill 选择与工具链执行，配合 Harness 安全层和 HITL 人机协作，提供专业、安全、个性化的健身指导。
 
 ### 🎯 核心价值
 
-- **DAG固定编排**: 预定义工作流程，避免LLM幻觉，保证数据安全
+- **Skills-first Agent**: LLM 自主选择 Skill → 工具链自动执行 → 输出校验，替代旧的固定 11 步 workflow
+- **Harness 安全层**: PreSkillPolicy + ToolAllowlist + OutputVerifier，fail-closed 设计
+- **HITL 人机协作**: 高风险操作自动中断等待用户确认（LangGraph interrupt/resume）
 - **三层检索**: 向量语义匹配 + 图谱关系推理 + 业务约束验证
 - **知识图谱**: Neo4j(4,246节点) + Qdrant(4,585向量/1024维GTE-Large-zh)
-- **18个MCP工具**: 1个stdio用户档案服务 + 17个Python内置工具 + find_similar_training_cases
-- **多模型支持**: Anthropic Claude haiku-4.5（主，Kiro RS代理）→ DeepSeek（备）→ Template（兜底）
-- **生产验证**: Token节省85%，成本降低93%，质量提升38%
+- **多模型池**: Anthropic Claude（主）→ DeepSeek/GLM/Qwen（备）→ Template（兜底）
 
 ---
 
 ## 🏗️ 系统架构
 
-### 核心组件
+### Agent v2 流程（6 步）
 
-**DAML-RAG框架**:
-- **数据层**: Neo4j知识图谱 + Qdrant向量数据库 + MySQL对话历史
-- **检索层**: 向量检索 + 图谱检索 + 业务约束检索
-- **编排层**: DAG固定编排器（默认模式）+ Agent动态决策（energy+会员）
-- **工具层**: 18个MCP工具（1个stdio + 17个Python内置）
-- **服务层**: FastAPI RESTful API + SSE流式输出
+```
+1. 接收请求 + 恢复线程 (init_thread)
+2. 意图理解 + Skill 选择 (skill_select) — LLM function calling
+3. 安全策略 + HITL (safety_check) — PreSkillPolicy + interrupt
+4. Skill 执行 (skill_execute) — 工具链并行/串行执行
+5. 输出校验 + LLM 综合 (output_generate) — OutputVerifier + 自然语言生成
+6. 记录 + 评测采集 (record) — Checkpoint + HarnessTracer
+```
 
-**三层检索架构**:
+### LangGraph 状态图
+
 ```
-用户查询 → Layer1向量语义匹配 → Layer2图谱关系推理 → Layer3规则验证约束 → 个性化推荐
-    ↓              ↓                     ↓                     ↓               ↓
-Qdrant检索     训练知识/动作相似        肌肉关系/容量模型         安全检查/调整      最终建议
+init_thread → skill_select → safety_check ─┬─ (pass) → skill_execute → output_generate → record
+                                            └─ (HITL)  → [interrupt] → resume → skill_execute → ...
+                    ↑                       └─ (deny)  → output_generate (降级回答)
+                    └── direct_reply ←── (简单问候/闲聊)
 ```
+
+### 核心模块
+
+| 模块 | 路径 | 职责 |
+|------|------|------|
+| Agent v2 | `src/agent_v2/` | 状态图 + 6 节点 + SSE 流式输出 |
+| Skills | `src/skills/` | 10 个 Skill YAML + Loader + Router + Executor |
+| Harness v2 | `src/harness_v2/` | Policy + Allowlist + Verifier + Tracer |
+| Framework | `src/framework/` | LLMPool + Checkpointer + Auth + 三层检索 |
+| API | `src/api/` | FastAPI 路由（chat/thread/approval/health） |
+| 旧 Workflow | `src/applications/` | 11 步 DAG 编排（feature flag 控制，逐步废弃） |
 
 ### 技术栈
 
-| 组件 | 技术 | 版本 | 状态 |
-|------|------|------|------|
-| **AI引擎** | Anthropic Claude haiku-4.5 | - | ✅ 主LLM（Kiro RS代理） |
-| **备用LLM** | DeepSeek-Chat | - | ✅ 降级备用 |
-| **向量检索** | Qdrant + GTE-Large-zh | 1024维 | ✅ 4,585向量 |
-| **知识图谱** | Neo4j | 7.4.0 | ✅ 4,246节点 |
-| **数据库** | MySQL + Redis | 8.4.0 / 7.2.5 | ✅ 生产运行 |
-| **后端框架** | FastAPI + Python | 3.11 | ✅ Docker容器 |
-| **协议** | MCP Stdio + REST API + SSE | - | ✅ 18个工具 |
+| 组件 | 技术 | 版本 |
+|------|------|------|
+| AI 引擎 | Anthropic Claude | haiku-4.5 / sonnet-4 |
+| Agent 框架 | LangGraph | 0.4+ |
+| 向量检索 | Qdrant + GTE-Large-zh | 1024维 |
+| 知识图谱 | Neo4j | 7.4.0 |
+| 数据库 | MySQL + Redis | 8.4.0 / 7.2.5 |
+| 后端框架 | FastAPI + Python | 3.11 |
+| 流式协议 | SSE (Server-Sent Events) | - |
+
+---
+
+## 🧠 Skills 体系
+
+10 个核心 Skill，每个定义为 YAML 文件（`src/skills/definitions/`）：
+
+| Skill | 场景 | 工具数 |
+|-------|------|--------|
+| `safe_training_plan` | 制定安全训练计划 | 6 |
+| `strength_program` | 力量训练方案 | 7 |
+| `fat_loss_program` | 减脂方案 | 9 |
+| `nutrition_planning` | 营养规划 | 5 |
+| `exercise_optimization` | 动作优化 | 6 |
+| `posture_correction` | 体态矫正 | 6 |
+| `rehabilitation_training` | 康复训练 | 6 |
+| `progress_analysis` | 进度分析 | 5 |
+| `safety_assessment` | 安全评估 | 5 |
+| `quick_consultation` | 快速咨询 | 3 |
+
+### Skill 选择机制
+
+LLM function calling 从 10 个 Skill 中选择最匹配的：
+- 每个 Skill 有 `triggers`（触发条件）和 `requires_profile`（是否需要用户档案）
+- 简单问候/闲聊 → `direct_reply`（跳过 Skill 执行）
+- 无档案 + 需要档案的 Skill → 提示补充
+
+---
+
+## 🛡️ Harness v2 安全层
+
+| 组件 | 职责 | 触发条件 |
+|------|------|---------|
+| PreSkillPolicy | Skill 前安全检查 | 有伤病/健康状况 + 高强度 Skill |
+| ToolAllowlist | 工具权限控制 | 每次工具调用前 |
+| OutputVerifier | 输出 6 维度校验 | 生成回答后 |
+| HarnessTracer | 决策链追踪 | 全程记录 |
+
+**HITL (Human-in-the-Loop)**:
+- 高风险操作自动 interrupt → 前端弹出 ApprovalDialog
+- 用户确认后 resume → 继续执行（走 safety_assessment Skill）
+- 用户拒绝 → 降级回答
 
 ---
 
 ## 📊 数据基础设施
 
-### 🗃️ Qdrant向量库（语义检索）
+### Qdrant 向量库
 
-| 集合 | 数量 | 用途 | 状态 |
-|------|------|------|------|
-| `training_knowledge` | 43个向量 | 训练周期化、力量发展原则 | ✅ 核心 |
-| `fitness_exercises_v2` | 1,596个向量 | 健身动作语义搜索 | ✅ 核心 |
-| `food_nutrition_vector` | 1,851个向量 | 食物营养匹配 | ✅ 核心 |
-| `chat_conversations` | 动态增长 | 对话历史检索 | ✅ 运行 |
-| `user_memory` | 动态增长 | 跨对话记忆 | ✅ v9.81.0新增 |
+| 集合 | 数量 | 用途 |
+|------|------|------|
+| `fitness_exercises_v2` | 1,596 | 健身动作语义搜索 |
+| `food_nutrition_vector` | 1,851 | 食物营养匹配 |
+| `training_knowledge` | 43 | 训练周期化原则 |
+| `chat_conversations` | 动态 | 对话历史检索 |
+| `user_memory` | 动态 | 跨对话记忆 |
 
-**向量配置**: 1024维 GTE-Large-zh嵌入，余弦相似度，支持中文检索
+### Neo4j 图数据库
 
-### 🔗 Neo4j图数据库（关系推理）
-
-**节点类型分布（总计4,246个节点）**:
-- **Exercise**: 1,603个动作（中英文名称，主要肌群，31个完整字段）
-- **Muscle**: 53个肌群（MEV/MAV/MRV训练容量数据，13个完整字段）
-- **Food**: 1,880种食物（中国营养数据库，8个完整字段）
-- **Nutrient**: 29个营养素
-- **Equipment**: 17种健身器材类型
-- **其他**: PeriodizationModel, TrainingLevel, Goal等
-
-**关系类型分布（总计61,507个关系）**:
-- **CONTAINS_NUTRIENT**: 44,406个（Food→Nutrient）
-- **TARGETS_PRIMARY**: 1,603个（Exercise→Muscle主要目标）
-- **TARGETS_SECONDARY**: 2,362个（Exercise→Muscle次要目标）
-- **REQUIRES**: 1,596个（Exercise→Equipment）
-
-**核心数据结构**:
-- 肌肉训练容量: Chest(MEV:10-12, MAV:12-20, MRV:22+)
-- 周期化模型: Linear/Undulating/Block/Conjugate/Reverse
-- 动作-肌肉映射: 完整的1,347个关系连接
+- **4,246 节点**: Exercise(1,603) + Muscle(53) + Food(1,880) + Nutrient(29) + Equipment(17) + 其他
+- **61,507 关系**: CONTAINS_NUTRIENT + TARGETS_PRIMARY/SECONDARY + REQUIRES
+- **核心能力**: 肌肉训练容量(MEV/MAV/MRV) + 动作-肌肉映射 + 禁忌症关系
 
 ---
 
-## 🔧 MCP工具体系
+## 🔌 API 端点
 
-### 1个Stdio MCP服务器
+### Agent v2（新）
 
-**user-profile-stdio** (Node.js):
-- `get_user_profile`: 获取用户健身档案
-- `update_user_profile`: 更新用户档案
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/v1/chat/agent` | Agent v2 流式对话（SSE） |
+| POST | `/api/v1/approval/respond` | HITL 审批响应 |
+| GET | `/api/v1/approval/pending` | 查询待审批状态 |
+| POST | `/api/v1/thread/create` | 创建对话线程 |
+| GET | `/api/v1/thread/list` | 列出用户线程 |
+| DELETE | `/api/v1/thread/{id}` | 删除线程 |
 
-### 17个Python内置工具
+### 旧接口（兼容）
 
-**P0核心工具（5个）**:
-- `intelligent_exercise_selector`: 智能动作选择器
-- `contraindications_checker`: 禁忌症检查器
-- `injury_risk_assessor`: 损伤风险评估器
-- `muscle_group_volume_calculator`: 肌群训练量计算器
-- `tdee_calculator`: TDEE计算器
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/v1/chat/stream` | 旧 11 步 workflow 流式对话 |
+| POST | `/api/v1/chat/sync` | 同步对话 |
+| GET | `/api/v1/health` | 健康检查 |
 
-**P1建议工具（8个）**:
-- `professional_program_designer`: 专业训练计划设计器
-- `exercise_alternative_finder`: 动作替代查找器
-- `movement_pattern_balancer`: 动作模式平衡器
-- `intelligent_weight_calculator`: 智能负重计算器
-- `safe_exercise_modifier`: 安全动作修改器
-- `nutrition_intake_analyzer`: 营养摄入分析器
-- `meal_plan_designer`: 膳食计划设计器
-- `exercise_nutrition_optimization`: 运动营养优化器
+### SSE 事件类型
 
-**P2扩展工具（4个）**:
-- `periodized_program_designer`: 周期化训练设计器
-- `training_split_designer`: 训练分化设计器
-- `find_similar_training_cases`: 相似训练案例检索
-- `record_training_feedback`: 训练反馈记录
-
-**安全评估工具（新增）**:
-- `postural_assessor`: 体态评估器
-
----
-
-## 🚀 快速开始
-
-### Docker部署（推荐）
-
-```bash
-# 启动容器
-docker-compose up -d fitness_daml_rag
-
-# 查看日志
-docker logs -f fitness_daml_rag
-
-# 健康检查
-curl http://localhost:8001/health
+```
+event: skill_started    — Skill 开始执行
+event: tool_completed   — 单个工具完成
+event: approval_required — HITL 审批请求
+event: content          — 流式文本内容
+event: done             — 完成
+event: error            — 错误
 ```
 
-### 环境变量配置
+---
 
-**关键环境变量**（在 `.env` 或 Zeabur 中配置）:
+## 🚀 部署
+
+### Docker（开发环境）
+
+```bash
+# 容器名: fitness_daml_rag，端口: 8001
+docker exec fitness_daml_rag python -m pytest tests/
+docker exec fitness_daml_rag python tests/integration/test_agent_v2_smoke.py
+```
+
+### Zeabur（生产环境）
+
+- 仓库: `vivy1024/daml-rag-server`
+- 分支: `main`（自动部署）
+- 环境变量: 见 `.kiro/steering/zeabur-env-vars.md`
+
+### Feature Flag
 
 ```env
-# Anthropic Claude（主LLM，通过Kiro RS代理）
-ANTHROPIC_API_KEY=your_kiro_rs_api_key
-ANTHROPIC_BASE_URL=https://api.kiro.rs/v1
-ANTHROPIC_MODEL=claude-3-5-haiku-20241022
-ANTHROPIC_ENABLED=true
-
-# DeepSeek（备用LLM）
-DEEPSEEK_API_KEY=your_deepseek_api_key
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_ENABLED=true
-
-# 数据库连接（容器内使用服务名）
-NEO4J_URI=bolt://neo4j:7687
-QDRANT_URL=http://qdrant:6333
-MYSQL_HOST=mysql
-REDIS_HOST=redis
-
-# 内部服务认证
-INTERNAL_API_TOKEN=crewai-internal-secret-2025
-BYPASS_RATE_LIMIT_FOR_INTERNAL=true
+AGENT_V2_ENABLED=true          # 主开关
+AGENT_V2_SKILL_WHITELIST=      # 空=全量启用
+AGENT_V2_USER_WHITELIST=       # 空=全量启用
 ```
 
 ---
 
-## 📚 API文档
+## 🧪 测试
 
-### 核心接口
-
-**GraphRAG查询**:
 ```bash
-POST /api/graphrag/query
-Content-Type: application/json
+# 单元测试
+docker exec fitness_daml_rag python -m pytest tests/unit/ -v
 
-{
-    "query_text": "胸肌训练动作推荐",
-    "domain": "fitness_exercises",
-    "query_type": "semantic_search",
-    "top_k": 5,
-    "user_profile": {
-        "age": 30,
-        "gender": "male",
-        "training_level": "intermediate"
-    }
-}
-```
-
-**对话接口（SSE流式输出）**:
-```bash
-POST /api/chat
-Content-Type: application/json
-
-{
-    "user_id": 1,
-    "message": "我想练胸肌",
-    "persona_id": "professional",
-    "attachments": []
-}
+# 集成测试
+docker exec fitness_daml_rag python tests/integration/test_agent_v2_smoke.py
+docker exec fitness_daml_rag python tests/integration/test_skill_execution.py
+docker exec fitness_daml_rag python tests/integration/test_harness_v2.py
+docker exec fitness_daml_rag python tests/integration/test_harness_feature_flag.py
 ```
 
 ---
 
-## 📊 性能指标
+## 📁 目录结构
 
-- **端到端响应时间**: <1.2s（95%请求）
-- **TTFB（首字节时间）**: <2秒
-- **令牌生成速率**: >50 tokens/s
-- **成功率**: >95%
-- **并发支持**: 50个同时会话
-
----
-
-## 📖 文档
-
-完整文档位于 `docs/` 目录，采用模块化组织结构：
-
-- **01-快速开始**: 新手入门指南
-- **02-核心架构**: 系统设计和架构决策
-- **03-代码参考**: 详细代码实现
-- **04-开发指南**: 使用指南和最佳实践
-- **05-API文档**: API接口文档
-- **06-部署运维**: 部署和运维指南
-- **07-测试报告**: 测试报告和验收报告
-
-**推荐阅读路径**:
-1. [快速开始](docs/01-快速开始/快速开始.md)
-2. [系统架构总览](docs/02-核心架构/01-系统架构/01-系统架构总览.md)
-3. [完整工作流程](docs/02-核心架构/01-系统架构/02-完整工作流程.md)
-4. [MCP工具架构](docs/02-核心架构/03-编排层/03-MCP工具架构.md)
-
----
-
-## 🔗 相关项目
-
-| 子项目 | 本地路径 | GitHub仓库 |
-|--------|---------|-----------|
-| 官网 | `yuzhen-website/` | `vivy1024/yuzhen-website` |
-| 前端 | `yuzhen_fitness/` | `vivy1024/yuzhen-fitness-frontend` |
-| 后端 | `yuzhen-backend/` | `vivy1024/yuzhen-backend` |
-| AI服务 | `daml-rag-server/` | `vivy1024/daml-rag-server` |
+```
+src/
+├── agent_v2/           # Agent v2 核心
+│   ├── state.py        # AgentState TypedDict
+│   ├── graph.py        # LangGraph StateGraph
+│   ├── sse_emitter.py  # SSE 流式输出
+│   ├── feature_flag.py # Feature flag 控制
+│   └── nodes/          # 6 个节点
+├── skills/             # Skills 体系
+│   ├── definitions/    # 10 个 Skill YAML
+│   ├── definition.py   # SkillDefinition dataclass
+│   ├── loader.py       # YAML 加载器
+│   ├── manager.py      # SkillManager
+│   ├── router.py       # SkillRouter (LLM function calling)
+│   └── executor.py     # SkillExecutor (工具链执行)
+├── harness_v2/         # Harness v2 安全层
+│   ├── pre_skill_policy.py
+│   ├── tool_allowlist.py
+│   ├── output_verifier.py
+│   └── harness_tracer.py
+├── framework/          # 基础设施
+│   ├── models/         # LLMPoolManager
+│   ├── persistence/    # Checkpointer
+│   ├── auth/           # FailClosedPermissionChecker
+│   └── retrieval/      # 三层检索引擎
+├── api/                # FastAPI 路由
+│   ├── routes/         # chat/thread/approval/health
+│   └── models/         # 请求/响应模型
+└── applications/       # 旧 workflow（逐步废弃）
+    └── fitness/
+        ├── workflow/   # 11 步 DAG 编排
+        └── mcp_tools/  # MCP 工具实现
+```
 
 ---
 
-## 📝 更新历史
+## 📝 版本历史
 
-### v9.83.0 (2026-02-20) - 代码库清理：死代码删除
-
-- 删除 `mcp_tool_manager.py`（1,300行，无引用）
-- 删除 `llm_analysis_engine.py`（576行，无引用）
-- 删除 `agent_stream_executor.py`（539行，无引用）
-- 删除 6个关联测试/脚本文件（~1,330行）
-
-### v9.82.0 (2026-02-20) - 跨对话记忆 + WebSearch兜底 + Token预算管理
-
-- 新增 DuckDuckGo WebSearch 兜底检索（Layer4，完全免费）
-- 新增 TokenBudgetManager 8000 token 总预算管理器
-- 新增 user_memory 跨对话记忆服务（Qdrant存储）
-
-### v9.81.0 (2026-02-20) - SystemPersona风格系统 + 蓝绿多模型池扩展
-
-- 新增 3种教练风格（专业/友好/简洁）
-- 新增 9模型4层级YAML蓝绿池（加权随机选择）
-- 新增 4个Vision模型蓝绿池
-- 新增 VisionMessageBuilder 多模态消息构建
-
-完整更新历史请查看 [CHANGELOG.md](CHANGELOG.md)
+见 `CHANGELOG.md`（构建号）和根仓库 `CHANGELOG.md`（产品版本）。
 
 ---
 
-**维护者**: 薛小川
-**联系方式**: 1336495069@qq.com | 微信: xxc1765563156
-**GitHub**: vivy1024
-**项目状态**: ✅ 生产运行 · Docker容器部署 · Zeabur生产环境
+**维护者**: 薛小川 (vivy1024)
+**许可**: Private

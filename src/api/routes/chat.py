@@ -769,5 +769,106 @@ def _calculate_personalization_score(
     return min(base_score, 1.0)
 
 
+# ═══════════════════════════════════════════════════════════
+# Agent v2 流式聊天入口
+# ═══════════════════════════════════════════════════════════
+
+# Agent graph 实例引用（由 configure_agent_chat 注入）
+_agent_graph = None
+_skill_router = None
+_skill_manager = None
+
+
+def configure_agent_chat(agent_graph, skill_router=None, skill_manager=None):
+    """注入 Agent v2 依赖
+
+    Args:
+        agent_graph: 编译后的 LangGraph CompiledGraph
+        skill_router: SkillRouter 实例
+        skill_manager: SkillManager 实例
+    """
+    global _agent_graph, _skill_router, _skill_manager
+    _agent_graph = agent_graph
+    _skill_router = skill_router
+    _skill_manager = skill_manager
+    logger.info("Agent v2 chat: 依赖已配置")
+
+
+@router.post("/v1/chat/agent")
+async def chat_agent_stream(request: Request, chat_request: ChatRequest):
+    """
+    Agent v2 流式聊天接口
+
+    使用 Skills-first Agent 架构处理用户请求：
+    1. 意图理解 + Skill 选择（LLM function calling）
+    2. 安全策略检查（Harness）
+    3. Skill 工具链执行
+    4. LLM 综合输出
+
+    返回 SSE 事件流，事件类型：
+    - skill_started: Skill 选择完成
+    - tool_completed: 单个工具执行完成
+    - approval_required: 需要用户确认（HITL）
+    - content: 最终回答内容
+    - done: 流结束
+    - error: 错误
+
+    如果 Agent 未配置，降级到旧 11 步工作流。
+    """
+    from ...agent_v2.sse_emitter import stream_agent_response
+
+    if not _agent_graph:
+        # 降级：Agent 未配置，返回提示
+        logger.warning("Agent v2 未配置，请先调用 configure_agent_chat()")
+        raise HTTPException(
+            status_code=503,
+            detail="Agent v2 服务未就绪，请使用 /v1/chat/stream 接口"
+        )
+
+    # 提取用户信息
+    user_id = _extract_user_id(request, chat_request.user_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="无法确定用户身份")
+
+    # 构建 Agent 输入状态
+    thread_id = chat_request.topic_id or chat_request.session_id or f"thread_{user_id}_{uuid.uuid4().hex[:8]}"
+
+    # 加载用户档案（从 context 或数据库）
+    user_profile = None
+    if chat_request.context and chat_request.context.get("user_profile"):
+        user_profile = chat_request.context["user_profile"]
+
+    input_state = {
+        "messages": [{"role": "user", "content": chat_request.query}],
+        "user_id": user_id,
+        "thread_id": thread_id,
+        "user_profile": user_profile,
+        "current_skill": None,
+        "skill_reason": None,
+        "tool_results": None,
+        "harness_trace": None,
+        "approval_status": None,
+        "direct_reply": None,
+        "final_output": None,
+        "error": None,
+    }
+
+    config = {"configurable": {"thread_id": thread_id}}
+
+    logger.info(
+        "[Agent v2] 流式请求: user_id=%s, thread_id=%s, query=%s",
+        user_id, thread_id, chat_request.query[:50],
+    )
+
+    return EventSourceResponse(
+        stream_agent_response(_agent_graph, input_state, config),
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 # 导出路由
 __all__ = ['router']

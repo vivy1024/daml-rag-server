@@ -403,7 +403,7 @@ async def track_llm_call_async(backend: str, model: str = "default", call_type: 
     异步上下文管理器：追踪LLM调用
     
     Args:
-        backend: 后端名称 (deepseek/anthropic/template)
+        backend: 后端名称 (deepseek/template)
         model: 模型名称
         call_type: 调用类型
     
