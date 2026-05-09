@@ -28,6 +28,7 @@ ENV/
 
 # 数据文件
 data/
+!src/**/data/
 *.db
 *.sqlite
 *.faiss
