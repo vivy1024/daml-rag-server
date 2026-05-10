@@ -10,7 +10,7 @@ from datetime import datetime
 
 from .models import LayerExecutionResult, ThreeLayerResult
 from .calibrated_fusion import calibrated_fusion, get_fusion_config
-
+from .graph_conv_rerank import graph_conv_rerank, get_graph_conv_config
 from ..reranker import get_reranker
 
 logger = logging.getLogger(__name__)
@@ -73,12 +73,28 @@ class ResultMergerMixin:
         
         # === Layer 3 规则过滤（在融合结果上应用安全规则） ===
         if layer3.success and layer3.results:
-            # Layer 3 有独立结果时（安全过滤后的结果），使用 Layer 3
             final_results = layer3.results
             reasoning += f" → Layer3 安全过滤({len(layer3.results)})"
         else:
-            # Layer 3 无结果或失败时，使用融合结果
             final_results = fused_results[:10]
+
+        # === GraphConvRerank: 图卷积重排序 ===
+        gc_config = get_graph_conv_config()
+        if gc_config["enabled"] and final_results and len(final_results) > 1:
+            try:
+                from ...storage.in_memory_hot_cache import get_hot_cache
+                cache = get_hot_cache()
+                if cache.ready:
+                    final_results = graph_conv_rerank(
+                        results=final_results,
+                        adjacency=cache._exercise_adjacency,
+                        alpha=gc_config["alpha"],
+                        K=gc_config["K"],
+                        max_neighbors=gc_config["max_neighbors"],
+                    )
+                    reasoning += f" → GraphConvRerank(α={gc_config['alpha']})"
+            except Exception as e:
+                logger.debug(f"GraphConvRerank skipped: {e}")
 
         # Reranker 重排序（如果启用且有结果）
         enable_reranker = os.getenv("ENABLE_RERANKER", "true").lower() == "true"
