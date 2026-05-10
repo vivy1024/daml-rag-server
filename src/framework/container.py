@@ -369,34 +369,9 @@ class AppContainer:
 
     def _create_mcp_orchestrator(self, neo4j_client=None, qdrant_client=None,
                                   three_layer_engine=None, backend_client=None, **kwargs):
-        try:
-            from .orchestration.mcp_orchestrator import MCPOrchestrator
-            from .storage.metadata_database import MetadataDB
-            from .config.app_config import get_config
-
-            config = get_config()
-            metadata_db = MetadataDB(db_path=config.framework.mcp_metadata_db_path)
-
-            tool_registry = self.get(
-                "mcp_tool_registry",
-                neo4j_client=neo4j_client,
-                qdrant_client=qdrant_client,
-                three_layer_engine=three_layer_engine,
-                backend_client=backend_client,
-            )
-
-            instance = MCPOrchestrator(
-                metadata_db=metadata_db,
-                mcp_client_pool=None,
-                cache_ttl=300,
-                max_parallel=5,
-                tool_registry=tool_registry,
-            )
-            logger.info("✅ MCPOrchestrator 初始化完成 (via Container)")
-            return instance
-        except Exception as e:
-            logger.error(f"❌ MCPOrchestrator 初始化失败: {e}")
-            return None
+        # MCPOrchestrator removed in Phase 5 (moved to YuzhenFork)
+        logger.info("ℹ️ MCPOrchestrator 已移除（功能迁移到 YuzhenFork Agent）")
+        return None
 
 
 # ============ 全局容器实例 ============
