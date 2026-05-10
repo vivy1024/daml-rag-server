@@ -1103,14 +1103,15 @@ class Layer3RuleEngine:
         
         # 目标映射（英文 primary_goal → _goal_preferences 键）
         goal_mapping = {
-            "muscle_gain": "muscle_gain",
-            "hypertrophy": "muscle_gain",
+            "hypertrophy": "hypertrophy",
             "fat_loss": "fat_loss",
             "strength": "strength",
             "endurance": "endurance",
             "body_shaping": "body_shaping",
             "rehabilitation": "rehabilitation",
             "general_fitness": "general_fitness",
+            "functional": "functional",
+            "athletic_performance": "athletic_performance",
         }
 
         goal_key = goal_mapping.get(primary_goal, "general_fitness")

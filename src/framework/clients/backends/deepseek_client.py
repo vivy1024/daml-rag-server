@@ -49,16 +49,20 @@ class DeepSeekClient(IBackendClient):
             yield chunk
 
     async def health_check(self) -> bool:
-        from ..llm_client import LLMConfig
+        from ...config.app_config import get_config
         import httpx
 
-        if not LLMConfig.DEEPSEEK_API_KEY:
+        cfg = get_config()
+        api_key = cfg.llm.deepseek.api_key
+        base_url = cfg.llm.deepseek.base_url
+
+        if not api_key:
             return False
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 resp = await client.get(
-                    f"{LLMConfig.DEEPSEEK_BASE_URL}/models",
-                    headers={"Authorization": f"Bearer {LLMConfig.DEEPSEEK_API_KEY}"},
+                    f"{base_url}/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
                 )
                 return resp.status_code == 200
         except Exception:

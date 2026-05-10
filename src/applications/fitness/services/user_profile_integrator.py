@@ -611,7 +611,7 @@ class UserProfileIntegrator:
         Requirements: 18.4 - 目标对齐约束
         """
         goal_mapping = {
-            "muscle_gain": {
+            "hypertrophy": {
                 "preferred_mechanics": ["compound", "isolation"],
                 "preferred_force": ["push", "pull"],
                 "rep_range": (8, 12),
