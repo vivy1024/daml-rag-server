@@ -286,15 +286,26 @@ class ContraindicationsChecker(BaseMCPTool):
         health_conditions: List[str],
         strict_mode: bool
     ) -> List[Dict[str, Any]]:
-        """检查动作的禁忌症"""
-        results = []
+        """
+        检查动作的禁忌症（批量查询优化）
         
+        优化前：每个动作 4 次 Neo4j 查询 → N×4 次
+        优化后：3 次批量查询覆盖所有动作 → 3 次
+        """
+        # === 批量查询：一次获取所有动作信息 ===
+        exercise_info_map = await self._batch_get_exercise_info(exercise_ids)
+        
+        # === 批量查询：一次获取所有禁忌症 ===
+        all_contraindications = await self._batch_get_contraindications(
+            exercise_ids, health_conditions
+        )
+        
+        # === 组装结果 ===
+        results = []
         for exercise_id in exercise_ids:
-            # 查询动作基本信息
-            exercise_info = await self._get_exercise_info(exercise_id)
+            exercise_info = exercise_info_map.get(exercise_id)
             
             if not exercise_info:
-                # 未找到动作数据
                 results.append({
                     "exercise_id": exercise_id,
                     "exercise_name_zh": "Unknown",
@@ -326,11 +337,8 @@ class ContraindicationsChecker(BaseMCPTool):
                 })
                 continue
             
-            # 查询禁忌症关系
-            contraindications = await self._get_exercise_contraindications(
-                exercise_id, 
-                health_conditions
-            )
+            # 获取该动作的禁忌症
+            contraindications = all_contraindications.get(exercise_id, [])
             
             # 填充动作名称
             for contra in contraindications:
@@ -342,10 +350,7 @@ class ContraindicationsChecker(BaseMCPTool):
             
             # 生成建议
             recommendations = self._generate_exercise_recommendations(
-                exercise_info,
-                contraindications,
-                risk_assessment,
-                health_conditions
+                exercise_info, contraindications, risk_assessment, strict_mode
             )
             
             results.append({
@@ -353,7 +358,7 @@ class ContraindicationsChecker(BaseMCPTool):
                 "exercise_name_zh": exercise_info.get("name_zh", ""),
                 "exercise_name_en": exercise_info.get("name_en", ""),
                 "category": exercise_info.get("category", ""),
-                "difficulty": exercise_info.get("difficulty_zh") or exercise_info.get("difficulty_en") or "",
+                "difficulty": exercise_info.get("difficulty_zh", ""),
                 "safety_level": exercise_info.get("safety_level", ""),
                 "has_contraindications": len(contraindications) > 0,
                 "contraindications": contraindications,
@@ -363,6 +368,145 @@ class ContraindicationsChecker(BaseMCPTool):
             })
         
         return results
+    
+    async def _batch_get_exercise_info(self, exercise_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+        """批量获取动作基本信息（1 次查询替代 N 次）"""
+        query = """
+        MATCH (e:Exercise)
+        WHERE e.id IN $exercise_ids
+        RETURN e.id as exercise_id,
+               e.name_zh,
+               e.name_en,
+               e.equipment_zh as category,
+               e.difficulty_zh,
+               e.safety_level,
+               e.muscles_primary_zh
+        """
+        
+        result = await self.neo4j_client.execute_query(query, {"exercise_ids": exercise_ids})
+        
+        info_map = {}
+        for row in result:
+            eid = row.get("exercise_id")
+            if eid:
+                info_map[eid] = dict(row)
+        
+        return info_map
+    
+    async def _batch_get_contraindications(
+        self,
+        exercise_ids: List[str],
+        health_conditions: List[str]
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        批量获取所有动作的禁忌症（3 种关系合并为 1 次查询）
+        
+        优化前：每个动作 3 次查询（injury + joint + postural）× N 个动作 = 3N 次
+        优化后：1 次 UNION 查询覆盖所有动作和关系类型 = 1 次
+        """
+        query = """
+        // 1. 损伤禁忌（CONTRAINDICATED_FOR）
+        MATCH (e:Exercise)-[r:CONTRAINDICATED_FOR]->(injury:InjuryType)
+        WHERE e.id IN $exercise_ids
+          AND (injury.name_zh IN $health_conditions
+               OR injury.name IN $health_conditions
+               OR injury.category IN $health_conditions)
+        RETURN e.id as exercise_id,
+               'injury' as source,
+               injury.name_zh as condition_name,
+               injury.category as category,
+               r.severity as severity,
+               r.reason as reason
+
+        UNION ALL
+
+        // 2. 关节禁忌（INVOLVES_JOINT）
+        MATCH (e:Exercise)-[r:INVOLVES_JOINT]->(j:Joint)
+        WHERE e.id IN $exercise_ids
+          AND (j.name_zh IN $health_conditions
+               OR j.name IN $health_conditions)
+          AND r.stress_level IN ['high', 'very_high']
+        RETURN e.id as exercise_id,
+               'joint' as source,
+               j.name_zh as condition_name,
+               'joint_stress' as category,
+               r.stress_level as severity,
+               '关节压力过大' as reason
+
+        UNION ALL
+
+        // 3. 体态问题禁忌（AGGRAVATES）
+        MATCH (e:Exercise)-[r:AGGRAVATES]->(p:PosturalIssue)
+        WHERE e.id IN $exercise_ids
+          AND (p.name_zh IN $health_conditions
+               OR p.name IN $health_conditions)
+        RETURN e.id as exercise_id,
+               'postural' as source,
+               p.name_zh as condition_name,
+               'postural_issue' as category,
+               r.severity as severity,
+               r.reason as reason
+        """
+        
+        try:
+            result = await self.neo4j_client.execute_query(query, {
+                "exercise_ids": exercise_ids,
+                "health_conditions": health_conditions
+            })
+        except Exception as e:
+            self.logger.warning(f"批量禁忌症查询失败，降级为逐个查询: {e}")
+            # Fallback: 逐个查询（保留原有逻辑作为降级）
+            return await self._fallback_individual_queries(exercise_ids, health_conditions)
+        
+        # 按 exercise_id 分组
+        contraindications_map: Dict[str, List[Dict[str, Any]]] = {eid: [] for eid in exercise_ids}
+        
+        for row in result:
+            eid = row.get("exercise_id")
+            if not eid or eid not in contraindications_map:
+                continue
+            
+            condition_name = row.get("condition_name")
+            if not condition_name:
+                continue
+            
+            severity_str = row.get("severity", "moderate")
+            risk_level = "HIGH" if severity_str in ("high", "very_high") else "MODERATE"
+            severity_score = 7 if severity_str in ("high", "very_high") else 5
+            
+            source = row.get("source", "injury")
+            contra_type = {
+                "injury": "损伤禁忌",
+                "joint": "关节压力禁忌",
+                "postural": "体态问题禁忌",
+            }.get(source, "禁忌")
+            
+            contraindications_map[eid].append({
+                "exercise_id": eid,
+                "exercise_name_zh": "",
+                "exercise_name_en": "",
+                "contraindication_type": contra_type,
+                "risk_level": risk_level,
+                "severity": severity_str,
+                "reason": row.get("reason") or "基于医学指导",
+                "severity_score": severity_score,
+                "body_part_affected": row.get("category") or condition_name,
+                "medical_source": None
+            })
+        
+        return contraindications_map
+    
+    async def _fallback_individual_queries(
+        self,
+        exercise_ids: List[str],
+        health_conditions: List[str]
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """降级：逐个动作查询（批量查询失败时使用）"""
+        result_map = {}
+        for exercise_id in exercise_ids:
+            contras = await self._get_exercise_contraindications(exercise_id, health_conditions)
+            result_map[exercise_id] = contras
+        return result_map
     
     async def _get_exercise_info(self, exercise_id: str) -> Optional[Dict[str, Any]]:
         """获取动作基本信息"""

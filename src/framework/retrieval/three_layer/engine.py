@@ -10,6 +10,7 @@
 """
 
 import logging
+import asyncio
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
@@ -218,22 +219,26 @@ class TrueThreeLayerEngine(
                 logger.info(f"✅ 降级检索完成: {len(final_result.final_results)}个结果, 耗时{final_result.total_execution_time_ms:.0f}ms")
                 return final_result
 
-            # Layer 2: 图谱关系推理
-            knowledge_context = await self._fetch_knowledge_context(query)
-
+            # Layer 2: 图谱关系推理 + knowledge_context（并行执行）
             if layer1_result.metadata.get("is_low_quality", False):
                 logger.info("  → Layer1质量偏低，Layer2增加召回倍数")
                 layer2_top_k = top_k * 3
             else:
                 layer2_top_k = top_k * 2
 
-            layer2_result = await self._execute_layer2_graph_reasoning(
+            # 并行执行 Layer 2 和 knowledge_context（两者互不依赖）
+            layer2_task = self._execute_layer2_graph_reasoning(
                 query=query,
                 domain=domain,
                 vector_results=layer1_result.results,
                 top_k=layer2_top_k,
                 user_id=user_id,
                 filters=filters
+            )
+            knowledge_task = self._fetch_knowledge_context(query)
+
+            layer2_result, knowledge_context = await asyncio.gather(
+                layer2_task, knowledge_task, return_exceptions=False
             )
 
             if layer2_result.success and layer2_result.results:
