@@ -9,6 +9,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from .models import LayerExecutionResult, ThreeLayerResult
+from .calibrated_fusion import calibrated_fusion, get_fusion_config
 
 from ..reranker import get_reranker
 
@@ -44,20 +45,40 @@ class ResultMergerMixin:
         start_time: datetime,
         knowledge_context: Optional[List[Dict[str, Any]]] = None
     ) -> ThreeLayerResult:
-        """构建最终结果"""
-        # 确定最终结果来源
-        if layer3.success and layer3.results:
-            final_results = layer3.results
-            reasoning = f"三层检索完成: Layer1({len(layer1.results)}) → Layer2({len(layer2.results)}) → Layer3({len(layer3.results)}) 最终推荐"
-        elif layer2.success and layer2.results:
-            final_results = layer2.results[:10]
-            reasoning = f"部分检索: Layer1({len(layer1.results)}) → Layer2({len(layer2.results)}) 图谱推荐"
+        """构建最终结果（使用 CalibratedFusion 融合 Layer 1+2）"""
+        
+        # === CalibratedFusion: 融合 Layer 1 和 Layer 2 ===
+        fusion_config = get_fusion_config()
+        
+        if fusion_config.enabled and layer1.success and layer2.success and layer1.results and layer2.results:
+            # 使用校准融合替代简单的层级优先
+            fused_results = calibrated_fusion(
+                layer1_results=layer1.results,
+                layer2_results=layer2.results,
+                config=fusion_config,
+            )
+            reasoning = (
+                f"CalibratedFusion: L1({len(layer1.results)}) + L2({len(layer2.results)}) "
+                f"→ {len(fused_results)} (α={fusion_config.alpha})"
+            )
         elif layer1.success and layer1.results:
-            final_results = layer1.results[:10]
+            fused_results = layer1.results[:10]
             reasoning = f"基础检索: Layer1({len(layer1.results)}) 向量推荐"
+        elif layer2.success and layer2.results:
+            fused_results = layer2.results[:10]
+            reasoning = f"图谱检索: Layer2({len(layer2.results)}) 图谱推荐"
         else:
-            final_results = []
+            fused_results = []
             reasoning = "检索失败: 未找到任何结果"
+        
+        # === Layer 3 规则过滤（在融合结果上应用安全规则） ===
+        if layer3.success and layer3.results:
+            # Layer 3 有独立结果时（安全过滤后的结果），使用 Layer 3
+            final_results = layer3.results
+            reasoning += f" → Layer3 安全过滤({len(layer3.results)})"
+        else:
+            # Layer 3 无结果或失败时，使用融合结果
+            final_results = fused_results[:10]
 
         # Reranker 重排序（如果启用且有结果）
         enable_reranker = os.getenv("ENABLE_RERANKER", "true").lower() == "true"
