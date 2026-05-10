@@ -1,8 +1,17 @@
 # 01-工作流程步骤
 
-**版本**: v1.0.0  
-**创建日期**: 2025-12-22  
-**状态**: ✅ 已完成
+> ⛔ **DEPRECATED (v3.0)**
+>
+> 本文档描述的 11 步工作流已在 v3.0 中**被 YuzhenFork Agent Loop 替代**。
+> DAML-RAG 不再包含工作流编排逻辑，仅作为 MCP Server 提供工具能力。
+> 删除的模块：`workflow/`, `orchestration/`, `agent_v2/`, `context/`
+>
+> 本文档仅保留供历史参考，不再维护。
+> 新架构参考：`.kiro/specs/skills-first-agent-v2/`
+
+**版本**: v1.0.0 → ~~已废弃~~
+**创建日期**: 2025-12-22
+**状态**: ⛔ DEPRECATED — v3.0 已删除
 
 ---
 

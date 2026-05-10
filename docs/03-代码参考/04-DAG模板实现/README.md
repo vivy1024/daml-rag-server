@@ -1,8 +1,17 @@
 # 04-DAG模板实现
 
-**版本**: v1.0.0  
-**创建日期**: 2025-12-22  
-**状态**: ✅ 已完成
+> ⛔ **DEPRECATED (v3.0)**
+>
+> 本文档描述的 DAG 模板系统已在 v3.0 中**完全删除**。
+> 编排职责已上移至 **YuzhenFork Agent Loop**（Skills-first Agent）。
+> 删除的代码：`dag_template_system.py`, `enhanced_dag_orchestrator.py`, `workflow_executor.py`
+>
+> 本文档仅保留供历史参考，不再维护。
+> 新架构参考：`.kiro/specs/skills-first-agent-v2/`
+
+**版本**: v1.0.0 → ~~已废弃~~
+**创建日期**: 2025-12-22
+**状态**: ⛔ DEPRECATED — v3.0 已删除
 
 ---
 
