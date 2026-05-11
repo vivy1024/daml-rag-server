@@ -191,7 +191,7 @@ class APIConfig(BaseSettings):
     enable_input_validation: bool = True
     internal_jwt_secret: str = ''
     internal_jwt_issuer: str = 'fitness-backend'
-    legacy_auth_enabled: bool = False
+    legacy_auth_enabled: bool = True
     debug: bool = False
 
 
