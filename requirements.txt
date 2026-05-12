@@ -22,6 +22,7 @@ pydantic-settings>=2.0.0
 
 # 机器学习
 numpy>=1.24.0  # Thompson Sampling所需
+hnswlib>=0.8.0  # v2 本地向量索引
 
 # 工具
 PyYAML>=6.0.0

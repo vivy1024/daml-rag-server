@@ -5,6 +5,45 @@
 
 ---
 
+## #59 (feat) DAML-RAG v2 浪潮引擎 — 本地向量检索 + MCP 服务 — 2026-05-12
+
+**浪潮引擎核心 (src_v2/engine/)**:
+- EPA 能量-相位-振幅分解器：将查询向量分解为 3 个语义维度
+- 残差金字塔：多尺度特征提取（4 层金字塔 + 残差连接）
+- 脉冲传播：基于图谱的信号扩散（BFS 2 跳 + 衰减）
+- 向量融合：EPA + 金字塔 + 脉冲 → 加权融合查询向量
+- 校准融合：向量相似度 + 图谱信号 → 统一排序分数
+- 图卷积重排：利用邻居节点信息平滑排序
+- 测地线重排：基于图距离的多样性保证
+
+**数据层 (src_v2/data/)**:
+- VectorIndex: hnswlib 内存索引（1790 动作 + 知识 + 食物）
+- GraphStore: JSON 图谱内存加载（节点 + 边 + 关系查询）
+- MetadataStore: 动作/食物/力量标准元数据
+
+**安全规则引擎 (src_v2/rules/)**:
+- 伤病禁忌规则（腰椎/膝关节/肩关节等）
+- 安全等级过滤（HIGH_RISK 对初学者降权）
+- apply_report 阻止/降权机制
+
+**MCP 工具层 (src_v2/tools/ + server.py)**:
+- search_exercises: 语义检索 + 图谱推理 + 安全过滤
+- get_exercise_detail: 完整元数据 + 图谱关系
+- graph_query: 知识图谱关系查询
+- find_alternatives: 替代动作查找
+- check_exercise_safety: 安全规则检查
+
+**集成测试 (tests_v2/)**:
+- 46 passed, 4 skipped, 0 failed
+- 覆盖：数据加载 / 引擎管线 / 安全引擎 / MCP 协议 / 性能
+
+**性能**:
+- 引擎管线 <50ms（不含 Embedding）
+- 并发 10 路检索无报错
+- Embedding 首次加载 ~8s，后续 <100ms
+
+---
+
 ## #58 (feat) Skills-first Agent v2 完成 — 2026-05-10
 
 **Agent v2 核心 (Group B)**:

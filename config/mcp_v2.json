@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "daml-rag-v2": {
+      "command": "python",
+      "args": ["start_server_v2.py"],
+      "cwd": "/app",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "TRANSFORMERS_OFFLINE": "1",
+        "HF_HUB_OFFLINE": "1"
+      },
+      "description": "DAML-RAG v2 浪潮引擎 — 健身动作/食物/知识检索 MCP 服务",
+      "tools": [
+        "search_exercises",
+        "get_exercise_detail",
+        "graph_query",
+        "find_alternatives",
+        "check_exercise_safety"
+      ]
+    }
+  }
+}
