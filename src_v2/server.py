@@ -66,6 +66,11 @@ def _get_engines():
     )
 
     logger.info("浪潮引擎初始化完成")
+
+    # 预热 Embedding 模型
+    from .tools.embedding import warmup
+    warmup()
+
     return _wave_engine, _safety_engine
 
 

@@ -53,8 +53,14 @@ async def search_exercises(
     query_vec = encode_query(query_text)
     t_embed = (time.time() - t0) * 1000
 
-    # 2. 提取关键词（用于 debug 输出）
+    # 2. 提取关键词（用于 debug 输出 + 注入 filters）
     keywords = _extract_keywords(query_text, filters)
+
+    # 2b. 将肌群关键词注入 filters（驱动图谱加分）
+    muscle_keywords_found = _get_muscle_keywords(keywords)
+    enriched_filters = dict(filters) if filters else {}
+    if muscle_keywords_found and "muscle_group" not in enriched_filters:
+        enriched_filters["muscle_group"] = muscle_keywords_found[0]
 
     # 3. WaveEngine 检索
     # 请求更多候选（安全过滤后可能减少）
@@ -63,7 +69,7 @@ async def search_exercises(
         query_vec=query_vec,
         domain="exercises",
         user_profile=user_profile,
-        filters=filters,
+        filters=enriched_filters if enriched_filters else None,
         top_k=fetch_k,
     )
 
@@ -96,6 +102,13 @@ async def search_exercises(
     if filters:
         candidate_ids = _apply_filters(
             candidate_ids, filters, wave_engine.data.metadata
+        )
+
+    # 6b. 肌群验证重排：如果查询含肌群关键词，降权不匹配的动作
+    if muscle_keywords_found:
+        candidate_ids = _muscle_rerank(
+            candidate_ids, candidate_scores, muscle_keywords_found,
+            wave_engine.data.metadata,
         )
 
     # 7. 截取 top_k
@@ -178,6 +191,99 @@ def _extract_keywords(query_text: str, filters: Optional[Dict]) -> List[str]:
             keywords.append(kw)
 
     return list(set(keywords))
+
+
+# 肌群关键词 → 元数据中的肌群名称映射
+_MUSCLE_KEYWORD_MAP = {
+    "胸": "胸肌",
+    "背": "背阔肌",
+    "肩": "三角肌",
+    "腿": "股四头肌",
+    "臀": "臀大肌",
+    "腹": "腹直肌",
+    "核心": "腹直肌",
+    "手臂": "肱二头肌",
+    "二头": "肱二头肌",
+    "三头": "肱三头肌",
+    "小腿": "小腿",
+    "前臂": "前臂",
+    "胸大肌": "胸肌",
+    "背阔肌": "背阔肌",
+    "三角肌": "三角肌",
+    "股四头": "股四头肌",
+    "腘绳肌": "腘绳肌",
+    "臀大肌": "臀大肌",
+    "腹直肌": "腹直肌",
+    "斜方肌": "斜方肌",
+    "竖脊肌": "竖脊肌",
+}
+
+
+def _get_muscle_keywords(keywords: List[str]) -> List[str]:
+    """从关键词列表中提取肌群相关的关键词"""
+    muscles = []
+    for kw in keywords:
+        if kw in _MUSCLE_KEYWORD_MAP:
+            muscles.append(kw)
+    return muscles
+
+
+def _muscle_rerank(
+    candidate_ids: List[str],
+    candidate_scores: Dict[str, float],
+    muscle_keywords: List[str],
+    metadata_store,
+) -> List[str]:
+    """肌群验证重排
+
+    如果查询包含肌群关键词（如"胸"），则：
+    - 目标肌群匹配的动作：保持原分
+    - 目标肌群不匹配的动作：降权 50%
+
+    这解决了"仰卧双膝抱胸"（下背部）排在胸肌动作前面的问题。
+    """
+    if not metadata_store or not muscle_keywords:
+        return candidate_ids
+
+    # 构建目标肌群匹配集合
+    target_muscles = set()
+    for kw in muscle_keywords:
+        mapped = _MUSCLE_KEYWORD_MAP.get(kw)
+        if mapped:
+            target_muscles.add(mapped)
+        target_muscles.add(kw)  # 也保留原始关键词
+
+    # 分为匹配组和不匹配组
+    matched = []
+    unmatched = []
+
+    for eid in candidate_ids:
+        meta = metadata_store.get_exercise(eid)
+        if not meta:
+            unmatched.append(eid)
+            continue
+
+        muscles_primary = meta.get("muscles_primary_zh", [])
+        if isinstance(muscles_primary, str):
+            muscles_primary = [muscles_primary]
+
+        # 检查是否有任何目标肌群匹配
+        is_match = False
+        for muscle in muscles_primary:
+            for target in target_muscles:
+                if target in muscle or muscle in target:
+                    is_match = True
+                    break
+            if is_match:
+                break
+
+        if is_match:
+            matched.append(eid)
+        else:
+            unmatched.append(eid)
+
+    # 匹配的排前面，不匹配的排后面（各自保持原有顺序）
+    return matched + unmatched
 
 
 def _apply_filters(

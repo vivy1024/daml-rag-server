@@ -68,3 +68,19 @@ def encode_query(query: str) -> np.ndarray:
     if vec.ndim == 2:
         vec = vec[0]
     return vec
+
+
+def warmup():
+    """预热 Embedding 模型
+
+    在服务启动时调用，避免首次请求延迟 ~8s。
+    编码一个短文本触发模型加载 + JIT 编译。
+    """
+    t0 = time.time()
+    encoder = get_encoder()
+    if encoder is not None:
+        # 编码一个短文本触发完整推理路径
+        _ = encoder.encode("warmup", convert_to_numpy=True, normalize_embeddings=True)
+        logger.info(f"Embedding 预热完成: {(time.time()-t0)*1000:.0f}ms")
+    else:
+        logger.warning("Embedding 预热失败: 模型未加载")
