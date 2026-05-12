@@ -54,12 +54,16 @@ if [ "$ENVIRONMENT" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
 else
     log_info "Detected local development environment"
     
-    # 本地环境使用.env
+    # 本地环境使用.env（不覆盖docker-compose已设置的环境变量）
     if [ -f "/app/.env" ]; then
-        log_info "Loading .env configuration..."
-        set -a
-        source /app/.env
-        set +a
+        log_info "Loading .env configuration (no-override mode)..."
+        # 只读取 KEY=VALUE 格式的行（跳过注释、空行、无等号行）
+        while IFS='=' read -r key value; do
+            # 只设置未定义的变量（不覆盖docker-compose设置的）
+            if [ -z "${!key+x}" ]; then
+                export "$key=$value"
+            fi
+        done < <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' /app/.env)
     fi
 fi
 

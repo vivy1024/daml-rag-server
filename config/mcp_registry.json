@@ -1,46 +1,9 @@
 {
   "$schema": "./mcp_registry.schema.json",
-  "version": "4.0.0",
-  "description": "MCP服务器注册表 - v4.0: 1个stdio MCP (用户档案) + 15个Python内置工具",
+  "version": "5.0.0",
+  "description": "MCP工具注册表 - v5.0: 15个Python内置工具（用户档案通过BackendClient直接获取）",
   
-  "servers": {
-    "user-profile-stdio": {
-      "name": "用户档案服务",
-      "version": "2.1.0",
-      "type": "stdio",
-      "command": "node",
-      "args": ["/app/mcp-servers/user-profile-stdio/build/index.js"],
-      "env": {
-        "PHP_BACKEND_URL": "http://nginx_v2:80",
-        "PHP_INTERNAL_TOKEN": "${INTERNAL_API_TOKEN}"
-      },
-      "dependencies": [],
-      "tools": [
-        {
-          "name": "get_user_profile",
-          "description": "获取用户健身档案",
-          "requires": [],
-          "level": 0,
-          "category": "data_retrieval",
-          "complexity": "simple",
-          "avg_execution_ms": 300
-        },
-        {
-          "name": "update_user_profile",
-          "description": "更新用户档案",
-          "requires": [],
-          "level": 0,
-          "category": "data_retrieval",
-          "complexity": "simple",
-          "avg_execution_ms": 400
-        }
-      ],
-      "health_check": {
-        "enabled": true,
-        "timeout_ms": 5000
-      }
-    }
-  },
+  "servers": {},
   
   "python_tools": {
     "description": "15个Python MCP工具（直接集成在DAML-RAG容器内）",

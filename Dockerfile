@@ -44,7 +44,7 @@ RUN --mount=type=cache,target=/tmp/hf_cache \
 COPY . .
 
 # 创建数据目录和日志目录
-RUN mkdir -p /app/data /app/logs /app/mcp-servers
+RUN mkdir -p /app/data /app/logs
 
 # 创建非root用户运行应用
 RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser && \
