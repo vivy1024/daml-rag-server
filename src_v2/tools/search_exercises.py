@@ -99,16 +99,22 @@ async def search_exercises(
         candidate_scores = {cid: score for cid, score in scored_list}
 
     # 6. 应用过滤条件
+    # 构建 ID → payload 映射（从 wave_result 中获取）
+    id_to_payload = {}
+    for r in wave_result.results:
+        rid = str(r["id"])
+        id_to_payload[rid] = r
+
     if filters:
         candidate_ids = _apply_filters(
-            candidate_ids, filters, wave_engine.data.metadata
+            candidate_ids, filters, wave_engine.data.metadata, id_to_payload
         )
 
     # 6b. 肌群验证重排：如果查询含肌群关键词，降权不匹配的动作
     if muscle_keywords_found:
         candidate_ids = _muscle_rerank(
             candidate_ids, candidate_scores, muscle_keywords_found,
-            wave_engine.data.metadata,
+            wave_engine.data.metadata, id_to_payload,
         )
 
     # 7. 截取 top_k
@@ -120,18 +126,27 @@ async def search_exercises(
         "difficulty_zh", "equipment_zh", "force_zh", "mechanic_zh",
         "safety_level", "smart_tags", "slug",
     ]
+
     exercises = []
     for eid in final_ids:
-        meta = wave_engine.data.metadata.get_exercise(eid) if wave_engine.data.metadata else {}
+        # 优先从 wave_result payload 获取（Qdrant 导出的完整数据）
+        payload = id_to_payload.get(eid, {})
+        # 其次尝试 MetadataStore（Neo4j 导出的数据，key 可能不匹配）
+        meta = wave_engine.data.metadata.get_exercise(eid) if wave_engine.data.metadata else None
+
         item = {
             "id": eid,
             "score": round(candidate_scores.get(eid, 0.0), 4),
         }
-        if meta:
+
+        # 从 payload 或 meta 中提取摘要字段
+        source = meta if meta else payload
+        if source:
             for field in SUMMARY_FIELDS:
-                val = meta.get(field)
+                val = source.get(field)
                 if val:  # 跳过空值
                     item[field] = val
+
         exercises.append(item)
 
     total_ms = (time.time() - t_start) * 1000
@@ -233,6 +248,7 @@ def _muscle_rerank(
     candidate_scores: Dict[str, float],
     muscle_keywords: List[str],
     metadata_store,
+    id_to_payload: Dict[str, Dict] = None,
 ) -> List[str]:
     """肌群验证重排
 
@@ -242,7 +258,7 @@ def _muscle_rerank(
 
     这解决了"仰卧双膝抱胸"（下背部）排在胸肌动作前面的问题。
     """
-    if not metadata_store or not muscle_keywords:
+    if not muscle_keywords:
         return candidate_ids
 
     # 构建目标肌群匹配集合
@@ -258,12 +274,19 @@ def _muscle_rerank(
     unmatched = []
 
     for eid in candidate_ids:
-        meta = metadata_store.get_exercise(eid)
-        if not meta:
+        # 优先从 payload 获取肌群信息
+        muscles_primary = None
+        if id_to_payload and eid in id_to_payload:
+            muscles_primary = id_to_payload[eid].get("muscles_primary_zh", [])
+        elif metadata_store:
+            meta = metadata_store.get_exercise(eid)
+            if meta:
+                muscles_primary = meta.get("muscles_primary_zh", [])
+
+        if muscles_primary is None:
             unmatched.append(eid)
             continue
 
-        muscles_primary = meta.get("muscles_primary_zh", [])
         if isinstance(muscles_primary, str):
             muscles_primary = [muscles_primary]
 
@@ -290,14 +313,18 @@ def _apply_filters(
     candidate_ids: List[str],
     filters: Dict[str, Any],
     metadata_store,
+    id_to_payload: Dict[str, Dict] = None,
 ) -> List[str]:
     """应用硬过滤条件"""
-    if not metadata_store:
-        return candidate_ids
-
     filtered = []
     for eid in candidate_ids:
-        meta = metadata_store.get_exercise(eid)
+        # 优先从 payload 获取
+        meta = None
+        if id_to_payload and eid in id_to_payload:
+            meta = id_to_payload[eid]
+        elif metadata_store:
+            meta = metadata_store.get_exercise(eid)
+
         if not meta:
             filtered.append(eid)  # 无元数据的保留
             continue
@@ -311,7 +338,7 @@ def _apply_filters(
                         match = False
                         break
                 else:
-                    if meta_val and val and meta_val.lower() != val.lower():
+                    if meta_val and val and str(meta_val).lower() != str(val).lower():
                         match = False
                         break
 

@@ -20,6 +20,16 @@ from .embedding import encode_query
 logger = logging.getLogger(__name__)
 
 
+def _to_float(val) -> float:
+    """安全转换为 float（处理字符串、None 等）"""
+    if val is None:
+        return 0.0
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return 0.0
+
+
 # === search_knowledge ===
 
 async def search_knowledge(
@@ -57,12 +67,12 @@ async def search_knowledge(
     # 格式化结果
     results = []
     for item in wave_result.results[:top_k]:
-        payload = item.get("payload", {})
+        # WaveEngine 返回的 item 中 payload 字段已展开（不在嵌套的 "payload" key 下）
         results.append({
-            "title": payload.get("title", payload.get("chunk_title", "")),
-            "content": payload.get("content", payload.get("text", "")),
-            "source": payload.get("source", payload.get("document_name", "")),
-            "category": payload.get("category", ""),
+            "title": item.get("title", item.get("chunk_title", "")),
+            "content": item.get("content", item.get("text", "")),
+            "source": item.get("source", item.get("document_name", "")),
+            "category": item.get("category", ""),
             "score": round(item["score"], 4),
         })
 
@@ -109,15 +119,16 @@ async def search_foods(
 
     foods = []
     for item in wave_result.results[:top_k]:
-        payload = item.get("payload", {})
+        # WaveEngine 返回的 item 中 payload 字段已展开
+        # 食物 payload 字段名: foodName, energyKCal, protein, fat, carbohydrate
         foods.append({
-            "name": payload.get("name", ""),
-            "category": payload.get("category", ""),
-            "energy_kcal": payload.get("energy_kcal", payload.get("energy", 0)),
-            "protein": payload.get("protein", 0),
-            "fat": payload.get("fat", 0),
-            "carbohydrate": payload.get("carbohydrate", payload.get("carbs", 0)),
-            "fiber": payload.get("fiber", 0),
+            "name": item.get("foodName", item.get("name", "")),
+            "category": item.get("category", item.get("foodCategory", "")),
+            "energy_kcal": _to_float(item.get("energyKCal", item.get("energy_kcal", 0))),
+            "protein": _to_float(item.get("protein", 0)),
+            "fat": _to_float(item.get("fat", 0)),
+            "carbohydrate": _to_float(item.get("carbohydrate", item.get("CHO", 0))),
+            "fiber": _to_float(item.get("fiber", item.get("dietaryFiber", 0))),
             "score": round(item["score"], 4),
         })
 
