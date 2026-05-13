@@ -83,11 +83,10 @@ async def warmup_user(request: WarmupRequest) -> WarmupResponse:
     try:
         # 1. 预热用户档案
         try:
-            from ...applications.fitness.workflow_executor import get_user_cache
-            from ...applications.fitness.clients.backend_client import BackendClient
+            from ...framework.container import get_container
             
-            backend_client = BackendClient()
-            user_cache = get_user_cache(backend_client=backend_client)
+            container = get_container()
+            user_cache = container.user_cache
             if user_cache:
                 # 如果force_refresh=True，强制刷新缓存（用户档案已更新）
                 profile = await user_cache.get_user_profile(user_id, force_refresh=force_refresh)
@@ -170,11 +169,10 @@ async def get_warmup_status(user_id: str) -> Dict[str, Any]:
     
     try:
         # 检查用户档案缓存状态
-        from ...applications.fitness.workflow_executor import get_user_cache
-        from ...applications.fitness.clients.backend_client import BackendClient
+        from ...framework.container import get_container
         
-        backend_client = BackendClient()
-        user_cache = get_user_cache(backend_client=backend_client)
+        container = get_container()
+        user_cache = container.user_cache
         
         if user_cache:
             # UserProfileCache 使用 UnifiedCache，直接尝试获取用户档案

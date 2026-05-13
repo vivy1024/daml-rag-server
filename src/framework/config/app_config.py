@@ -202,7 +202,7 @@ class FrameworkConfig(BaseSettings):
     metadata_db_path: str = '/tmp/metadata.db'
     mcp_config_path: str = '/app/config/mcp_registry.json'
     mcp_metadata_db_path: str = '/tmp/mcp_metadata.db'
-    embedding_model: str = 'BAAI/bge-small-zh-v1.5'
+    embedding_model: str = 'thenlper/gte-large-zh'
 
 
 class ServiceConfig(BaseSettings):

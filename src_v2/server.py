@@ -207,6 +207,193 @@ async def list_tools():
                 "required": ["exercise_id"],
             },
         ),
+        # === 知识检索工具 ===
+        Tool(
+            name="search_knowledge",
+            description="搜索训练知识库。查找训练原则、方法论、恢复策略等专业知识。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query_text": {
+                        "type": "string",
+                        "description": "查询文本（如'渐进超负荷原则'、'如何安排deload周'）",
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "description": "返回数量，默认5",
+                        "default": 5,
+                    },
+                },
+                "required": ["query_text"],
+            },
+        ),
+        Tool(
+            name="search_foods",
+            description="搜索食物营养数据。查找高蛋白食物、特定营养素食物等。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query_text": {
+                        "type": "string",
+                        "description": "查询文本（如'高蛋白食物'、'鸡胸肉'、'低GI碳水'）",
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "description": "返回数量，默认10",
+                        "default": 10,
+                    },
+                },
+                "required": ["query_text"],
+            },
+        ),
+        Tool(
+            name="get_food_detail",
+            description="获取食物详细营养信息，包括完整营养成分。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "food_id": {
+                        "type": "string",
+                        "description": "食物ID",
+                    },
+                },
+                "required": ["food_id"],
+            },
+        ),
+        Tool(
+            name="get_strength_standards",
+            description="查询力量标准。根据动作、性别、体重查询各水平的力量标准。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "exercise_name": {
+                        "type": "string",
+                        "description": "动作名称（如'卧推'、'深蹲'）",
+                    },
+                    "level": {
+                        "type": "string",
+                        "description": "训练水平",
+                        "enum": ["beginner", "novice", "intermediate", "advanced", "elite"],
+                    },
+                    "gender": {
+                        "type": "string",
+                        "description": "性别",
+                        "enum": ["male", "female"],
+                    },
+                    "body_weight": {
+                        "type": "number",
+                        "description": "体重(kg)",
+                    },
+                },
+            },
+        ),
+        # === 计算规划工具 ===
+        Tool(
+            name="calculate_tdee",
+            description="计算每日总能量消耗(TDEE)和宏量营养素分配。基于Mifflin-St Jeor公式。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "gender": {"type": "string", "enum": ["male", "female"]},
+                    "age": {"type": "integer", "description": "年龄"},
+                    "weight_kg": {"type": "number", "description": "体重(kg)"},
+                    "height_cm": {"type": "number", "description": "身高(cm)"},
+                    "activity_level": {
+                        "type": "string",
+                        "description": "活动水平",
+                        "enum": ["sedentary", "light", "moderate", "active", "very_active"],
+                    },
+                    "goal": {
+                        "type": "string",
+                        "description": "目标",
+                        "enum": ["lose_fat", "maintain", "lean_bulk", "bulk"],
+                    },
+                },
+                "required": ["gender", "age", "weight_kg", "height_cm"],
+            },
+        ),
+        Tool(
+            name="calculate_training_volume",
+            description="计算肌群训练容量(MEV/MAV/MRV)。基于RP训练容量理论。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "muscle_group": {
+                        "type": "string",
+                        "description": "肌群名称（中英文均可，如'胸'、'chest'、'背部'）",
+                    },
+                    "training_level": {
+                        "type": "string",
+                        "enum": ["beginner", "intermediate", "advanced"],
+                    },
+                    "goal": {
+                        "type": "string",
+                        "enum": ["hypertrophy", "strength", "endurance"],
+                    },
+                    "recovery_capacity": {
+                        "type": "string",
+                        "enum": ["low", "normal", "high"],
+                    },
+                },
+                "required": ["muscle_group"],
+            },
+        ),
+        Tool(
+            name="calculate_1rm",
+            description="估算1RM（单次最大重复重量）。基于Epley公式。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "weight": {"type": "number", "description": "使用重量(kg)"},
+                    "reps": {"type": "integer", "description": "完成次数"},
+                },
+                "required": ["weight", "reps"],
+            },
+        ),
+        Tool(
+            name="assess_strength_level",
+            description="评估力量水平。根据体重和举起重量判断训练水平。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "exercise": {
+                        "type": "string",
+                        "description": "动作名称（bench_press/squat/deadlift/overhead_press）",
+                    },
+                    "one_rm": {"type": "number", "description": "1RM重量(kg)"},
+                    "body_weight": {"type": "number", "description": "体重(kg)"},
+                    "gender": {"type": "string", "enum": ["male", "female"]},
+                },
+                "required": ["exercise", "one_rm", "body_weight"],
+            },
+        ),
+        Tool(
+            name="design_training_split",
+            description="设计训练分化方案。根据训练频率和目标推荐分化方式。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "days_per_week": {
+                        "type": "integer",
+                        "description": "每周训练天数(2-6)",
+                    },
+                    "goal": {
+                        "type": "string",
+                        "enum": ["hypertrophy", "strength", "general_fitness"],
+                    },
+                    "training_level": {
+                        "type": "string",
+                        "enum": ["beginner", "intermediate", "advanced"],
+                    },
+                    "weak_points": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "弱项肌群列表",
+                    },
+                },
+                "required": ["days_per_week"],
+            },
+        ),
     ]
 
 
@@ -226,6 +413,24 @@ async def call_tool(name: str, arguments: Dict[str, Any]):
             return await _handle_find_alternatives(arguments, wave_engine, safety_engine)
         elif name == "check_exercise_safety":
             return await _handle_check_safety(arguments, safety_engine)
+        elif name == "search_knowledge":
+            return await _handle_search_knowledge(arguments, wave_engine)
+        elif name == "search_foods":
+            return await _handle_search_foods(arguments, wave_engine)
+        elif name == "get_food_detail":
+            return _handle_get_food_detail(arguments, wave_engine)
+        elif name == "get_strength_standards":
+            return _handle_get_strength_standards(arguments, wave_engine)
+        elif name == "calculate_tdee":
+            return _handle_calculate_tdee(arguments)
+        elif name == "calculate_training_volume":
+            return _handle_calculate_training_volume(arguments)
+        elif name == "calculate_1rm":
+            return _handle_calculate_1rm(arguments)
+        elif name == "assess_strength_level":
+            return _handle_assess_strength_level(arguments)
+        elif name == "design_training_split":
+            return _handle_design_training_split(arguments)
         else:
             return [TextContent(type="text", text=f"未知工具: {name}")]
 
@@ -392,7 +597,129 @@ async def _handle_check_safety(args: Dict, safety_engine):
     return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
 
-def _load_user_profile(user_id: str) -> Optional[Dict]:
+# === 新工具处理函数 ===
+
+async def _handle_search_knowledge(args: Dict, wave_engine):
+    """处理 search_knowledge"""
+    import json
+    from .tools.knowledge_and_food import search_knowledge
+
+    result = await search_knowledge(
+        query_text=args["query_text"],
+        top_k=args.get("top_k", 5),
+        wave_engine=wave_engine,
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+async def _handle_search_foods(args: Dict, wave_engine):
+    """处理 search_foods"""
+    import json
+    from .tools.knowledge_and_food import search_foods
+
+    result = await search_foods(
+        query_text=args["query_text"],
+        top_k=args.get("top_k", 10),
+        wave_engine=wave_engine,
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_get_food_detail(args: Dict, wave_engine):
+    """处理 get_food_detail"""
+    import json
+    from .tools.knowledge_and_food import get_food_detail
+
+    result = get_food_detail(
+        food_id=args["food_id"],
+        data_store=wave_engine.data,
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_get_strength_standards(args: Dict, wave_engine):
+    """处理 get_strength_standards"""
+    import json
+    from .tools.knowledge_and_food import get_strength_standards
+
+    result = get_strength_standards(
+        exercise_name=args.get("exercise_name"),
+        level=args.get("level"),
+        gender=args.get("gender"),
+        body_weight=args.get("body_weight"),
+        data_store=wave_engine.data,
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_calculate_tdee(args: Dict):
+    """处理 calculate_tdee"""
+    import json
+    from .tools.calculators import calculate_tdee
+
+    result = calculate_tdee(
+        gender=args["gender"],
+        age=args["age"],
+        weight_kg=args["weight_kg"],
+        height_cm=args["height_cm"],
+        activity_level=args.get("activity_level", "moderate"),
+        goal=args.get("goal", "maintain"),
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_calculate_training_volume(args: Dict):
+    """处理 calculate_training_volume"""
+    import json
+    from .tools.calculators import calculate_training_volume
+
+    result = calculate_training_volume(
+        muscle_group=args["muscle_group"],
+        training_level=args.get("training_level", "intermediate"),
+        goal=args.get("goal", "hypertrophy"),
+        recovery_capacity=args.get("recovery_capacity", "normal"),
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_calculate_1rm(args: Dict):
+    """处理 calculate_1rm"""
+    import json
+    from .tools.calculators import calculate_1rm
+
+    result = calculate_1rm(
+        weight=args["weight"],
+        reps=args["reps"],
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_assess_strength_level(args: Dict):
+    """处理 assess_strength_level"""
+    import json
+    from .tools.calculators import assess_strength_level
+
+    result = assess_strength_level(
+        exercise_name=args["exercise_name"],
+        one_rm=args["one_rm"],
+        body_weight=args["body_weight"],
+        gender=args.get("gender", "male"),
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_design_training_split(args: Dict):
+    """处理 design_training_split"""
+    import json
+    from .tools.calculators import design_training_split
+
+    result = design_training_split(
+        days_per_week=args["days_per_week"],
+        goal=args.get("goal", "hypertrophy"),
+        training_level=args.get("training_level", "intermediate"),
+        weak_points=args.get("weak_points"),
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
     """加载用户档案
 
     TODO: 从 Redis/MySQL 加载真实用户档案
