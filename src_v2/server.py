@@ -10,9 +10,10 @@ DAML-RAG v2 MCP Server
 """
 
 import logging
+import json
 import sys
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 # 确保路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -394,6 +395,240 @@ async def list_tools():
                 "required": ["days_per_week"],
             },
         ),
+        # === 图谱专项查询工具（新增） ===
+        Tool(
+            name="get_contraindications",
+            description="查询伤病禁忌动作。给定伤病列表，返回所有禁忌动作+风险等级+替代方案。基于6371条禁忌关系。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "injuries": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "伤病列表，如['腰椎间盘突出', '肩袖损伤']",
+                    },
+                },
+                "required": ["injuries"],
+            },
+        ),
+        Tool(
+            name="get_posture_corrections",
+            description="查询体态矫正方案。给定体态问题，返回矫正动作+应避免动作+紧张/薄弱肌群分析。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "issue": {
+                        "type": "string",
+                        "description": "体态问题，如'圆肩'、'骨盆前倾'、'驼背'",
+                    },
+                },
+                "required": ["issue"],
+            },
+        ),
+        Tool(
+            name="get_rehabilitation_protocol",
+            description="查询康复训练协议。给定伤病类型，返回禁忌动作+安全动作+康复阶段。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "injury": {
+                        "type": "string",
+                        "description": "伤病类型，如'肩袖损伤'、'ACL重建术后'",
+                    },
+                    "phase": {
+                        "type": "string",
+                        "description": "康复阶段（early/mid/late），可选",
+                        "enum": ["early", "mid", "late"],
+                    },
+                },
+                "required": ["injury"],
+            },
+        ),
+        Tool(
+            name="get_muscle_exercise_map",
+            description="查询肌群对应的所有训练动作。支持按难度和器械过滤。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "muscle": {
+                        "type": "string",
+                        "description": "肌群名称，如'胸肌'、'肱二头肌'、'臀部'",
+                    },
+                    "level": {
+                        "type": "string",
+                        "description": "难度过滤",
+                        "enum": ["初级", "中级", "高级"],
+                    },
+                    "equipment": {
+                        "type": "string",
+                        "description": "器械过滤，如'哑铃'、'杠铃'、'徒手'",
+                    },
+                },
+                "required": ["muscle"],
+            },
+        ),
+        # === 用户数据工具（新增） ===
+        Tool(
+            name="get_user_profile",
+            description="获取用户完整健身档案（身高/体重/目标/伤病/训练水平/力量数据）。需要user_id。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "string",
+                        "description": "用户ID",
+                    },
+                },
+                "required": ["user_id"],
+            },
+        ),
+        Tool(
+            name="get_training_history",
+            description="获取用户训练记录。返回最近N天的训练数据（动作/重量/次数/RPE）和力量趋势。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "string",
+                        "description": "用户ID",
+                    },
+                    "days": {
+                        "type": "integer",
+                        "description": "最近N天，默认30",
+                        "default": 30,
+                    },
+                    "exercise_name": {
+                        "type": "string",
+                        "description": "按动作名称过滤（可选）",
+                    },
+                },
+                "required": ["user_id"],
+            },
+        ),
+        Tool(
+            name="get_progress_data",
+            description="获取用户进度数据（体重/体脂/FFMI/力量趋势）。返回时间序列和趋势分析。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "string",
+                        "description": "用户ID",
+                    },
+                    "metric": {
+                        "type": "string",
+                        "description": "指标类型",
+                        "enum": ["weight", "body_fat", "ffmi", "strength"],
+                    },
+                    "days": {
+                        "type": "integer",
+                        "description": "最近N天，默认90",
+                        "default": 90,
+                    },
+                },
+                "required": ["user_id"],
+            },
+        ),
+        Tool(
+            name="save_training_plan",
+            description="将AI生成的训练计划保存到用户账户。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "string",
+                        "description": "用户ID",
+                    },
+                    "plan": {
+                        "type": "object",
+                        "description": "训练计划数据（含名称、目标、动作列表等）",
+                    },
+                },
+                "required": ["user_id", "plan"],
+            },
+        ),
+        # === 智能推理工具（新增） ===
+        Tool(
+            name="generate_training_cycle",
+            description="生成完整训练周期方案。结合用户水平、目标、器械、伤病，输出可直接执行的训练计划（含动作/组数/次数/强度/渐进策略/deload）。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_profile": {
+                        "type": "object",
+                        "description": "用户档案（含 training.level, health.injuries, goals 等）",
+                    },
+                    "goal": {
+                        "type": "string",
+                        "enum": ["hypertrophy", "strength", "general_fitness"],
+                    },
+                    "days_per_week": {
+                        "type": "integer",
+                        "description": "每星期训练天数(2-6)",
+                    },
+                    "available_equipment": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "可用器械列表",
+                    },
+                    "cycle_weeks": {
+                        "type": "integer",
+                        "description": "周期长度（几个训练周期为一轮），默认4",
+                        "default": 4,
+                    },
+                },
+                "required": ["user_profile", "days_per_week"],
+            },
+        ),
+        Tool(
+            name="analyze_training_balance",
+            description="分析训练平衡性。对比各肌群实际训练量与推荐标准(MEV/MAV/MRV)，识别失衡和弱项。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "training_records": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "exercise": {"type": "string"},
+                                "muscle_group": {"type": "string"},
+                                "sets": {"type": "integer"},
+                                "date": {"type": "string"},
+                            },
+                        },
+                        "description": "训练记录列表",
+                    },
+                },
+                "required": ["training_records"],
+            },
+        ),
+        Tool(
+            name="calculate_progressive_overload",
+            description="计算渐进超负荷建议。基于最近训练记录分析趋势，给出下次训练的重量/次数建议和是否需要deload。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "exercise_name": {
+                        "type": "string",
+                        "description": "动作名称",
+                    },
+                    "recent_records": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "weight": {"type": "number"},
+                                "reps": {"type": "integer"},
+                                "date": {"type": "string"},
+                            },
+                        },
+                        "description": "最近几次训练记录（按时间顺序）",
+                    },
+                },
+                "required": ["exercise_name", "recent_records"],
+            },
+        ),
     ]
 
 
@@ -431,13 +666,37 @@ async def call_tool(name: str, arguments: Dict[str, Any]):
             return _handle_assess_strength_level(arguments)
         elif name == "design_training_split":
             return _handle_design_training_split(arguments)
+        # === 图谱专项工具 ===
+        elif name == "get_contraindications":
+            return _handle_get_contraindications(arguments, wave_engine)
+        elif name == "get_posture_corrections":
+            return _handle_get_posture_corrections(arguments, wave_engine)
+        elif name == "get_rehabilitation_protocol":
+            return _handle_get_rehabilitation_protocol(arguments, wave_engine)
+        elif name == "get_muscle_exercise_map":
+            return _handle_get_muscle_exercise_map(arguments, wave_engine)
+        # === 用户数据工具 ===
+        elif name == "get_user_profile":
+            return await _handle_get_user_profile(arguments)
+        elif name == "get_training_history":
+            return await _handle_get_training_history(arguments)
+        elif name == "get_progress_data":
+            return await _handle_get_progress_data(arguments)
+        elif name == "save_training_plan":
+            return await _handle_save_training_plan(arguments)
+        # === 智能推理工具 ===
+        elif name == "generate_training_cycle":
+            return _handle_generate_training_cycle(arguments, wave_engine)
+        elif name == "analyze_training_balance":
+            return _handle_analyze_training_balance(arguments)
+        elif name == "calculate_progressive_overload":
+            return _handle_calculate_progressive_overload(arguments)
         else:
             return [TextContent(type="text", text=f"未知工具: {name}")]
 
     except Exception as e:
         logger.exception(f"工具执行失败: {name}")
-        import json as _json
-        error_payload = _json.dumps({"error": str(e)}, ensure_ascii=False)
+        error_payload = json.dumps({"error": str(e)}, ensure_ascii=False)
         return [TextContent(type="text", text=error_payload)]
 
 
@@ -445,7 +704,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]):
 
 async def _handle_search_exercises(args: Dict, wave_engine, safety_engine):
     """处理 search_exercises"""
-    import json
+
     from .tools.search_exercises import search_exercises
 
     query_text = args["query_text"]
@@ -472,7 +731,7 @@ async def _handle_search_exercises(args: Dict, wave_engine, safety_engine):
 
 async def _handle_get_exercise_detail(args: Dict, wave_engine):
     """处理 get_exercise_detail"""
-    import json
+
 
     exercise_id = args["exercise_id"]
     meta = None
@@ -495,7 +754,7 @@ async def _handle_get_exercise_detail(args: Dict, wave_engine):
 
 async def _handle_graph_query(args: Dict, wave_engine):
     """处理 graph_query"""
-    import json
+
 
     node_id = args["node_id"]
     relation_type = args.get("relation_type")
@@ -527,7 +786,7 @@ async def _handle_graph_query(args: Dict, wave_engine):
 
 async def _handle_find_alternatives(args: Dict, wave_engine, safety_engine):
     """处理 find_alternatives"""
-    import json
+
     from .tools.search_exercises import search_exercises
 
     exercise_id = args["exercise_id"]
@@ -564,7 +823,7 @@ async def _handle_find_alternatives(args: Dict, wave_engine, safety_engine):
 
 async def _handle_check_safety(args: Dict, safety_engine):
     """处理 check_exercise_safety"""
-    import json
+
 
     exercise_id = args["exercise_id"]
     injuries = args.get("injuries", [])
@@ -601,7 +860,7 @@ async def _handle_check_safety(args: Dict, safety_engine):
 
 async def _handle_search_knowledge(args: Dict, wave_engine):
     """处理 search_knowledge"""
-    import json
+
     from .tools.knowledge_and_food import search_knowledge
 
     result = await search_knowledge(
@@ -614,7 +873,7 @@ async def _handle_search_knowledge(args: Dict, wave_engine):
 
 async def _handle_search_foods(args: Dict, wave_engine):
     """处理 search_foods"""
-    import json
+
     from .tools.knowledge_and_food import search_foods
 
     result = await search_foods(
@@ -627,7 +886,7 @@ async def _handle_search_foods(args: Dict, wave_engine):
 
 def _handle_get_food_detail(args: Dict, wave_engine):
     """处理 get_food_detail"""
-    import json
+
     from .tools.knowledge_and_food import get_food_detail
 
     result = get_food_detail(
@@ -639,7 +898,7 @@ def _handle_get_food_detail(args: Dict, wave_engine):
 
 def _handle_get_strength_standards(args: Dict, wave_engine):
     """处理 get_strength_standards"""
-    import json
+
     from .tools.knowledge_and_food import get_strength_standards
 
     result = get_strength_standards(
@@ -654,7 +913,7 @@ def _handle_get_strength_standards(args: Dict, wave_engine):
 
 def _handle_calculate_tdee(args: Dict):
     """处理 calculate_tdee"""
-    import json
+
     from .tools.calculators import calculate_tdee
 
     result = calculate_tdee(
@@ -670,7 +929,7 @@ def _handle_calculate_tdee(args: Dict):
 
 def _handle_calculate_training_volume(args: Dict):
     """处理 calculate_training_volume"""
-    import json
+
     from .tools.calculators import calculate_training_volume
 
     result = calculate_training_volume(
@@ -684,7 +943,7 @@ def _handle_calculate_training_volume(args: Dict):
 
 def _handle_calculate_1rm(args: Dict):
     """处理 calculate_1rm"""
-    import json
+
     from .tools.calculators import calculate_1rm
 
     result = calculate_1rm(
@@ -696,7 +955,7 @@ def _handle_calculate_1rm(args: Dict):
 
 def _handle_assess_strength_level(args: Dict):
     """处理 assess_strength_level"""
-    import json
+
     from .tools.calculators import assess_strength_level
 
     result = assess_strength_level(
@@ -710,7 +969,7 @@ def _handle_assess_strength_level(args: Dict):
 
 def _handle_design_training_split(args: Dict):
     """处理 design_training_split"""
-    import json
+
     from .tools.calculators import design_training_split
 
     result = design_training_split(
@@ -720,12 +979,155 @@ def _handle_design_training_split(args: Dict):
         weak_points=args.get("weak_points"),
     )
     return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
-    """加载用户档案
 
-    TODO: 从 Redis/MySQL 加载真实用户档案
+
+def _load_user_profile(user_id: str) -> Optional[Dict]:
+    """加载用户档案（同步版，用于旧工具兼容）
+
+    新工具应使用 async 的 user_data.get_user_profile()
     """
-    # 暂时返回空档案
+    # 暂时返回基础档案，后续接通 BackendClient
     return {"user_id": user_id, "fitness_level": "intermediate"}
+
+
+# === 图谱专项工具处理函数 ===
+
+def _handle_get_contraindications(args: Dict, wave_engine):
+    """处理 get_contraindications"""
+
+    from .tools.graph_queries import get_contraindications
+
+    result = get_contraindications(
+        injuries=args["injuries"],
+        graph=wave_engine.data.graph,
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_get_posture_corrections(args: Dict, wave_engine):
+    """处理 get_posture_corrections"""
+
+    from .tools.graph_queries import get_posture_corrections
+
+    result = get_posture_corrections(
+        issue=args["issue"],
+        graph=wave_engine.data.graph,
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_get_rehabilitation_protocol(args: Dict, wave_engine):
+    """处理 get_rehabilitation_protocol"""
+
+    from .tools.graph_queries import get_rehabilitation_protocol
+
+    result = get_rehabilitation_protocol(
+        injury=args["injury"],
+        phase=args.get("phase"),
+        graph=wave_engine.data.graph,
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_get_muscle_exercise_map(args: Dict, wave_engine):
+    """处理 get_muscle_exercise_map"""
+
+    from .tools.graph_queries import get_muscle_exercise_map
+
+    result = get_muscle_exercise_map(
+        muscle=args["muscle"],
+        graph=wave_engine.data.graph,
+        level=args.get("level"),
+        equipment=args.get("equipment"),
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+# === 用户数据工具处理函数 ===
+
+async def _handle_get_user_profile(args: Dict):
+    """处理 get_user_profile"""
+
+    from .tools.user_data import get_user_profile
+
+    result = await get_user_profile(user_id=args["user_id"])
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+async def _handle_get_training_history(args: Dict):
+    """处理 get_training_history"""
+
+    from .tools.user_data import get_training_history
+
+    result = await get_training_history(
+        user_id=args["user_id"],
+        days=args.get("days", 30),
+        exercise_name=args.get("exercise_name"),
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+async def _handle_get_progress_data(args: Dict):
+    """处理 get_progress_data"""
+
+    from .tools.user_data import get_progress_data
+
+    result = await get_progress_data(
+        user_id=args["user_id"],
+        metric=args.get("metric", "weight"),
+        days=args.get("days", 90),
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+async def _handle_save_training_plan(args: Dict):
+    """处理 save_training_plan"""
+
+    from .tools.user_data import save_training_plan
+
+    result = await save_training_plan(
+        user_id=args["user_id"],
+        plan_data=args["plan"],
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+# === 智能推理工具处理函数 ===
+
+def _handle_generate_training_cycle(args: Dict, wave_engine):
+    """处理 generate_training_cycle"""
+    from .tools.smart_planning import generate_training_cycle
+
+    result = generate_training_cycle(
+        user_profile=args["user_profile"],
+        goal=args.get("goal", "hypertrophy"),
+        days_per_week=args["days_per_week"],
+        available_equipment=args.get("available_equipment"),
+        cycle_weeks=args.get("cycle_weeks", 4),
+        graph=wave_engine.data.graph if wave_engine else None,
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_analyze_training_balance(args: Dict):
+    """处理 analyze_training_balance"""
+    from .tools.smart_planning import analyze_training_balance
+
+    result = analyze_training_balance(
+        training_records=args["training_records"],
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_calculate_progressive_overload(args: Dict):
+    """处理 calculate_progressive_overload"""
+    from .tools.smart_planning import calculate_progressive_overload
+
+    result = calculate_progressive_overload(
+        exercise_name=args["exercise_name"],
+        recent_records=args["recent_records"],
+    )
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
 
 # === 入口 ===

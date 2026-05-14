@@ -305,8 +305,18 @@ def _muscle_rerank(
         else:
             unmatched.append(eid)
 
-    # 匹配的排前面，不匹配的排后面（各自保持原有顺序）
-    return matched + unmatched
+    # 在匹配组内，进一步区分训练动作和拉伸动作
+    # force_zh == "保持" 的是拉伸/静态动作，排到训练动作后面
+    def _is_stretch(eid: str) -> bool:
+        data = (id_to_payload or {}).get(eid, {})
+        force = data.get("force_zh", "")
+        name = data.get("name_zh", "")
+        return force == "保持" or "拉伸" in name
+
+    matched_training = [e for e in matched if not _is_stretch(e)]
+    matched_stretch = [e for e in matched if _is_stretch(e)]
+
+    return matched_training + matched_stretch + unmatched
 
 
 def _apply_filters(
