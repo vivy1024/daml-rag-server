@@ -1135,13 +1135,39 @@ def _handle_calculate_progressive_overload(args: Dict):
 async def main():
     """MCP 服务器主入口"""
     logging.basicConfig(level=logging.INFO)
-    logger.info("DAML-RAG v2 MCP Server 启动 (stdio 模式)")
 
     # 预热引擎
     _get_engines()
 
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(read_stream, write_stream, server.create_initialization_options())
+    if "--sse" in sys.argv:
+        # SSE 模式（HTTP，供 YuzhenFork 等外部客户端连接）
+        from mcp.server.sse import SseServerTransport
+        from starlette.applications import Starlette
+        from starlette.routing import Route
+        import uvicorn
+
+        sse = SseServerTransport("/messages")
+
+        async def handle_sse(request):
+            async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+                await server.run(streams[0], streams[1], server.create_initialization_options())
+
+        async def handle_messages(request):
+            await sse.handle_post_message(request.scope, request.receive, request._send)
+
+        app = Starlette(routes=[
+            Route("/sse", endpoint=handle_sse),
+            Route("/messages", endpoint=handle_messages, methods=["POST"]),
+        ])
+
+        port = int(os.environ.get("MCP_SSE_PORT", "8002"))
+        logger.info(f"DAML-RAG v2 MCP Server 启动 (SSE 模式, 端口 {port})")
+        uvicorn.run(app, host="0.0.0.0", port=port)
+    else:
+        # stdio 模式（默认）
+        logger.info("DAML-RAG v2 MCP Server 启动 (stdio 模式)")
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
 if __name__ == "__main__":

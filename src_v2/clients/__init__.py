@@ -17,7 +17,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 # 配置
-BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://fitness_nginx_v2:8000")
+BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", os.getenv("BACKEND_API_URL", "http://fitness_nginx_v2:80"))
 INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN", "")
 TIMEOUT = float(os.getenv("BACKEND_API_TIMEOUT", "10.0"))
 MAX_RETRIES = int(os.getenv("BACKEND_API_MAX_RETRIES", "2"))
