@@ -158,18 +158,32 @@ def generate_training_cycle(
                     sets, reps, intensity = (3, "8-12", "65-75%") if is_compound else (3, "12-15", "55-65%")
 
                 increment = strategy["increment_kg"]["compound" if is_compound else "isolation"]
+                # 解析 reps 为 [min, max]
+                reps_parts = reps.replace("次", "").split("-")
+                reps_range = [int(reps_parts[0]), int(reps_parts[-1])]
+                # 默认休息时间
+                rest_seconds = 180 if is_compound and goal == "strength" else (120 if is_compound else 90)
+
                 exercises.append({
                     "name": ex_name,
+                    "name_zh": ex_name,
                     "sets": sets,
                     "reps": reps,
+                    "reps_range": reps_range,
+                    "rest_seconds": rest_seconds,
                     "intensity": intensity,
+                    "weight": intensity,  # 前端用 weight 字段显示
                     "progression": f"+{increment}kg/周期" if strategy["name"] == "线性渐进" else strategy["description"],
                 })
 
         sessions.append({
             "day": day_num,
+            "day_number": day_num,
+            "day_name": f"Day {day_num}",
             "focus": focus,
+            "focus_muscle_groups": muscle_groups,
             "exercises": exercises,
+            "total_sets": sum(e["sets"] for e in exercises),
         })
 
     # 6. Deload 安排（根据训练水平调整频率）
@@ -184,6 +198,27 @@ def generate_training_cycle(
         deload_protocol = "新手阶段通常不需要 deload，持续线性进步直到停滞"
 
     return {
+        # 前端 TrainingPlanCard 直接可用的字段
+        "program_overview": {
+            "training_goal": goal,
+            "training_split": split.get("split_type", "custom"),
+            "training_days_per_week": days_per_week,
+            "difficulty_level": training_level,
+            "total_exercises": sum(len(s["exercises"]) for s in sessions),
+            "estimated_weekly_duration_minutes": sum(len(s["exercises"]) * 4 + 10 for s in sessions),
+        },
+        "weekly_program": {
+            "training_days": sessions,
+        },
+        "program_balance": {
+            "balance_score": 80,
+        },
+        "safety_assessment": {
+            "overall_risk_level": "HIGH" if injuries else "LOW",
+            "safety_recommendations": [f"注意 {inj} 相关动作" for inj in (injuries or [])[:3]],
+            "personalized_notes": [deload_protocol] if deload_protocol else [],
+        },
+        # 兼容旧格式
         "cycle_type": strategy["name"],
         "cycle_weeks": cycle_weeks,
         "deload_week": deload_week,
